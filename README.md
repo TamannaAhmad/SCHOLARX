@@ -134,11 +134,6 @@ print(f"Generated {len(teams)} teams")
 
 This project is part of a Final Year Project in AI and Data Science Engineering.
 
-## 👥 Authors
-
-- **ScholarX Team** - *Initial work* - [ScholarX](https://github.com/scholarx)
-
-
 ## 📞 Support
 
 For questions or support:
