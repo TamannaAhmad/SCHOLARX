@@ -1,4 +1,12 @@
-import pandas as pd
+# Try to import pandas, but make it optional
+try:
+    import pandas as pd
+    PANDAS_AVAILABLE = True
+except ImportError as e:
+    # Defer logger setup until after it's defined; fall back to silent flag here
+    PANDAS_AVAILABLE = False
+    pd = None
+
 from typing import List, Dict, Set, Optional, Tuple, Union, Any
 from collections import defaultdict
 import itertools
@@ -46,8 +54,17 @@ except ImportError:
     SQLALCHEMY_AVAILABLE = False
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
+
+# Reduce noise from third-party libraries in terminal output
+logging.getLogger("httpx").setLevel(logging.ERROR)
+logging.getLogger("postgrest").setLevel(logging.ERROR)
+logging.getLogger("realtime").setLevel(logging.ERROR)
+
+# If pandas import failed earlier, keep it quiet by default (debug-only)
+if not 'PANDAS_AVAILABLE' in globals() or PANDAS_AVAILABLE is False:
+    logger.debug("pandas not available: Unable to import required dependencies (safe to ignore if not using pandas)")
 
 class DatabaseConfig:
     """Database configuration class with validation"""
@@ -869,12 +886,12 @@ class EnhancedWebScheduleMatcher:
             return ''
         return str(raw_usn).strip().upper()
     
-def is_valid_usn(self, usn: str) -> bool:
-    """Validate USN format: 1KG22AD001 (1 + 2 letters + 2 digits + 2 letters + 3 digits)."""
-    import re
-    if not usn:
-        return False
-    return re.match(r'^1[A-Z]{2}[0-9]{2}[A-Z]{2}[0-9]{3}$', usn) is not None
+    def is_valid_usn(self, usn: str) -> bool:
+        """Validate USN format: 1KG22AD001 (1 + 2 letters + 2 digits + 2 letters + 3 digits)."""
+        import re
+        if not usn:
+            return False
+        return re.match(r'^1[A-Z]{2}[0-9]{2}[A-Z]{2}[0-9]{3}$', usn) is not None
     
     def calculate_schedule_match_percentage(self, user1_id: str, user2_id: str, 
                                           preferred_days: List[str] = None) -> Dict:
@@ -890,8 +907,8 @@ def is_valid_usn(self, usn: str) -> bool:
                 'common_slots': 0
             }
         
-        # Load user data
-        users_data = self.load_user_profiles([user1_norm, user2_norm])
+        # Load user data (bypass cache to ensure fresh fetch for specific USNs)
+        users_data = self.load_user_profiles([user1_norm, user2_norm], use_cache=False, force_reload=True)
         
         if user1_norm not in users_data or user2_norm not in users_data:
             return {
@@ -955,6 +972,25 @@ def is_valid_usn(self, usn: str) -> bool:
             'recommendation_score': round(self._calculate_recommendation_score(match_percentage, meeting_potential), 1),
             'users_found': True
         }
+
+    def format_schedule_match(self, match_result: Dict) -> str:
+        """Pretty print the schedule match result for CLI output"""
+        if not isinstance(match_result, dict) or match_result.get('error'):
+            return f"Error: {match_result.get('error', 'Unknown error')}"
+        lines = []
+        lines.append(f"Match: {match_result['match_percentage']}%  |  Common slots: {match_result['common_slots']} / {match_result['total_possible_slots']}")
+        lines.append(f"Meeting potential score: {match_result['meeting_potential']}")
+        lines.append("")
+        lines.append("Day-wise breakdown:")
+        for day in ['sunday','monday','tuesday','wednesday','thursday','friday','saturday']:
+            if day in match_result['day_breakdown']:
+                d = match_result['day_breakdown'][day]
+                lines.append(
+                    f"  - {day.capitalize():10} | common: {d['common_slots']:<4} total: {d['total_possible']:<2} "
+                    f"| day%: {d['day_percentage']:<5.1f} | u1: {d['user1_available']:<2} u2: {d['user2_available']:<2} "
+                    f"| exact: {d['exact_matches']:<2} overlap: {d['overlapping_matches']}"
+                )
+        return "\n".join(lines)
     
     def get_overlapping_slots(self, slot1: Tuple[str, str], slot2: Tuple[str, str]) -> bool:
         """Check if two time slots overlap"""
@@ -1017,6 +1053,13 @@ def is_valid_usn(self, usn: str) -> bool:
             if match_result.get('match_percentage', 0) >= min_match_threshold:
                 candidate_data = users_data[candidate_id]
                 
+                # Extract top days by day_percentage for quick insight
+                day_items = match_result.get('day_breakdown', {}).items()
+                top_days = sorted(
+                    ((day, info['day_percentage']) for day, info in day_items),
+                    key=lambda x: x[1], reverse=True
+                )[:3]
+
                 recommendations.append({
                     'user_id': candidate_id,
                     'name': candidate_data['name'],
@@ -1027,7 +1070,8 @@ def is_valid_usn(self, usn: str) -> bool:
                     'skills': candidate_data['skills'],
                     'total_available_slots': candidate_data['total_available_slots'],
                     'schedule_match': match_result,
-                    'recommendation_priority': match_result.get('recommendation_score', match_result.get('match_percentage', 0))
+                    'recommendation_priority': match_result.get('recommendation_score', match_result.get('match_percentage', 0)),
+                    'best_days': [{ 'day': d.capitalize(), 'day_percentage': round(p,1) } for d, p in top_days]
                 })
         
         # Sort by recommendation score (descending)
@@ -1314,39 +1358,42 @@ def test_enhanced_matcher():
     
     try:
         # Test connection
-        print("=== Testing Database Connection ===")
+        print("=== Connection ===")
         if not matcher.connect_to_database():
-            print("Failed to connect to database")
+            print("Failed to connect to Supabase")
             return
+        else:
+            print("Connected to Supabase")
         
         # Test schema verification
-        print("\n=== Schema Verification ===")
+        print("\n=== Schema ===")
         schema_result = matcher.verify_database_schema()
-        print(f"Schema Valid: {schema_result['valid']}")
+        print(f"Valid: {schema_result['valid']}")
         if schema_result['issues']:
             print(f"Issues: {schema_result['issues']}")
         
         # Test database statistics
-        print("\n=== Database Statistics ===")
+        print("\n=== Stats ===")
         db_stats = matcher.get_database_statistics()
         print(json.dumps(db_stats, indent=2))
         
         # Load all available users
-        print("\n=== Loading Users ===")
+        print("\n=== Users ===")
         all_users = matcher.load_all_users(limit=10)
-        print(f"Found {len(all_users)} users: {all_users}")
+        print(f"Loaded {len(all_users)} users")
         
         if len(all_users) >= 2:
             # Test user profile loading
-            print(f"\n=== Testing User Profile Loading ===")
-            user_profiles = matcher.load_user_profiles(all_users[:3])
-            print(f"Loaded {len(user_profiles)} user profiles")
+            print(f"\n=== Profiles ===")
+            # Load a broader set so specific USNs like 052 are present
+            user_profiles = matcher.load_user_profiles(all_users, use_cache=False, force_reload=True)
+            print(f"Loaded {len(user_profiles)} profiles")
             
             for usn, profile in user_profiles.items():
                 print(f"{usn}: {profile['name']} - {profile['total_available_slots']} available slots")
             
             # Test recommendations using the updated comprehensive method
-            print(f"\n=== Testing Recommendations ===")
+            print(f"\n=== Recommendations ===")
             user_id = all_users[0]
             filters = {
                 'department': None,
@@ -1365,28 +1412,32 @@ def test_enhanced_matcher():
                 recommendations = rec_result.get('data', [])
                 print(f"Recommendations for {user_id}:")
                 for i, rec in enumerate(recommendations[:5]):
-                    print(f"  {i+1}. {rec['name']} ({rec['user_id']})")
-                    if 'schedule_match' in rec:
-                        print(f"     Match: {rec['schedule_match'].get('match_percentage', 0)}%")
-                    print(f"     Department: {rec.get('department')}, Year: {rec.get('year')}")
-                    print(f"     Available slots: {rec.get('total_available_slots', 0)}")
+                    print(f"  {i+1}. {rec['name']} ({rec['user_id']})  |  Match: {rec['schedule_match'].get('match_percentage', 0)}%")
+                    if rec.get('best_days'):
+                        best = ", ".join([f"{d['day']} {d['day_percentage']}%" for d in rec['best_days']])
+                        print(f"     Best days: {best}")
             
             # Test schedule matching between two specific users (if supported)
-            print(f"\n=== Testing Schedule Matching ===")
-            if len(all_users) >= 2 and hasattr(matcher, 'calculate_schedule_match_percentage'):
-                user1, user2 = all_users[0], all_users[1]
+            print(f"\n=== Match (058 vs 052) ===")
+            # Allow custom USNs for testing; fall back to first two users
+            specific_user1 = '1KG22AD058'
+            specific_user2 = '1KG22AD052'
+            user1 = specific_user1 if specific_user1 in all_users else all_users[0]
+            user2 = specific_user2 if specific_user2 in all_users else (all_users[1] if len(all_users) > 1 else all_users[0])
+            if hasattr(matcher, 'calculate_schedule_match_percentage'):
                 match_result = matcher.calculate_schedule_match_percentage(user1, user2)
                 print(f"Schedule match between {user1} and {user2}:")
                 if isinstance(match_result, dict) and 'error' in match_result:
                     print(f"  Error: {match_result['error']}")
                 else:
-                    print(f"  Match result: {match_result}")
+                    # Pretty print
+                    print(matcher.format_schedule_match(match_result))
             else:
                 print("Schedule match method not available - skipping")
             
             # Test team meeting slots
             if len(all_users) >= 3:
-                print(f"\n=== Testing Team Meeting Slots ===")
+                print(f"\n=== Team Slots ===")
                 team_ids = all_users[:3]
                 
                 meeting_result = matcher.find_team_meeting_slots(
@@ -1469,4 +1520,62 @@ def create_matcher_from_secrets(db_type: str = 'supabase') -> EnhancedWebSchedul
         return None
 
 if __name__ == "__main__":
-    test_enhanced_matcher()
+    import argparse
+    # Simple CLI interface
+    parser = argparse.ArgumentParser(description="SCHOLARX schedule tools")
+    parser.add_argument('--match', nargs=2, metavar=('USER1_USN','USER2_USN'), help='Match two users by USN')
+    parser.add_argument('--team', nargs='+', metavar=('USN'), help='Find team meeting slots for USNs')
+    parser.add_argument('--days', nargs='*', default=None, help='Preferred days (e.g., monday tuesday ...)')
+    parser.add_argument('--min-threshold', type=float, default=10.0, help='Minimum match threshold for recommendations')
+    parser.add_argument('--limit', type=int, default=10, help='Limit for recommendations or output lists')
+    args = parser.parse_args()
+
+    # If no CLI flags, run the comprehensive test
+    if not args.match and not args.team:
+        test_enhanced_matcher()
+    else:
+        # Build config and matcher
+        try:
+            supabase_config = DatabaseConfig.create_config_from_secrets('supabase')
+        except ValueError as e:
+            print(f"Error: {e}")
+            print("Please create secrets.py from secrets.example.py and fill in your values")
+            raise SystemExit(1)
+
+        matcher = EnhancedWebScheduleMatcher(supabase_config)
+        if not matcher.connect_to_database():
+            print("Failed to connect to database")
+            raise SystemExit(1)
+
+        try:
+            if args.match:
+                user1, user2 = args.match[0], args.match[1]
+                preferred_days = args.days if args.days else matcher.days
+                result = matcher.calculate_schedule_match_percentage(user1, user2, preferred_days)
+                print(f"Schedule match between {user1} and {user2}:")
+                if isinstance(result, dict) and 'error' in result:
+                    print(f"  Error: {result['error']}")
+                else:
+                    print(matcher.format_schedule_match(result))
+
+            if args.team:
+                preferred_days = args.days if args.days else matcher.days
+                team_ids = args.team
+                meeting_result = matcher.find_team_meeting_slots(
+                    team_member_ids=team_ids,
+                    preferred_days=preferred_days,
+                    min_duration_hours=2
+                )
+                if 'error' in meeting_result:
+                    print(f"Error: {meeting_result['error']}")
+                else:
+                    stats = meeting_result['statistics']
+                    print(f"Team meeting slots for {team_ids}:")
+                    print(f"  Perfect: {stats['total_perfect_slots']} | Good: {stats['total_good_slots']} | Backup: {stats['total_backup_slots']}")
+                    print(f"  Success rate: {stats['success_rate']}% | Recommendation: {stats['recommendation']}")
+                    if meeting_result['perfect_slots']:
+                        print("  Some perfect meeting times:")
+                        for slot in meeting_result['perfect_slots'][:min(args.limit, 10)]:
+                            print(f"    - {slot['day']} {slot['time_slot']} ({slot['availability_percentage']}% available)")
+        finally:
+            matcher.close_connection()
