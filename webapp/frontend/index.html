@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScholarX - Find Your Perfect Study Partners</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css">
+    <style>        
+        /* Hero Section */
+        .hero {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 4rem 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-content {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero h1 {
+            font-family: var(--font-heading);
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            margin-bottom: 2.5rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 3rem;
+        }
+
+        .hero-image {
+            width: 100%;
+            max-width: 800px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-large);
+            margin: 2rem auto;
+            overflow: hidden;
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-image img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .image-attribution {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-top: 0.5rem;
+        }
+
+        .image-attribution a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .image-attribution a:hover {
+            text-decoration: underline;
+        }
+
+        /* Features Section */
+        .features {
+            padding: 5rem 2rem;
+            background-color: var(--card-background);
+        }
+
+        .section-title {
+            text-align: center;
+            font-family: var(--font-heading);
+            font-size: 2.25rem;
+            margin-bottom: 3rem;
+            color: var(--text-primary);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .feature-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            box-shadow: var(--shadow-medium);
+            transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-large);
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            text-align: center;
+            padding: 5rem 2rem;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.03) 0%, rgba(124, 58, 237, 0.03) 100%);
+        }
+
+        .cta-section h2 {
+            font-family: var(--font-heading);
+            font-size: 2.25rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .cta-section p {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 2.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.25rem;
+            }
+            
+            .hero p, .cta-section p {
+                font-size: 1.1rem;
+            }
+            
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .cta-buttons .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <!-- Background Design -->
+        <div class="background-design">
+            <div class="gradient-overlay"></div>
+            <div class="geometric-pattern">
+                <div class="pattern-circle pattern-1"></div>
+                <div class="pattern-circle pattern-2"></div>
+                <div class="pattern-triangle pattern-3"></div>
+                <div class="pattern-square pattern-4"></div>
+            </div>
+        </div>
+
+        <!-- Header -->
+        <header class="login-header">
+            <div class="logo-container">
+                <a href="index.html">
+                    <h1 class="logo">ScholarX</h1>
+                </a>
+                <p class="tagline">AI-Driven Student<br>Collaboration</p>
+            </div>
+            <nav class="header-nav">
+                <a href="login.html" class="btn btn-secondary" style="margin-right: 0.5rem;">Log In</a>
+                <a href="register.html" class="btn btn-primary">Sign Up</a>
+            </nav>
+        </header>
+
+        <!-- Hero Section -->
+        <main>
+            <section class="hero">
+                <div class="hero-content">
+                    <h1>Find Your Perfect Study Partners</h1>
+                    <p>Connect with like-minded students, form study groups, and collaborate on projects based on your skills and availability.</p>
+                    <div class="cta-buttons">
+                        <a href="register.html" class="btn btn-primary">Get Started</a>
+                        <a href="#how-it-works" class="btn btn-secondary">Learn More</a>
+                    </div>
+                </div>
+                
+                <div class="hero-image">
+                    <img src="images/the-connected-narrative-8m9m7TqtBe4-unsplash.jpg" 
+                         alt="Students collaborating on a project" 
+                         loading="lazy">
+                    <div class="image-attribution">
+                        Photo by <a href="https://unsplash.com/@theconnectednarrative?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText">The Connected Narrative</a> on <a href="https://unsplash.com/photos/a-person-working-on-a-laptop-8m9m7TqtBe4?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText">Unsplash</a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Features Section -->
+            <section class="features" id="how-it-works">
+                <h2 class="section-title">How ScholarX Works</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">📋</div>
+                        <h3>Create Your Profile</h3>
+                        <p>Set up your profile with your skills, interests, and availability to find the perfect study partners.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🔍</div>
+                        <h3>Find Matches</h3>
+                        <p>Our smart matching algorithm connects you with students who complement your skills and schedule.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🤝</div>
+                        <h3>Collaborate</h3>
+                        <p>Form study groups, work on projects, and achieve academic success together.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CTA Section -->
+            <section class="cta-section">
+                <h2>Ready to Find Your Study Partners?</h2>
+                <p>Join ScholarX today and take your academic collaboration to the next level.</p>
+                <a href="register.html" class="btn btn-primary">Sign Up for Free</a>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer style="text-align: center; padding: 2rem; color: var(--text-secondary); font-size: 0.875rem;">
+            <p>© 2025 ScholarX. All rights reserved.</p>
+        </footer>
+    </div>
+</body>
+</html>

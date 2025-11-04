@@ -1,0 +1,105 @@
+import { authAPI } from './auth.js';
+
+const API_BASE_URL = 'http://localhost:8000/api/projects';
+
+async function fetchAPI(endpoint, options = {}) {
+  const url = `${API_BASE_URL}${endpoint}`;
+
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  const token = localStorage.getItem('authToken');
+  if (token) {
+    headers['Authorization'] = `Token ${token}`;
+  }
+
+  let response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+      credentials: 'include',
+    });
+  } catch (networkError) {
+    throw new Error('Unable to connect to server. Please check your internet connection.');
+  }
+
+  if (response.status === 401) {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    window.location.href = '/login.html';
+    throw new Error('Your session has expired. Please log in again.');
+  }
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    let errorMessage = 'Something went wrong';
+    
+    if (data) {
+      if (data.detail) {
+        errorMessage = data.detail;
+      } else if (data.message) {
+        errorMessage = data.message;
+      } else if (data.error) {
+        errorMessage = data.error;
+      } else if (data.non_field_errors && Array.isArray(data.non_field_errors)) {
+        errorMessage = data.non_field_errors[0];
+      } else {
+        const fieldErrors = Object.entries(data)
+          .filter(([key, value]) => Array.isArray(value) && value.length > 0)
+          .map(([key, value]) => `${key}: ${value[0]}`);
+        
+        if (fieldErrors.length > 0) {
+          errorMessage = fieldErrors.join(', ');
+        }
+      }
+    }
+    
+    console.error('API Error:', errorMessage);
+    throw new Error(errorMessage);
+  }
+  return data;
+}
+
+export const messagesAPI = {
+  // Get all messages for the current user
+  async getMessages() {
+    return fetchAPI('/messages/');
+  },
+
+  // Get incoming join requests (for owners)
+  async getIncomingRequests() {
+    return fetchAPI('/messages/incoming/');
+  },
+
+  // Get outgoing join requests (for requesters)
+  async getOutgoingRequests() {
+    return fetchAPI('/messages/outgoing/');
+  },
+
+  // Approve a join request
+  async approveRequest(requestId) {
+    return fetchAPI(`/messages/${requestId}/approve/`, {
+      method: 'POST',
+    });
+  },
+
+  // Reject a join request
+  async rejectRequest(requestId) {
+    return fetchAPI(`/messages/${requestId}/reject/`, {
+      method: 'POST',
+    });
+  },
+
+  // Mark message as read
+  async markAsRead(messageId) {
+    return fetchAPI(`/messages/${messageId}/read/`, {
+      method: 'POST',
+    });
+  },
+};
+
+export default messagesAPI;
+

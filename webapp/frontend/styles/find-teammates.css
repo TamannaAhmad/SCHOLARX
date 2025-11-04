@@ -1,0 +1,198 @@
+.teammates-page {
+    width: min(100%, 960px);
+    margin: 0 auto;
+    padding: var(--spacing-2xl) var(--spacing-xl) 0;
+    gap: var(--spacing-xl);
+    align-items: stretch;
+}
+
+.search-filter {
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto var(--spacing-xl);
+    display: flex;
+    gap: var(--spacing-md);
+    align-items: center;
+    justify-content: center;
+}
+
+.search-input-wrapper {
+    flex: 1;
+}
+
+.search-input {
+    border-radius: var(--radius-md);
+    padding-left: var(--spacing-md);
+}
+
+.filter-btn {
+    min-width: 100px;
+    white-space: nowrap;
+}
+
+.profiles-section {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-lg);
+    padding-bottom: var(--spacing-lg);
+}
+
+.profiles-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-xl);
+    width: 100%;
+    max-width: 800px;
+}
+
+.profile-card {
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-light);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    width: 100%;
+}
+
+.profile-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-medium);
+    border-color: rgba(37, 99, 235, 0.2);
+}
+
+.profile-card-body {
+    padding: var(--spacing-xl);
+}
+
+.profile-details {
+    display: grid;
+    gap: var(--spacing-lg);
+}
+
+.detail-row {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: var(--spacing-md);
+    align-items: center;
+}
+
+.detail-row dt {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    text-align: left;
+}
+
+.detail-row dd {
+    color: var(--text-primary);
+    font-size: 1rem;
+    margin: 0;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--background-color);
+    border-radius: var(--radius-sm);
+    min-height: 1.5rem;
+    display: flex;
+    align-items: center;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Availability formatting */
+.detail-row dd[data-field="availability"] {
+    display: block;
+    padding: var(--spacing-md);
+    line-height: 1.8;
+    white-space: normal;
+}
+
+.availability-day {
+    font-weight: 600;
+    color: var(--primary-color);
+    min-width: 45px;
+    display: inline-block;
+    vertical-align: top;
+}
+
+.availability-times {
+    color: var(--text-primary);
+    margin-left: var(--spacing-sm);
+}
+
+.detail-row dd.match-value {
+    background-color: var(--card-background);
+    border: 1px solid var(--border-color);
+    text-align: center;
+    font-weight: 600;
+    color: var(--primary-color);
+    justify-content: center;
+    min-width: 60px;
+    max-width: 80px;
+}
+
+.profile-card-footer {
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-lg);
+    background-color: var(--background-color);
+}
+
+.profile-card-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    width: 100%;
+    justify-content: flex-end;
+}
+
+.contact-btn {
+    min-width: 120px;
+}
+
+.add-btn {
+    min-width: 120px;
+}
+
+.empty-state {
+    margin-top: var(--spacing-xl);
+    text-align: center;
+    color: var(--text-secondary);
+    padding: var(--spacing-xl);
+}
+
+@media (max-width: 768px) {
+    .detail-row {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-xs);
+    }
+
+    .detail-row dt {
+        margin-bottom: var(--spacing-xs);
+    }
+
+    .profile-card-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .profile-card-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .contact-btn,
+    .add-btn,
+    .filter-btn {
+        width: 100%;
+    }
+
+    .teammates-page {
+        padding: var(--spacing-lg) var(--spacing-md) 0;
+    }
+}

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="cache-control" content="no-cache" />
+    <title>Dashboard - ScholarX</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css"> 
+    <link rel="stylesheet" href="styles/dashboard.css?v=1.0.0"> 
+</head>
+<body>
+    <div class="login-container">
+        <!-- Background Design -->
+        <div class="background-design">
+            <div class="gradient-overlay"></div>
+            <div class="geometric-pattern">
+                <div class="pattern-circle pattern-1"></div>
+                <div class="pattern-circle pattern-2"></div>
+                <div class="pattern-triangle pattern-3"></div>
+                <div class="pattern-square pattern-4"></div>
+            </div>
+        </div>
+
+        <!-- Header -->
+        <header class="login-header">
+            <div class="logo-container">
+                <a href="index.html">
+                    <h1 class="logo">ScholarX</h1>
+                </a>
+                <p class="tagline">AI-Driven Student<br> Collaboration</p>
+            </div>
+            <div class="profile-title-container">
+                <h1 class="profile-title">DASHBOARD</h1>
+            </div>
+            <nav class="header-nav">
+                <div class="user-menu">
+                    <a href="userprofile.html" class="user-avatar-link">
+                        <span id="userInitials" class="user-avatar">U</span>
+                    </a>
+                    <button id="logoutBtn" class="profile-nav-btn">LOGOUT</button>
+                </div>
+            </nav>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="main-content dashboard-main">
+            <div id="error-container" class="error-message" style="display: none; margin-bottom: 1rem; max-width: 800px; margin-left: auto; margin-right: auto;"></div>
+            <div class="welcome-message">
+                <h1>Welcome back, <span id="userName">User</span>!</h1>
+                <p>Here's what's happening with your account today.</p>
+            </div>
+            
+            <div class="dashboard-grid">
+                <div class="card">
+                    <h3>Your Profile</h3>
+                    <p>View and update your personal information, profile picture, and account settings.</p>
+                    <a href="userprofile.html" class="btn">View Profile</a>
+                </div>
+                
+                <div class="card">
+                    <h3>Chatbot</h3>
+                    <p>Get instant help and answers to your questions with our AI-powered assistant.</p>
+                    <a href="chatbot.html" class="btn">Open Chatbot</a>
+                </div>
+                
+                <div class="card">
+                    <h3>Search for Groups</h3>
+                    <p>Find and join study groups that match your interests and academic needs.</p>
+                    <a href="search.html" class="btn">Search Groups</a>
+                </div>
+
+                <div class="card">
+                    <h3>Messages</h3>
+                    <p>View join requests for your projects and groups, and check the status of your requests.</p>
+                    <a href="messages.html" class="btn">View Messages</a>
+                </div>
+
+                <div class="card">
+                    <h3>Your Projects</h3>
+                    <p>Manage and view the details of your ongoing and completed projects.</p>
+                    <a href="project-creation.html" class="btn">Create Project</a>
+                    <div id="user-projects-list"></div>
+                </div>
+
+                <div class="card">
+                    <h3>Your Study Groups</h3>
+                    <p>Collaborate and study with your peers in organized study groups.</p>
+                    <a href="group-creation.html" class="btn">Create Study Group</a>
+                    <div id="user-study-groups-list"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="scripts/dashboard.js"></script>
+</body>
+</html>

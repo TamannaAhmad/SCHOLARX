@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Project - ScholarX</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/project-creation.css">
+    <link rel="stylesheet" href="styles/userprofile.css">
+</head>
+<body>
+    <!-- Background Design -->
+    <div class="background-design">
+        <div class="gradient-overlay"></div>
+        <div class="geometric-pattern">
+            <div class="pattern-circle pattern-1"></div>
+            <div class="pattern-circle pattern-2"></div>
+            <div class="pattern-triangle pattern-3"></div>
+            <div class="pattern-square pattern-4"></div>
+        </div>
+    </div>
+
+    <!-- Profile Header -->
+    <header class="login-header">
+        <div class="logo-container">
+            <a href = "index.html">
+                <h1 class="logo">ScholarX</h1>
+            </a>
+            <p class="tagline">AI-Driven Student<br> Collaboration</p>
+        </div>
+        <div class="profile-title-container">
+            <h1 class="profile-title">CREATE PROJECT</h1>
+        </div>
+        <nav class="header-nav">
+            <a href="dashboard.html" class="profile-nav-btn" id="backBtn">
+                BACK
+            </a>
+        </nav>
+        <nav class="header-nav">
+            <a href="#" class="profile-nav-btn" id="editBtn">
+                EDIT
+            </a>
+        </nav>
+    </header>
+    <div class="main-content">
+        <div class="login-form-container">
+            
+            <!-- Error Container -->
+            <div id="error-container" class="error-message"></div>
+
+            <form id="project-creation-form" class="auth-form">
+                <div class="input-group">
+                    <label for="project-title" class="input-label">Project Title</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="text" 
+                            id="project-title" 
+                            name="project-title" 
+                            class="form-input"
+                            required 
+                            minlength="5" 
+                            maxlength="100" 
+                            placeholder="Enter project title"
+                        >
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="project-type" class="input-label">Project Type</label>
+                    <div class="input-wrapper">
+                        <select 
+                            id="project-type" 
+                            name="project-type" 
+                            class="form-input"
+                            required
+                        >
+                            <option value="">Select Project Type</option>
+                            <option value="research">Research</option>
+                            <option value="software">Software Development</option>
+                            <option value="hardware">Hardware Project</option>
+                            <option value="design">Design</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="project-description" class="input-label">Project Description</label>
+                    <div class="input-wrapper">
+                        <textarea 
+                            id="project-description" 
+                            name="project-description" 
+                            class="form-input"
+                            rows="4" 
+                            placeholder="Provide a detailed description of your project"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="skills-input" class="input-label">Required Skills</label>
+                    <div class="input-wrapper skills-autocomplete-wrapper">
+                        <input 
+                            type="text" 
+                            id="skills-input" 
+                            name="skills-input" 
+                            class="form-input skills-input"
+                            placeholder="Type to search and add skills"
+                        >
+                        <div id="skills-suggestions" class="skills-suggestions"></div>
+                        <div id="selected-skills" class="selected-skills"></div>
+                    </div>
+                    <div class="error-message" id="skills-error"></div>
+                    <small class="input-note">Start typing to see skill suggestions</small>
+                </div>
+
+                <div class="input-group">
+                    <label for="max-team-size" class="input-label">Maximum Team Size</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="number" 
+                            id="max-team-size" 
+                            name="max-team-size" 
+                            class="form-input"
+                            min="1" 
+                            max="10" 
+                            required 
+                            value="4"
+                        >
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="project-deadline" class="input-label">Project Deadline</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="date" 
+                            id="project-deadline" 
+                            name="project-deadline" 
+                            class="form-input"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button 
+                        type="button" 
+                        id="save-draft-btn" 
+                        class="secondary-btn"
+                    >
+                        Save Draft
+                    </button>
+                    <button 
+                        type="submit" 
+                        id="create-project-btn" 
+                        class="primary-btn"
+                    >
+                        Create Project
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="scripts/project-creation.js?v=20250924-1"></script>
+</body>
+</html>

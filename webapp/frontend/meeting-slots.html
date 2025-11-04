@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meeting Time Slots - ScholarX</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/userprofile.css">
+    <link rel="icon" href="favicon.ico">
+    <style>
+        .meeting-slots-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .time-slot {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .time-slot h3 {
+            margin-top: 0;
+            color: #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .availability {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .member-availability {
+            background: #f0f4ff;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .member-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #4a6cf7;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+        
+        .no-slots {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-design">
+        <div class="gradient-overlay"></div>
+        <div class="geometric-pattern">
+            <div class="pattern-circle pattern-1"></div>
+            <div class="pattern-circle pattern-2"></div>
+            <div class="pattern-triangle pattern-3"></div>
+            <div class="pattern-square pattern-4"></div>
+        </div>
+    </div>
+
+    <header class="login-header">
+        <div class="logo-container">
+            <a href="index.html">
+                <h1 class="logo">ScholarX</h1>
+            </a>
+            <p class="tagline">AI-Driven Student<br> Collaboration</p>
+        </div>
+        <div class="profile-title-container">
+            <h1 class="profile-title" id="page-title">MEETING TIME SLOTS</h1>
+        </div>
+        <nav class="header-nav">
+            <a href="#" id="backBtn" class="profile-nav-btn">BACK TO GROUP</a>
+        </nav>
+    </header>
+
+    <div class="main-content">
+        <div class="meeting-slots-container">
+            <div id="error-container" class="error-message" style="display: none;"></div>
+            
+            <div id="loading" class="loading">
+                <p>Finding optimal meeting times for your group...</p>
+            </div>
+            
+            <div id="slots-container" style="display: none;">
+                <h2>Optimal Meeting Times</h2>
+                <p>Based on member availability, here are the best times for your group to meet:</p>
+                
+                <div id="time-slots">
+                    <!-- Time slots will be inserted here by JavaScript -->
+                </div>
+            </div>
+            
+            <div id="no-slots" class="no-slots" style="display: none;">
+                <p>No optimal meeting times found. Please try again later or adjust your group's availability.</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="scripts/meeting-slots.js"></script>
+</body>
+</html>

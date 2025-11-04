@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find Project Teammates - ScholarX</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/userprofile.css">
+    <link rel="stylesheet" href="styles/find-teammates.css">
+</head>
+<body>
+    <div class="background-design">
+        <div class="gradient-overlay"></div>
+        <div class="geometric-pattern">
+            <div class="pattern-circle pattern-1"></div>
+            <div class="pattern-circle pattern-2"></div>
+            <div class="pattern-triangle pattern-3"></div>
+            <div class="pattern-square pattern-4"></div>
+        </div>
+    </div>
+
+    <header class="login-header">
+        <div class="logo-container">
+            <a href="index.html">
+                <h1 class="logo">ScholarX</h1>
+            </a>
+            <p class="tagline">AI-Driven Student<br> Collaboration</p>
+        </div>
+        <div class="profile-title-container">
+            <h1 class="profile-title" id="pageTitle">FIND TEAMMATES</h1>
+        </div>
+        <nav class="header-nav">
+            <a href="dashboard.html" class="profile-nav-btn" id="backBtn">BACK</a>
+        </nav>
+    </header>
+
+    <main class="main-content teammates-page">
+        <div id="error-container" class="error-message" style="display: none; margin-bottom: 1rem; max-width: 800px; margin-left: auto; margin-right: auto;"></div>
+        <section class="search-filter">
+            <div class="input-wrapper search-input-wrapper">
+                <input type="search" id="searchInput" class="form-input search-input" placeholder="Search" aria-label="Search teammates">
+            </div>
+            <button type="button" id="filterBtn" class="secondary-btn filter-btn">Filter</button>
+        </section>
+
+        <section class="profiles-section">
+            <div id="profilesContainer" class="profiles-container" role="list"></div>
+            <p id="emptyState" class="empty-state" hidden>No teammates match your search yet. Adjust the filters to explore more profiles.</p>
+        </section>
+    </main>
+
+    <template id="profileCardTemplate">
+        <article class="profile-card" role="listitem">
+            <div class="profile-card-body">
+                <dl class="profile-details">
+                    <div class="detail-row">
+                        <dt>Name:</dt>
+                        <dd data-field="name"></dd>
+                    </div>
+                    <div class="detail-row">
+                        <dt>Department:</dt>
+                        <dd data-field="department"></dd>
+                    </div>
+                    <div class="detail-row">
+                        <dt>Semester:</dt>
+                        <dd data-field="semester"></dd>
+                    </div>
+                    <div class="detail-row">
+                        <dt>Skills:</dt>
+                        <dd data-field="skills"></dd>
+                    </div>
+                    <div class="detail-row">
+                        <dt>Availability:</dt>
+                        <dd data-field="availability"></dd>
+                    </div>
+                    <div class="detail-row">
+                        <dt>Match (%):</dt>
+                        <dd data-field="matchPercentage" class="match-value"></dd>
+                    </div>
+                </dl>
+            </div>
+            <div class="profile-card-footer">
+                <div class="profile-card-actions">
+                    <button type="button" class="secondary-btn contact-btn" data-action="contact">Contact</button>
+                    <button type="button" class="primary-btn add-btn" data-action="add" id="addButton">Add to Team</button>
+                </div>
+            </div>
+        </article>
+    </template>
+
+    <script type="module" src="scripts/find-teammates.js"></script>
+</body>
+</html>
