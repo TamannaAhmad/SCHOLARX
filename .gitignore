@@ -4,6 +4,7 @@ secrets.py
 .env
 .env.local
 .env.production
+documentation
 
 # Python
 __pycache__/

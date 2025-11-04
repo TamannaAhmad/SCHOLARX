@@ -1079,6 +1079,129 @@ class EnhancedWebScheduleMatcher:
         
         return recommendations
     
+    def find_optimal_teams(self, team_size: int = 3, 
+                          preferred_days: List[str] = None,
+                          min_team_score: float = 20.0,
+                          max_teams: int = 10) -> Dict:
+        """Find optimal team formations based on schedule compatibility"""
+        
+        if team_size < 2:
+            return {'error': 'Team size must be at least 2'}
+        
+        # Load all users
+        all_users = self.load_all_users()
+        if len(all_users) < team_size:
+            return {'error': f'Not enough users. Need {team_size}, have {len(all_users)}'}
+        
+        # Load all user profiles
+        users_data = self.load_user_profiles(all_users, use_cache=False, force_reload=True)
+        
+        # Filter users with some availability (but allow some flexibility)
+        available_users = {uid: data for uid, data in users_data.items() 
+                          if data['total_available_slots'] >= 0}  # Allow users with 0 slots for now
+        
+        if len(available_users) < team_size:
+            return {'error': f'Not enough users. Need {team_size}, have {len(available_users)}'}
+        
+        # Generate all possible team combinations
+        from itertools import combinations
+        team_combinations = list(combinations(available_users.keys(), team_size))
+        
+        if len(team_combinations) > 1000:  # Limit for performance
+            team_combinations = team_combinations[:1000]
+        
+        # Score each team combination
+        team_scores = []
+        for team_ids in team_combinations:
+            team_score = self._calculate_team_compatibility_score(list(team_ids), users_data, preferred_days)
+            if team_score['overall_score'] >= min_team_score:
+                team_scores.append({
+                    'team_ids': list(team_ids),
+                    'team_names': [users_data[uid]['name'] for uid in team_ids],
+                    'score': team_score
+                })
+        
+        # Sort by overall score (descending)
+        team_scores.sort(key=lambda x: x['score']['overall_score'], reverse=True)
+        
+        # Get meeting slots for top teams
+        top_teams = []
+        for team_data in team_scores[:max_teams]:
+            meeting_slots = self.find_team_meeting_slots(
+                team_data['team_ids'], 
+                preferred_days, 
+                min_duration_hours=2
+            )
+            
+            if 'error' not in meeting_slots:
+                top_teams.append({
+                    'team_info': team_data,
+                    'meeting_slots': meeting_slots
+                })
+        
+        return {
+            'success': True,
+            'total_combinations_evaluated': len(team_combinations),
+            'teams_found': len(top_teams),
+            'top_teams': top_teams,
+            'criteria': {
+                'team_size': team_size,
+                'min_team_score': min_team_score,
+                'preferred_days': preferred_days or self.days
+            }
+        }
+    
+    def _calculate_team_compatibility_score(self, team_ids: List[str], 
+                                          users_data: Dict, 
+                                          preferred_days: List[str] = None) -> Dict:
+        """Calculate compatibility score for a team"""
+        
+        if preferred_days is None:
+            preferred_days = self.days
+        
+        # Calculate pairwise compatibility scores
+        pairwise_scores = []
+        for i in range(len(team_ids)):
+            for j in range(i + 1, len(team_ids)):
+                user1, user2 = team_ids[i], team_ids[j]
+                match_result = self.calculate_schedule_match_percentage(user1, user2, preferred_days)
+                if 'error' not in match_result:
+                    pairwise_scores.append(match_result['match_percentage'])
+        
+        if not pairwise_scores:
+            return {'overall_score': 0, 'pairwise_scores': [], 'meeting_potential': 0}
+        
+        # Calculate team metrics
+        avg_pairwise_score = sum(pairwise_scores) / len(pairwise_scores)
+        min_pairwise_score = min(pairwise_scores)
+        max_pairwise_score = max(pairwise_scores)
+        
+        # Calculate team availability diversity
+        team_availability = [users_data[uid]['total_available_slots'] for uid in team_ids]
+        availability_variance = max(team_availability) - min(team_availability)
+        
+        # Heavy penalty for users with 0 availability
+        zero_availability_penalty = sum(1 for slots in team_availability if slots == 0) * 15.0
+        availability_penalty = min(availability_variance / 10.0, 10.0) + zero_availability_penalty
+        
+        # Calculate overall team score
+        overall_score = (avg_pairwise_score * 0.6 + 
+                        min_pairwise_score * 0.3 + 
+                        max_pairwise_score * 0.1 - 
+                        availability_penalty)
+        
+        return {
+            'overall_score': round(overall_score, 1),
+            'avg_pairwise_score': round(avg_pairwise_score, 1),
+            'min_pairwise_score': round(min_pairwise_score, 1),
+            'max_pairwise_score': round(max_pairwise_score, 1),
+            'pairwise_scores': [round(score, 1) for score in pairwise_scores],
+            'availability_variance': round(availability_variance, 1),
+            'availability_penalty': round(availability_penalty, 1),
+            'zero_availability_penalty': round(zero_availability_penalty, 1),
+            'meeting_potential': round(overall_score, 1)
+        }
+    
     def find_team_meeting_slots(self, team_member_ids: List[str], 
                                preferred_days: List[str] = None,
                                min_duration_hours: int = 2) -> Dict:
@@ -1093,8 +1216,8 @@ class EnhancedWebScheduleMatcher:
         if len(valid_ids) < 2:
             return {'error': 'Need at least 2 valid team member IDs'}
         
-        # Load team data
-        users_data = self.load_user_profiles(valid_ids)
+        # Load team data (force reload to ensure fresh data)
+        users_data = self.load_user_profiles(valid_ids, use_cache=False, force_reload=True)
         
         missing_users = [uid for uid in valid_ids if uid not in users_data]
         if missing_users:
@@ -1175,6 +1298,11 @@ class EnhancedWebScheduleMatcher:
         
         success_rate = ((total_perfect + total_good) / total_checked * 100) if total_checked > 0 else 0
         
+        # Enhanced fallback recommendations
+        fallback_recommendations = self._generate_fallback_recommendations(
+            perfect_slots, good_slots, backup_slots, day_statistics, valid_ids, users_data
+        )
+        
         return {
             'team_info': {
                 'member_ids': valid_ids,
@@ -1184,6 +1312,7 @@ class EnhancedWebScheduleMatcher:
             'perfect_slots': perfect_slots[:20],  # Top 20 perfect slots
             'good_slots': good_slots[:15],        # Top 15 good slots
             'backup_slots': backup_slots[:10],    # Top 10 backup slots
+            'fallback_recommendations': fallback_recommendations,
             'statistics': {
                 'total_perfect_slots': total_perfect,
                 'total_good_slots': total_good,
@@ -1215,6 +1344,80 @@ class EnhancedWebScheduleMatcher:
     def _calculate_recommendation_score(self, match_percentage: float, meeting_potential: float) -> float:
         """Calculate overall recommendation score"""
         return (match_percentage * 0.6) + (meeting_potential * 0.4)
+    
+    def _generate_fallback_recommendations(self, perfect_slots: List, good_slots: List, 
+                                         backup_slots: List, day_statistics: Dict,
+                                         team_ids: List[str], users_data: Dict) -> Dict:
+        """Generate intelligent fallback recommendations when no perfect slots are available"""
+        
+        recommendations = {
+            'alternative_strategies': [],
+            'best_available_slots': [],
+            'team_optimization_suggestions': [],
+            'schedule_adjustment_tips': []
+        }
+        
+        # Strategy 1: Best available slots (even if not perfect)
+        all_available_slots = perfect_slots + good_slots + backup_slots
+        if all_available_slots:
+            # Sort by availability percentage
+            sorted_slots = sorted(all_available_slots, 
+                                key=lambda x: x['availability_percentage'], reverse=True)
+            recommendations['best_available_slots'] = sorted_slots[:5]
+            
+            # Add strategy recommendation
+            best_slot = sorted_slots[0]
+            recommendations['alternative_strategies'].append({
+                'strategy': 'Use best available slot',
+                'description': f"Schedule meeting on {best_slot['day']} {best_slot['time_slot']} with {best_slot['availability_percentage']}% team availability",
+                'confidence': 'High' if best_slot['availability_percentage'] >= 80 else 'Medium'
+            })
+        
+        # Strategy 2: Find days with most team availability
+        best_days = []
+        for day, stats in day_statistics.items():
+            if stats['total_viable_slots'] > 0:
+                best_days.append((day, stats['total_viable_slots']))
+        
+        best_days.sort(key=lambda x: x[1], reverse=True)
+        if best_days:
+            recommendations['alternative_strategies'].append({
+                'strategy': 'Focus on high-availability days',
+                'description': f"Best days for meetings: {', '.join([day.capitalize() for day, _ in best_days[:3]])}",
+                'confidence': 'High'
+            })
+        
+        # Strategy 3: Team optimization suggestions
+        team_availability = [users_data[uid]['total_available_slots'] for uid in team_ids]
+        min_availability = min(team_availability)
+        max_availability = max(team_availability)
+        
+        if max_availability - min_availability > 10:
+            least_available_user = min(team_ids, key=lambda uid: users_data[uid]['total_available_slots'])
+            recommendations['team_optimization_suggestions'].append({
+                'suggestion': 'Consider team member with limited availability',
+                'description': f"{users_data[least_available_user]['name']} has only {min_availability} available slots",
+                'action': 'Ask if they can increase availability or consider alternative team member'
+            })
+        
+        # Strategy 4: Schedule adjustment tips
+        if not perfect_slots and not good_slots:
+            recommendations['schedule_adjustment_tips'].extend([
+                {
+                    'tip': 'Extend meeting duration',
+                    'description': 'Consider shorter meetings (1 hour instead of 2) to increase available slots'
+                },
+                {
+                    'tip': 'Flexible timing',
+                    'description': 'Allow team members to join late or leave early for partial participation'
+                },
+                {
+                    'tip': 'Alternative communication',
+                    'description': 'Use asynchronous communication for non-critical discussions'
+                }
+            ])
+        
+        return recommendations
     
     def _get_meeting_recommendation(self, perfect: int, good: int, backup: int) -> str:
         """Generate meeting recommendation based on available slots"""
@@ -1417,28 +1620,65 @@ def test_enhanced_matcher():
                         best = ", ".join([f"{d['day']} {d['day_percentage']}%" for d in rec['best_days']])
                         print(f"     Best days: {best}")
             
-            # Test schedule matching between two specific users (if supported)
-            print(f"\n=== Match (058 vs 052) ===")
-            # Allow custom USNs for testing; fall back to first two users
-            specific_user1 = '1KG22AD058'
-            specific_user2 = '1KG22AD052'
-            user1 = specific_user1 if specific_user1 in all_users else all_users[0]
-            user2 = specific_user2 if specific_user2 in all_users else (all_users[1] if len(all_users) > 1 else all_users[0])
-            if hasattr(matcher, 'calculate_schedule_match_percentage'):
-                match_result = matcher.calculate_schedule_match_percentage(user1, user2)
-                print(f"Schedule match between {user1} and {user2}:")
-                if isinstance(match_result, dict) and 'error' in match_result:
-                    print(f"  Error: {match_result['error']}")
+            # Test schedule matching between first two users
+            if len(all_users) >= 2:
+                print(f"\n=== Schedule Match Test ===")
+                user1 = all_users[0]
+                user2 = all_users[1]
+                if hasattr(matcher, 'calculate_schedule_match_percentage'):
+                    match_result = matcher.calculate_schedule_match_percentage(user1, user2)
+                    print(f"Schedule match between {user1} and {user2}:")
+                    if isinstance(match_result, dict) and 'error' in match_result:
+                        print(f"  Error: {match_result['error']}")
+                    else:
+                        # Pretty print
+                        print(matcher.format_schedule_match(match_result))
                 else:
-                    # Pretty print
-                    print(matcher.format_schedule_match(match_result))
-            else:
-                print("Schedule match method not available - skipping")
+                    print("Schedule match method not available - skipping")
             
-            # Test team meeting slots
+            # Test optimal team formation
             if len(all_users) >= 3:
-                print(f"\n=== Team Slots ===")
-                team_ids = all_users[:3]
+                print(f"\n=== Optimal Teams ===")
+                optimal_result = matcher.find_optimal_teams(
+                    team_size=3,
+                    preferred_days=['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+                    min_team_score=15.0,
+                    max_teams=3
+                )
+                
+                if 'error' in optimal_result:
+                    print(f"Error: {optimal_result['error']}")
+                else:
+                    print(f"Found {optimal_result['teams_found']} optimal teams from {optimal_result['total_combinations_evaluated']} combinations")
+                    
+                    for i, team_data in enumerate(optimal_result['top_teams'][:2]):
+                        team_info = team_data['team_info']
+                        meeting_slots = team_data['meeting_slots']
+                        score = team_info['score']
+                        
+                        print(f"\nTeam {i+1}: {', '.join(team_info['team_names'])}")
+                        print(f"  Compatibility Score: {score['overall_score']}")
+                        print(f"  Avg Pairwise Match: {score['avg_pairwise_score']}%")
+                        
+                        if 'statistics' in meeting_slots:
+                            stats = meeting_slots['statistics']
+                            print(f"  Meeting Slots: Perfect={stats['total_perfect_slots']}, Good={stats['total_good_slots']}, Backup={stats['total_backup_slots']}")
+                            print(f"  Success Rate: {stats['success_rate']}%")
+                            print(f"  Recommendation: {stats['recommendation']}")
+                            
+                            # Show fallback recommendations
+                            if 'fallback_recommendations' in meeting_slots:
+                                fallback = meeting_slots['fallback_recommendations']
+                                if fallback['alternative_strategies']:
+                                    print("  Alternative strategies:")
+                                    for strategy in fallback['alternative_strategies'][:2]:
+                                        print(f"    - {strategy['strategy']}: {strategy['description']}")
+            
+            # Test team meeting slots for a specific team
+            if len(all_users) >= 3:
+                print(f"\n=== Team Slots (Specific Team) ===")
+                # Use the first 3 users from the loaded profiles to ensure they exist
+                team_ids = list(user_profiles.keys())[:3]
                 
                 meeting_result = matcher.find_team_meeting_slots(
                     team_member_ids=team_ids,
@@ -1461,6 +1701,14 @@ def test_enhanced_matcher():
                         print("Perfect meeting times:")
                         for slot in meeting_result['perfect_slots'][:3]:
                             print(f"  {slot['day']} {slot['time_slot']} - {slot['availability_percentage']}% available")
+                    
+                    # Show fallback recommendations
+                    if 'fallback_recommendations' in meeting_result:
+                        fallback = meeting_result['fallback_recommendations']
+                        if fallback['alternative_strategies']:
+                            print("Alternative strategies:")
+                            for strategy in fallback['alternative_strategies'][:2]:
+                                print(f"  - {strategy['strategy']}: {strategy['description']}")
             
             # Test search functionality - using correct method names from your class
             print(f"\n=== Testing User Search ===")
@@ -1519,20 +1767,403 @@ def create_matcher_from_secrets(db_type: str = 'supabase') -> EnhancedWebSchedul
         print("Please ensure secrets.py is properly configured")
         return None
 
+
+def interactive_teammate_finder():
+    """
+    Interactive CLI for finding teammates based on schedule compatibility.
+    Allows user to input their USN and desired team size, then finds best matches.
+    """
+    print("\n" + "="*60)
+    print("   SCHOLARX - Interactive Teammate Finder")
+    print("="*60)
+    
+    # Initialize matcher
+    try:
+        config = DatabaseConfig.create_config_from_secrets('supabase')
+        matcher = EnhancedWebScheduleMatcher(config)
+    except ValueError as e:
+        print(f"\n[ERROR] {e}")
+        print("Please create secrets.py from secrets.example.py and configure it.")
+        return
+    
+    if not matcher.connect_to_database():
+        print("\n[ERROR] Failed to connect to database")
+        return
+    
+    try:
+        # Load all available users
+        print("\n[*] Loading user database...")
+        all_users = matcher.load_all_users()
+        
+        if not all_users:
+            print("[ERROR] No users found in database")
+            return
+        
+        print(f"[OK] Found {len(all_users)} users in database\n")
+        
+        # Get user's USN
+        while True:
+            user_usn = input("Enter your USN (e.g., 1KG24CB009): ").strip().upper()
+            
+            if not user_usn:
+                print("[ERROR] USN cannot be empty. Please try again.\n")
+                continue
+            
+            # Normalize and validate
+            normalized_usn = matcher.normalize_usn(user_usn)
+            
+            if not matcher.is_valid_usn(normalized_usn):
+                print(f"[ERROR] Invalid USN format: {user_usn}")
+                print("   Expected format: 1KG24CB009 (1 + KG + 2-digit year + 2-letter dept + 3-digit number)\n")
+                continue
+            
+            # Check if user exists
+            if normalized_usn not in all_users:
+                print(f"[ERROR] USN {normalized_usn} not found in database")
+                print(f"   Available USNs (first 10): {', '.join(all_users[:10])}...\n")
+                retry = input("Would you like to try another USN? (y/n): ").strip().lower()
+                if retry != 'y':
+                    return
+                continue
+            
+            user_usn = normalized_usn
+            break
+        
+        # Load user profile
+        print(f"\n[*] Loading profile for {user_usn}...")
+        user_profile = matcher.get_user_profile(user_usn)
+        
+        if not user_profile:
+            print(f"[ERROR] Could not load profile for {user_usn}")
+            return
+        
+        print(f"\n[USER PROFILE]:")
+        print(f"   Name: {user_profile['name']}")
+        print(f"   Department: {user_profile['department']}")
+        print(f"   Year: {user_profile['year']}")
+        print(f"   Available Time Slots: {user_profile['total_available_slots']}")
+        print(f"   Skills: {len(user_profile['skills'])} skills")
+        
+        # Check if user has any availability
+        if user_profile['total_available_slots'] == 0:
+            print("\n[WARNING] You have 0 available time slots in your profile!")
+            print("   This will make it very difficult to find matching teammates.")
+            print("\n[TIP] Recommendation: Please add your available time slots to your profile first.")
+            print("   You can still continue, but matches will be limited.\n")
+            
+            cont = input("Continue anyway? (y/n): ").strip().lower()
+            if cont != 'y':
+                return
+        
+        # Get desired team size
+        print("\n" + "-"*60)
+        while True:
+            try:
+                team_size_input = input("How many teammates do you want? (1-10): ").strip()
+                team_size = int(team_size_input)
+                
+                if team_size < 1:
+                    print("[ERROR] Team size must be at least 1\n")
+                    continue
+                elif team_size > 10:
+                    print("[ERROR] Team size cannot exceed 10\n")
+                    continue
+                elif team_size >= len(all_users):
+                    print(f"[ERROR] Not enough users. Maximum team size: {len(all_users) - 1}\n")
+                    continue
+                
+                break
+            except ValueError:
+                print("[ERROR] Please enter a valid number\n")
+        
+        total_team_size = team_size + 1  # Including the user
+        print(f"\n[*] Searching for {team_size} teammate(s) (total team size: {total_team_size})...")
+        
+        # Get candidate users (exclude the user themselves)
+        candidate_users = [u for u in all_users if u != user_usn]
+        
+        # Get recommendations
+        print(f"   Analyzing {len(candidate_users)} potential candidates...\n")
+        
+        recommendations = matcher.get_profile_recommendations(
+            user_id=user_usn,
+            candidate_ids=candidate_users,
+            preferred_days=None,  # Use all days
+            min_match_threshold=0.0  # Include all matches, even 0%
+        )
+        
+        if not recommendations:
+            print("[ERROR] No recommendations found")
+            return
+        
+        # Filter and display results
+        print("\n" + "="*60)
+        print("   MATCHING RESULTS")
+        print("="*60)
+        
+        # Separate into categories
+        excellent_matches = [r for r in recommendations if r['schedule_match']['match_percentage'] >= 30]
+        good_matches = [r for r in recommendations if 10 <= r['schedule_match']['match_percentage'] < 30]
+        fair_matches = [r for r in recommendations if 1 <= r['schedule_match']['match_percentage'] < 10]
+        no_matches = [r for r in recommendations if r['schedule_match']['match_percentage'] == 0]
+        
+        # Display excellent matches
+        if excellent_matches:
+            print(f"\n[EXCELLENT MATCHES] (>=30% compatibility): {len(excellent_matches)} found")
+            print("-" * 60)
+            for i, rec in enumerate(excellent_matches[:team_size], 1):
+                _display_match_result(rec, i)
+        
+        # Display good matches
+        if good_matches:
+            print(f"\n[GOOD MATCHES] (10-29% compatibility): {len(good_matches)} found")
+            print("-" * 60)
+            display_count = min(team_size - len(excellent_matches), len(good_matches))
+            for i, rec in enumerate(good_matches[:display_count], len(excellent_matches) + 1):
+                _display_match_result(rec, i)
+        
+        # Display fair matches
+        if fair_matches:
+            print(f"\n[FAIR MATCHES] (1-9% compatibility): {len(fair_matches)} found")
+            print("-" * 60)
+            displayed_so_far = len(excellent_matches) + min(len(good_matches), team_size - len(excellent_matches))
+            display_count = min(team_size - displayed_so_far, len(fair_matches))
+            for i, rec in enumerate(fair_matches[:display_count], displayed_so_far + 1):
+                _display_match_result(rec, i)
+        
+        # Handle no matches scenario
+        if no_matches and not (excellent_matches or good_matches or fair_matches):
+            print(f"\n[NO MATCHES] 0% compatibility with all {len(no_matches)} candidates")
+            print("-" * 60)
+            print("\n[RECOMMENDATIONS]:")
+            print("\n1. Add More Time Slots:")
+            print("   Your current available slots: {}".format(user_profile['total_available_slots']))
+            print("   Try adding more flexible time slots to your profile.")
+            
+            print("\n2. Analyze Common Patterns:")
+            print("   Let's check when other users are typically available...\n")
+            
+            # Analyze when other users are available
+            _analyze_common_availability(matcher, candidate_users[:20], user_usn)
+            
+            print("\n3. Consider Asynchronous Collaboration:")
+            print("   For projects/study groups, you might not need 100% schedule overlap.")
+            print("   Consider using collaboration tools for asynchronous work.")
+            
+            # Still show some candidates based on other criteria
+            print("\n4. Alternative Candidates (based on profile similarity):")
+            print("-" * 60)
+            for i, rec in enumerate(no_matches[:team_size], 1):
+                print(f"\n{i}. {rec['name']} ({rec['user_id']})")
+                print(f"   Department: {rec['department']} | Year: {rec['year']}")
+                print(f"   Available Slots: {rec['total_available_slots']}")
+                print(f"   Schedule Match: 0% [NO MATCH]")
+                if rec['skills']:
+                    skills_str = ", ".join([s['skill_name'] for s in rec['skills'][:3]])
+                    print(f"   Skills: {skills_str}")
+        
+        # Optimal team formation if we have enough good matches
+        if len(excellent_matches) + len(good_matches) >= team_size:
+            print("\n" + "="*60)
+            print("   OPTIMAL TEAM FORMATION")
+            print("="*60)
+            
+            # Get top candidates
+            top_candidates = (excellent_matches + good_matches)[:min(team_size * 2, 20)]
+            candidate_ids = [r['user_id'] for r in top_candidates]
+            
+            print(f"\n[*] Analyzing {len(candidate_ids)} top candidates for optimal team of {total_team_size}...")
+            
+            # Find optimal team including the user
+            team_with_user = [user_usn] + candidate_ids
+            
+            # Calculate best team combination
+            best_team = _find_best_team_combination(
+                matcher, 
+                user_usn, 
+                candidate_ids, 
+                team_size
+            )
+            
+            if best_team:
+                print(f"\n[RECOMMENDED TEAM]:")
+                print("-" * 60)
+                for i, member_id in enumerate(best_team, 1):
+                    if member_id == user_usn:
+                        print(f"{i}. {user_profile['name']} ({member_id}) [YOU]")
+                    else:
+                        member_rec = next((r for r in recommendations if r['user_id'] == member_id), None)
+                        if member_rec:
+                            match_pct = member_rec['schedule_match']['match_percentage']
+                            print(f"{i}. {member_rec['name']} ({member_id}) - {match_pct}% match with you")
+                
+                # Find common meeting slots for the team
+                print(f"\n[*] Finding common meeting slots for the team...")
+                meeting_slots = matcher.find_team_meeting_slots(
+                    team_member_ids=best_team,
+                    preferred_days=['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+                    min_duration_hours=2
+                )
+                
+                if 'error' not in meeting_slots:
+                    stats = meeting_slots['statistics']
+                    print(f"\n   Perfect Slots (100% team available): {stats['total_perfect_slots']}")
+                    print(f"   Good Slots (≥80% team available): {stats['total_good_slots']}")
+                    print(f"   Success Rate: {stats['success_rate']}%")
+                    
+                    if meeting_slots['perfect_slots']:
+                        print(f"\n   [BEST MEETING TIMES]:")
+                        for slot in meeting_slots['perfect_slots'][:5]:
+                            print(f"      - {slot['day']} {slot['time_slot']}")
+                    elif meeting_slots['good_slots']:
+                        print(f"\n   [GOOD MEETING TIMES]:")
+                        for slot in meeting_slots['good_slots'][:5]:
+                            print(f"      - {slot['day']} {slot['time_slot']} ({slot['availability_percentage']}% available)")
+        
+        print("\n" + "="*60)
+        print("   Search Complete!")
+        print("="*60 + "\n")
+        
+    except KeyboardInterrupt:
+        print("\n\n[CANCELLED] Search cancelled by user")
+    except Exception as e:
+        print(f"\n[ERROR] {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        if hasattr(matcher, 'db') and matcher.db:
+            matcher.db.close()
+
+
+def _display_match_result(rec: Dict, index: int):
+    """Helper function to display a match result"""
+    match_pct = rec['schedule_match']['match_percentage']
+    common_slots = rec['schedule_match']['common_slots']
+    
+    print(f"\n{index}. {rec['name']} ({rec['user_id']})")
+    print(f"   Department: {rec['department']} | Year: {rec['year']}")
+    print(f"   Schedule Match: {match_pct}% | Common Slots: {common_slots}")
+    print(f"   Available Slots: {rec['total_available_slots']}")
+    
+    if rec.get('best_days'):
+        best_days_str = ", ".join([f"{d['day']} ({d['day_percentage']}%)" for d in rec['best_days'][:3]])
+        print(f"   Best Days: {best_days_str}")
+    
+    if rec['skills']:
+        skills_str = ", ".join([s['skill_name'] for s in rec['skills'][:3]])
+        print(f"   Skills: {skills_str}")
+
+
+def _analyze_common_availability(matcher, candidate_ids: List[str], user_usn: str):
+    """Analyze when most candidates are available to provide recommendations"""
+    try:
+        users_data = matcher.load_user_profiles(candidate_ids[:20])
+        
+        # Count availability by day and time slot
+        day_slot_counts = {}
+        for day in matcher.days:
+            day_slot_counts[day] = {}
+            for slot in matcher.time_slots:
+                day_slot_counts[day][slot] = 0
+        
+        # Count how many users are available for each slot
+        for user_id, user_data in users_data.items():
+            for day in matcher.days:
+                for slot in user_data['schedule'][day]['available']:
+                    if slot in day_slot_counts[day]:
+                        day_slot_counts[day][slot] += 1
+        
+        # Find most popular slots
+        popular_slots = []
+        for day in matcher.days:
+            for slot, count in day_slot_counts[day].items():
+                if count > 0:
+                    popular_slots.append({
+                        'day': day,
+                        'slot': slot,
+                        'count': count,
+                        'percentage': (count / len(users_data)) * 100
+                    })
+        
+        # Sort by popularity
+        popular_slots.sort(key=lambda x: x['count'], reverse=True)
+        
+        if popular_slots:
+            print("   Most popular time slots among other users:")
+            for i, slot_info in enumerate(popular_slots[:5], 1):
+                print(f"   {i}. {slot_info['day'].capitalize()} {slot_info['slot'][0]}-{slot_info['slot'][1]} ")
+                print(f"      ({slot_info['count']} users, {slot_info['percentage']:.1f}% of analyzed users)")
+            
+            print("\n   [TIP] Consider adding these time slots to your profile for better matches!")
+        else:
+            print("   No common availability patterns found.")
+    
+    except Exception as e:
+        print(f"   Could not analyze availability patterns: {e}")
+
+
+def _find_best_team_combination(matcher, user_usn: str, candidate_ids: List[str], team_size: int) -> Optional[List[str]]:
+    """Find the best team combination including the user"""
+    try:
+        from itertools import combinations
+        
+        # Limit candidates to avoid performance issues
+        candidates = candidate_ids[:min(15, len(candidate_ids))]
+        
+        if len(candidates) < team_size:
+            return [user_usn] + candidates
+        
+        best_team = None
+        best_score = -1
+        
+        # Try different combinations
+        for combo in combinations(candidates, team_size):
+            team = [user_usn] + list(combo)
+            
+            # Calculate average pairwise match
+            total_match = 0
+            pair_count = 0
+            
+            for i in range(len(team)):
+                for j in range(i + 1, len(team)):
+                    match_result = matcher.calculate_schedule_match_percentage(team[i], team[j])
+                    if 'error' not in match_result:
+                        total_match += match_result['match_percentage']
+                        pair_count += 1
+            
+            if pair_count > 0:
+                avg_match = total_match / pair_count
+                if avg_match > best_score:
+                    best_score = avg_match
+                    best_team = team
+        
+        return best_team
+    
+    except Exception as e:
+        print(f"   Error finding optimal team: {e}")
+        return [user_usn] + candidate_ids[:team_size]
+
+
 if __name__ == "__main__":
     import argparse
     # Simple CLI interface
     parser = argparse.ArgumentParser(description="SCHOLARX schedule tools")
     parser.add_argument('--match', nargs=2, metavar=('USER1_USN','USER2_USN'), help='Match two users by USN')
     parser.add_argument('--team', nargs='+', metavar=('USN'), help='Find team meeting slots for USNs')
+    parser.add_argument('--optimal-teams', type=int, metavar='SIZE', help='Find optimal teams of specified size')
+    parser.add_argument('--test', action='store_true', help='Run comprehensive test suite')
     parser.add_argument('--days', nargs='*', default=None, help='Preferred days (e.g., monday tuesday ...)')
     parser.add_argument('--min-threshold', type=float, default=10.0, help='Minimum match threshold for recommendations')
+    parser.add_argument('--min-team-score', type=float, default=20.0, help='Minimum team compatibility score')
     parser.add_argument('--limit', type=int, default=10, help='Limit for recommendations or output lists')
     args = parser.parse_args()
 
-    # If no CLI flags, run the comprehensive test
-    if not args.match and not args.team:
+    # If --test flag is provided, run the comprehensive test
+    if args.test:
         test_enhanced_matcher()
+    # If no CLI flags, run the interactive teammate finder
+    elif not args.match and not args.team and not args.optimal_teams:
+        interactive_teammate_finder()
     else:
         # Build config and matcher
         try:
@@ -1577,5 +2208,54 @@ if __name__ == "__main__":
                         print("  Some perfect meeting times:")
                         for slot in meeting_result['perfect_slots'][:min(args.limit, 10)]:
                             print(f"    - {slot['day']} {slot['time_slot']} ({slot['availability_percentage']}% available)")
+                    elif meeting_result['good_slots']:
+                        print("  Some good meeting times:")
+                        for slot in meeting_result['good_slots'][:min(args.limit, 5)]:
+                            print(f"    - {slot['day']} {slot['time_slot']} ({slot['availability_percentage']}% available)")
+                    elif meeting_result['backup_slots']:
+                        print("  Some backup meeting times:")
+                        for slot in meeting_result['backup_slots'][:min(args.limit, 5)]:
+                            print(f"    - {slot['day']} {slot['time_slot']} ({slot['availability_percentage']}% available)")
+                    
+                    # Show fallback recommendations if available
+                    if 'fallback_recommendations' in meeting_result:
+                        fallback = meeting_result['fallback_recommendations']
+                        if fallback['alternative_strategies']:
+                            print("  Alternative strategies:")
+                            for strategy in fallback['alternative_strategies'][:3]:
+                                print(f"    - {strategy['strategy']}: {strategy['description']}")
+
+            if args.optimal_teams:
+                preferred_days = args.days if args.days else matcher.days
+                optimal_result = matcher.find_optimal_teams(
+                    team_size=args.optimal_teams,
+                    preferred_days=preferred_days,
+                    min_team_score=args.min_team_score,
+                    max_teams=args.limit
+                )
+                
+                if 'error' in optimal_result:
+                    print(f"Error: {optimal_result['error']}")
+                else:
+                    print(f"Optimal teams of size {args.optimal_teams}:")
+                    print(f"  Evaluated {optimal_result['total_combinations_evaluated']} combinations")
+                    print(f"  Found {optimal_result['teams_found']} qualifying teams")
+                    print()
+                    
+                    for i, team_data in enumerate(optimal_result['top_teams'][:args.limit]):
+                        team_info = team_data['team_info']
+                        meeting_slots = team_data['meeting_slots']
+                        score = team_info['score']
+                        
+                        print(f"  Team {i+1}: {', '.join(team_info['team_names'])}")
+                        print(f"    Compatibility Score: {score['overall_score']}")
+                        print(f"    Avg Pairwise Match: {score['avg_pairwise_score']}%")
+                        
+                        if 'statistics' in meeting_slots:
+                            stats = meeting_slots['statistics']
+                            print(f"    Meeting Slots: Perfect={stats['total_perfect_slots']}, Good={stats['total_good_slots']}, Backup={stats['total_backup_slots']}")
+                            print(f"    Success Rate: {stats['success_rate']}%")
+                            print(f"    Recommendation: {stats['recommendation']}")
+                        print()
         finally:
             matcher.close_connection()
