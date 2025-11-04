@@ -2144,6 +2144,248 @@ def _find_best_team_combination(matcher, user_usn: str, candidate_ids: List[str]
         return [user_usn] + candidate_ids[:team_size]
 
 
+def interactive_meeting_slot_finder():
+    """
+    Interactive CLI for finding meeting slots for a specific team.
+    User provides USNs of all team members, system finds common available slots.
+    """
+    print("\n" + "="*60)
+    print("   SCHOLARX - Team Meeting Slot Finder")
+    print("="*60)
+    
+    # Initialize matcher
+    try:
+        config = DatabaseConfig.create_config_from_secrets('supabase')
+        matcher = EnhancedWebScheduleMatcher(config)
+    except ValueError as e:
+        print(f"\n[ERROR] {e}")
+        print("Please create secrets.py from secrets.example.py and configure it.")
+        return
+    
+    if not matcher.connect_to_database():
+        print("\n[ERROR] Failed to connect to database")
+        return
+    
+    try:
+        # Load all available users for validation
+        print("\n[*] Loading user database...")
+        all_users = matcher.load_all_users()
+        
+        if not all_users:
+            print("[ERROR] No users found in database")
+            return
+        
+        print(f"[OK] Found {len(all_users)} users in database\n")
+        
+        # Get number of team members
+        print("-" * 60)
+        while True:
+            try:
+                team_size_input = input("How many team members (including yourself)? (2-10): ").strip()
+                team_size = int(team_size_input)
+                
+                if team_size < 2:
+                    print("[ERROR] Team must have at least 2 members\n")
+                    continue
+                elif team_size > 10:
+                    print("[ERROR] Team size cannot exceed 10\n")
+                    continue
+                
+                break
+            except ValueError:
+                print("[ERROR] Please enter a valid number\n")
+        
+        # Get USNs for all team members
+        print(f"\n[*] Please enter the USNs of all {team_size} team members")
+        print("    (Format: 1KG24CB009)")
+        print("-" * 60)
+        
+        team_usns = []
+        for i in range(team_size):
+            while True:
+                usn_input = input(f"Team member {i+1} USN: ").strip().upper()
+                
+                if not usn_input:
+                    print("[ERROR] USN cannot be empty. Please try again.\n")
+                    continue
+                
+                # Normalize and validate
+                normalized_usn = matcher.normalize_usn(usn_input)
+                
+                if not matcher.is_valid_usn(normalized_usn):
+                    print(f"[ERROR] Invalid USN format: {usn_input}")
+                    print("   Expected format: 1KG24CB009\n")
+                    continue
+                
+                # Check if user exists
+                if normalized_usn not in all_users:
+                    print(f"[ERROR] USN {normalized_usn} not found in database")
+                    print(f"   Available USNs (first 10): {', '.join(all_users[:10])}...\n")
+                    retry = input("Would you like to try another USN? (y/n): ").strip().lower()
+                    if retry != 'y':
+                        return
+                    continue
+                
+                # Check for duplicates
+                if normalized_usn in team_usns:
+                    print(f"[ERROR] USN {normalized_usn} already added to the team\n")
+                    continue
+                
+                team_usns.append(normalized_usn)
+                break
+        
+        # Load team member profiles
+        print(f"\n[*] Loading profiles for {len(team_usns)} team members...")
+        team_profiles = matcher.load_user_profiles(team_usns)
+        
+        if len(team_profiles) != len(team_usns):
+            missing = [usn for usn in team_usns if usn not in team_profiles]
+            print(f"[ERROR] Could not load profiles for: {', '.join(missing)}")
+            return
+        
+        # Display team information
+        print("\n" + "="*60)
+        print("   TEAM MEMBERS")
+        print("="*60)
+        for i, usn in enumerate(team_usns, 1):
+            profile = team_profiles[usn]
+            print(f"{i}. {profile['name']} ({usn})")
+            print(f"   Department: {profile['department']} | Year: {profile['year']}")
+            print(f"   Available Slots: {profile['total_available_slots']}")
+        
+        # Check if any member has zero availability
+        zero_availability = [usn for usn in team_usns if team_profiles[usn]['total_available_slots'] == 0]
+        if zero_availability:
+            print(f"\n[WARNING] The following members have 0 available time slots:")
+            for usn in zero_availability:
+                print(f"   - {team_profiles[usn]['name']} ({usn})")
+            print("   This will make it difficult to find common meeting times.\n")
+        
+        # Find meeting slots
+        print("\n" + "="*60)
+        print("   FINDING MEETING SLOTS")
+        print("="*60)
+        print(f"\n[*] Analyzing schedules for {len(team_usns)} team members...")
+        
+        meeting_result = matcher.find_team_meeting_slots(
+            team_member_ids=team_usns,
+            preferred_days=['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'],
+            min_duration_hours=2
+        )
+        
+        if 'error' in meeting_result:
+            print(f"[ERROR] {meeting_result['error']}")
+            return
+        
+        stats = meeting_result['statistics']
+        
+        # Display statistics
+        print(f"\n[STATISTICS]:")
+        print(f"   Perfect Slots (100% team available): {stats['total_perfect_slots']}")
+        print(f"   Good Slots (>=80% team available): {stats['total_good_slots']}")
+        print(f"   Backup Slots (>=50% team available): {stats['total_backup_slots']}")
+        print(f"   Success Rate: {stats['success_rate']}%")
+        print(f"   Recommendation: {stats['recommendation']}")
+        
+        # Organize slots by day
+        def organize_slots_by_day(slots):
+            """Organize slots by day of week in chronological order"""
+            day_order = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+            organized = {day: [] for day in day_order}
+            
+            for slot in slots:
+                day = slot['day']
+                organized[day].append(slot)
+            
+            # Sort slots within each day by start time
+            for day in day_order:
+                organized[day].sort(key=lambda x: x['start_time'])
+            
+            return organized
+        
+        # Display perfect slots
+        if meeting_result['perfect_slots']:
+            print("\n" + "="*60)
+            print("   PERFECT MEETING SLOTS (100% Team Available)")
+            print("="*60)
+            
+            organized_perfect = organize_slots_by_day(meeting_result['perfect_slots'])
+            
+            for day in ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']:
+                day_slots = organized_perfect[day]
+                if day_slots:
+                    print(f"\n{day}:")
+                    for slot in day_slots:
+                        print(f"   - {slot['time_slot']}")
+                        print(f"     All {slot['total_members']} members available")
+        
+        # Display good slots
+        if meeting_result['good_slots']:
+            print("\n" + "="*60)
+            print("   GOOD MEETING SLOTS (>=80% Team Available)")
+            print("="*60)
+            
+            organized_good = organize_slots_by_day(meeting_result['good_slots'])
+            
+            for day in ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']:
+                day_slots = organized_good[day]
+                if day_slots:
+                    print(f"\n{day}:")
+                    for slot in day_slots:
+                        print(f"   - {slot['time_slot']} ({slot['availability_percentage']}% available)")
+                        print(f"     {slot['available_members']}/{slot['total_members']} members available")
+                        if slot['unavailable_member_names']:
+                            print(f"     Unavailable: {', '.join(slot['unavailable_member_names'])}")
+        
+        # Display backup slots
+        if meeting_result['backup_slots']:
+            print("\n" + "="*60)
+            print("   BACKUP MEETING SLOTS (>=50% Team Available)")
+            print("="*60)
+            
+            organized_backup = organize_slots_by_day(meeting_result['backup_slots'])
+            
+            for day in ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']:
+                day_slots = organized_backup[day]
+                if day_slots:
+                    print(f"\n{day}:")
+                    for slot in day_slots:
+                        print(f"   - {slot['time_slot']} ({slot['availability_percentage']}% available)")
+                        print(f"     {slot['available_members']}/{slot['total_members']} members available")
+                        if slot['unavailable_member_names']:
+                            print(f"     Unavailable: {', '.join(slot['unavailable_member_names'])}")
+        
+        # No slots found - provide recommendations
+        if not (meeting_result['perfect_slots'] or meeting_result['good_slots'] or meeting_result['backup_slots']):
+            print("\n" + "="*60)
+            print("   NO COMMON MEETING SLOTS FOUND")
+            print("="*60)
+            print("\n[RECOMMENDATIONS]:")
+            print("\n1. Team members should add more flexible time slots to their profiles")
+            print("2. Consider asynchronous collaboration tools (Slack, Discord, etc.)")
+            print("3. Try splitting into smaller sub-teams for better scheduling")
+            
+            # Show individual availability
+            print("\n[INDIVIDUAL AVAILABILITY]:")
+            for usn in team_usns:
+                profile = team_profiles[usn]
+                print(f"   - {profile['name']}: {profile['total_available_slots']} slots")
+        
+        print("\n" + "="*60)
+        print("   Search Complete!")
+        print("="*60 + "\n")
+        
+    except KeyboardInterrupt:
+        print("\n\n[CANCELLED] Search cancelled by user")
+    except Exception as e:
+        print(f"\n[ERROR] {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        if hasattr(matcher, 'db') and matcher.db:
+            matcher.db.close()
+
+
 if __name__ == "__main__":
     import argparse
     # Simple CLI interface
@@ -2151,6 +2393,7 @@ if __name__ == "__main__":
     parser.add_argument('--match', nargs=2, metavar=('USER1_USN','USER2_USN'), help='Match two users by USN')
     parser.add_argument('--team', nargs='+', metavar=('USN'), help='Find team meeting slots for USNs')
     parser.add_argument('--optimal-teams', type=int, metavar='SIZE', help='Find optimal teams of specified size')
+    parser.add_argument('--find-slots', action='store_true', help='Interactive meeting slot finder for your team')
     parser.add_argument('--test', action='store_true', help='Run comprehensive test suite')
     parser.add_argument('--days', nargs='*', default=None, help='Preferred days (e.g., monday tuesday ...)')
     parser.add_argument('--min-threshold', type=float, default=10.0, help='Minimum match threshold for recommendations')
@@ -2161,9 +2404,12 @@ if __name__ == "__main__":
     # If --test flag is provided, run the comprehensive test
     if args.test:
         test_enhanced_matcher()
-    # If no CLI flags, run the interactive teammate finder
+    # If --find-slots flag is provided, run the interactive meeting slot finder
+    elif args.find_slots:
+        interactive_meeting_slot_finder()
+    # If no CLI flags, run the interactive meeting slot finder (new default)
     elif not args.match and not args.team and not args.optimal_teams:
-        interactive_teammate_finder()
+        interactive_meeting_slot_finder()
     else:
         # Build config and matcher
         try:
