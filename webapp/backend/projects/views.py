@@ -8,6 +8,15 @@ from django.core.mail import send_mail
 from django.conf import settings
 import logging
 from .models import Project, StudyGroup, TeamMember, StudyGroupMember, JoinRequest
+from django.contrib.auth import get_user_model
+from .meeting_slots import get_meeting_slots
+from accounts.models import UserAvailability
+from django.db.models import Q
+from collections import defaultdict
+from datetime import time, datetime, timedelta
+import logging
+
+logger = logging.getLogger(__name__)
 from django.db import IntegrityError
 from .serializers import ProjectSerializer, SkillSerializer, StudyGroupSerializer, JoinRequestSerializer
 from accounts.models import Skill, UserProfile
@@ -61,6 +70,36 @@ def get_user_projects(request):
     projects = Project.objects.filter(created_by=request.user)
     serializer = ProjectSerializer(projects, many=True, context={'request': request})
     return Response(serializer.data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_member_projects(request, user_id=None):
+    """Get projects where the user is a member (not necessarily the creator)"""
+    User = get_user_model()
+    try:
+        if user_id:
+            user = User.objects.get(id=user_id)
+        else:
+            user = request.user
+            
+        # Get project IDs where user is a team member
+        member_project_ids = TeamMember.objects.filter(
+            user__user=user
+        ).values_list('project_id', flat=True)
+        
+        # Get the projects
+        projects = Project.objects.filter(
+            Q(project_id__in=member_project_ids) |
+            Q(created_by=user)  # Include projects created by the user
+        ).distinct()
+        
+        serializer = ProjectSerializer(projects, many=True, context={'request': request})
+        return Response(serializer.data)
+    except User.DoesNotExist:
+        return Response(
+            {'error': 'User not found'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -120,6 +159,36 @@ def get_user_study_groups(request):
     groups = StudyGroup.objects.filter(created_by=request.user).order_by('-created_at')
     serializer = StudyGroupSerializer(groups, many=True, context={'request': request})
     return Response(serializer.data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_member_groups(request, user_id=None):
+    """Get study groups where the user is a member (not necessarily the creator)"""
+    User = get_user_model()
+    try:
+        if user_id:
+            user = User.objects.get(id=user_id)
+        else:
+            user = request.user
+            
+        # Get group IDs where user is a member
+        member_group_ids = StudyGroupMember.objects.filter(
+            user=user
+        ).values_list('group_id', flat=True)
+        
+        # Get the study groups
+        groups = StudyGroup.objects.filter(
+            Q(group_id__in=member_group_ids) |
+            Q(created_by=user)  # Include groups created by the user
+        ).distinct().order_by('-created_at')
+        
+        serializer = StudyGroupSerializer(groups, many=True, context={'request': request})
+        return Response(serializer.data)
+    except User.DoesNotExist:
+        return Response(
+            {'error': 'User not found'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

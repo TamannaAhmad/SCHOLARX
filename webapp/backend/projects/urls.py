@@ -8,6 +8,8 @@ urlpatterns = [
     path('create/', views.create_project, name='create_project'),
     path('draft/', views.save_draft_project, name='save_draft_project'),
     path('my-projects/', views.get_user_projects, name='get_user_projects'),
+    path('member-projects/', views.get_user_member_projects, name='get_user_member_projects'),
+    path('member-projects/<int:user_id>/', views.get_user_member_projects, name='get_specific_user_member_projects'),
     path('all/', views.get_all_projects, name='get_all_projects'),  # Must come before <int:project_id>/
     path('<int:project_id>/', views.get_project_details, name='get_project_details'),
     path('<int:project_id>/update/', views.update_project, name='update_project'),
@@ -16,6 +18,8 @@ urlpatterns = [
     # Study groups
     path('groups/create/', views.create_study_group, name='create_study_group'),
     path('groups/my-groups/', views.get_user_study_groups, name='get_user_study_groups'),
+    path('groups/member-groups/', views.get_user_member_groups, name='get_user_member_groups'),
+    path('groups/member-groups/<int:user_id>/', views.get_user_member_groups, name='get_specific_user_member_groups'),
     path('groups/all/', views.get_all_study_groups, name='get_all_study_groups'),  # Must come before groups/<int:group_id>/
     path('groups/<int:group_id>/', views.get_study_group_details, name='get_study_group_details'),
     path('groups/<int:group_id>/update/', views.update_study_group, name='update_study_group'),
@@ -27,4 +31,6 @@ urlpatterns = [
     path('messages/<int:request_id>/approve/', views.approve_request, name='approve_request'),
     path('messages/<int:request_id>/reject/', views.reject_request, name='reject_request'),
     path('messages/<int:message_id>/read/', views.mark_message_read, name='mark_message_read'),
+    # Meeting slots
+    path('<str:entity_type>/<int:entity_id>/meeting-slots/', views.get_meeting_slots, name='get_meeting_slots'),
 ]

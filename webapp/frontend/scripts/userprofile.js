@@ -1,5 +1,6 @@
 // User Profile JavaScript
-const API_BASE_URL = 'http://127.0.0.1:8000/api/auth';
+const API_AUTH_BASE_URL = 'http://127.0.0.1:8000/api/auth';
+const API_BASE_URL = 'http://127.0.0.1:8000/api';
 let currentUserData = null;
 let isOwnProfile = true;
 let availableSkills = []; // Store available skills from database
@@ -41,6 +42,9 @@ function getUrlParameter(name) {
 // Initialize the page when DOM is loaded
 document.addEventListener('DOMContentLoaded', async function() {
     try {
+        // Initialize event listeners first
+        setupEventListeners();
+        
         // Check if user is logged in
         const token = localStorage.getItem('authToken');
         if (!token) {
@@ -55,12 +59,136 @@ document.addEventListener('DOMContentLoaded', async function() {
         } else {
             await fetchCurrentUserProfile();
         }
-        setupEventListeners();
+        
+        // Load projects and study groups
+        await loadUserProjectsAndGroups();
     } catch (error) {
         console.error('Error initializing profile:', error);
         showError('Failed to load profile. Please try again.');
     }
 });
+
+// Load projects and study groups for the current user
+async function loadUserProjectsAndGroups() {
+    try {
+        showLoading(true);
+        const token = localStorage.getItem('authToken');
+        
+        // Determine if we're viewing another user's profile
+        const usn = getUrlParameter('usn');
+        let userId = null;
+        
+        if (usn && currentUserData && currentUserData.usn !== usn) {
+            // If viewing another user's profile, we need to get their user ID
+            const userResponse = await fetch(`${API_AUTH_BASE_URL}/users/?usn=${encodeURIComponent(usn)}`, {
+                headers: {
+                    'Authorization': `Token ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include'
+            });
+            
+            if (userResponse.ok) {
+                const users = await userResponse.json();
+                if (users.length > 0) {
+                    userId = users[0].id;
+                }
+            }
+        }
+        
+        // Fetch projects where user is a member
+        const projectsUrl = userId 
+            ? `${API_BASE_URL}/projects/member-projects/${userId}/`
+            : `${API_BASE_URL}/projects/member-projects/`;
+            
+        const projectsResponse = await fetch(projectsUrl, {
+            headers: {
+                'Authorization': `Token ${token}`,
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include'
+        });
+        
+        if (projectsResponse.ok) {
+            const projects = await projectsResponse.json();
+            displayProjects(projects);
+        } else {
+            console.warn('Failed to fetch member projects');
+        }
+        
+        // Fetch study groups where user is a member
+        const groupsUrl = userId
+            ? `${API_BASE_URL}/projects/groups/member-groups/${userId}/`
+            : `${API_BASE_URL}/projects/groups/member-groups/`;
+            
+        const groupsResponse = await fetch(groupsUrl, {
+            headers: {
+                'Authorization': `Token ${token}`,
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include'
+        });
+        
+        if (groupsResponse.ok) {
+            const groups = await groupsResponse.json();
+            displayStudyGroups(groups);
+        } else {
+            console.warn('Failed to fetch member study groups');
+        }
+        
+    } catch (error) {
+        console.error('Error loading projects and groups:', error);
+    } finally {
+        showLoading(false);
+    }
+}
+
+// Display projects in the UI
+function displayProjects(projects) {
+    const projectsList = document.getElementById('projectsList');
+    if (!projectsList) return;
+    
+    if (!projects || projects.length === 0) {
+        projectsList.innerHTML = '<p class="no-items">No projects found</p>';
+        return;
+    }
+    
+    projectsList.innerHTML = projects.map(project => `
+        <div class="project-item">
+            <h3 class="project-title">${escapeHtml(project.title || 'Untitled Project')}</h3>
+            <a href="project-view.html?id=${project.project_id}" class="project-link">View Details</a>
+        </div>
+    `).join('');
+}
+
+// Display study groups in the UI
+function displayStudyGroups(groups) {
+    const groupsList = document.getElementById('studyGroupsList');
+    if (!groupsList) return;
+    
+    if (!groups || groups.length === 0) {
+        groupsList.innerHTML = '<p class="no-items">No study groups found</p>';
+        return;
+    }
+    
+    groupsList.innerHTML = groups.map(group => `
+        <div class="group-item">
+            <h3 class="group-name">${escapeHtml(group.name || 'Untitled Group')}</h3>
+            <a href="study-group-view.html?id=${group.group_id}" class="group-link">View Group</a>
+        </div>
+    `).join('');
+}
+
+// Helper function to escape HTML to prevent XSS
+function escapeHtml(unsafe) {
+    if (typeof unsafe !== 'string') return '';
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
 
 // Fetch current user's profile
 async function fetchCurrentUserProfile() {
@@ -73,7 +201,7 @@ async function fetchCurrentUserProfile() {
         }
 
         // Fetch current user's profile data
-        const profileResponse = await fetch(`${API_BASE_URL}/profile/`, {
+        const profileResponse = await fetch(`${API_AUTH_BASE_URL}/profile/`, {
             method: 'GET',
             headers: {
                 'Authorization': `Token ${token}`,
@@ -96,7 +224,7 @@ async function fetchCurrentUserProfile() {
         currentUserData = await profileResponse.json();
         
         // Fetch user skills
-        const skillsResponse = await fetch(`${API_BASE_URL}/user/skills/`, {
+        const skillsResponse = await fetch(`${API_AUTH_BASE_URL}/user/skills/`, {
             method: 'GET',
             headers: {
                 'Authorization': `Token ${token}`,
@@ -136,7 +264,7 @@ async function fetchUserProfile(usn) {
         const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
         
         // Always fetch fresh data for the requested user
-        const response = await fetch(`${API_BASE_URL}/profile/${usn}/`, {
+        const response = await fetch(`${API_AUTH_BASE_URL}/profile/${usn}/`, {
             method: 'GET',
             headers: {
                 'Authorization': `Token ${token}`,
@@ -353,14 +481,6 @@ function populateUserInfo() {
             }
         } else {
             element.textContent = displayText;
-        }
-    };
-    
-    // Helper function to safely set element visibility
-    const setElementVisibility = (id, isVisible) => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.style.display = isVisible ? 'block' : 'none';
         }
     };
     
@@ -684,105 +804,20 @@ function populateSchedule() {
             }
             .schedule-cell.available:hover {
                 background-color: #c3e6cb;
-            }
-        `;
+            }`;
         document.head.appendChild(style);
     }
 }
 
-// Populate projects list
+// Placeholder functions for projects and study groups
 function populateProjects() {
-    const projectsList = document.getElementById('projectsList');
-    if (!projectsList) return;
-    
-    // Clear existing content
-    projectsList.innerHTML = '';
-    
-    if (currentUserData.projects && Array.isArray(currentUserData.projects) && currentUserData.projects.length > 0) {
-        currentUserData.projects.forEach(project => {
-            if (!project) return;
-            
-            const projectItem = document.createElement('div');
-            projectItem.className = 'project-item';
-            
-            const projectName = document.createElement('h4');
-            projectName.textContent = project.name || 'Unnamed Project';
-            
-            if (project.description) {
-                const projectDesc = document.createElement('p');
-                projectDesc.textContent = project.description;
-                projectItem.appendChild(projectDesc);
-            }
-            
-            if (project.url) {
-                const projectLink = document.createElement('a');
-                projectLink.href = project.url;
-                projectLink.textContent = 'View Project';
-                projectLink.target = '_blank';
-                projectLink.className = 'project-link';
-                projectItem.appendChild(projectLink);
-            }
-            
-            projectItem.insertBefore(projectName, projectItem.firstChild);
-            projectsList.appendChild(projectItem);
-            
-            // Make project item interactive
-            projectItem.tabIndex = 0;
-            projectItem.setAttribute('role', 'button');
-            
-            // Add click handler for project items
-            projectItem.addEventListener('click', () => {
-                // Future: Navigate to project page
-                console.log('Project clicked:', project.name);
-            });
-            
-            // Add keyboard support
-            projectItem.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    projectItem.click();
-                }
-            });
-        });
-    } else {
-        const noProjects = document.createElement('p');
-        noProjects.textContent = 'No projects added yet.';
-        noProjects.className = 'no-data';
-        projectsList.appendChild(noProjects);
-    }
+    // This function is called but projects are loaded separately
+    // in loadUserProjectsAndGroups()
 }
 
-// Populate study groups list
 function populateStudyGroups() {
-    const groupsList = document.getElementById('studyGroupsList');
-    if (!groupsList) return;
-    
-    // Clear existing content
-    groupsList.innerHTML = '';
-    
-    if (currentUserData.study_groups && currentUserData.study_groups.length > 0) {
-        currentUserData.study_groups.forEach(group => {
-            const groupItem = document.createElement('div');
-            groupItem.className = 'group-item';
-            
-            const groupName = document.createElement('h4');
-            groupName.textContent = group.name;
-            
-            if (group.description) {
-                const groupDesc = document.createElement('p');
-                groupDesc.textContent = group.description;
-                groupItem.appendChild(groupDesc);image.png
-            }
-            
-            groupItem.appendChild(groupName);
-            groupsList.appendChild(groupItem);
-        });
-    } else {
-        const noGroups = document.createElement('p');
-        noGroups.textContent = 'Not part of any study groups yet.';
-        noGroups.className = 'no-data';
-        groupsList.appendChild(noGroups);
-    }
+    // This function is called but study groups are loaded separately
+    // in loadUserProjectsAndGroups()
 }
 
 // Save profile changes
@@ -907,30 +942,27 @@ async function saveProfileChanges() {
         const usn = getUrlParameter('usn') || currentUser.usn;
         
         // Update basic profile info
-        const [profileResponse] = await Promise.all([
-            // Update profile
-            fetch(`${API_BASE_URL}/profile/${usn}/`, {
-                method: 'PATCH',
-                headers: {
-                    'Authorization': `Token ${token}`,
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify(data),
-                credentials: 'include'
-            }),
-            
-            // Update skills if it's the user's own profile
-            usn === currentUser.usn ? updateUserSkills() : Promise.resolve(),
-            
-            // Update availability if it's the user's own profile
-            usn === currentUser.usn ? updateUserAvailability() : Promise.resolve()
-        ]);
+        const profileResponse = await fetch(`${API_BASE_URL}/profile/${usn}/`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Token ${token}`,
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(data),
+            credentials: 'include'
+        });
 
         if (!profileResponse.ok) {
             const errorData = await profileResponse.json().catch(() => ({}));
             console.error('Error response:', errorData);
             throw new Error(errorData.detail || 'Failed to update profile');
+        }
+
+        // Update skills and availability if it's the user's own profile
+        if (usn === currentUser.usn) {
+            await updateUserSkills();
+            await updateUserAvailability();
         }
 
         // Restore dropdowns back to text elements first (before refresh)
@@ -1275,7 +1307,7 @@ async function updateUserAvailability() {
                 
                 if (!response.ok) {
                     // Try to get the actual error message from the response
-                    let errorMessage = `Failed to create availability slot`;
+                    let errorMessage = 'Failed to create availability slot';
                     let errorData = null;
                     let errorText = '';
                     
@@ -1340,7 +1372,7 @@ async function updateUserAvailability() {
                     createdSlots.push(createdSlot);
                 }
             } catch (err) {
-                console.error(`Exception creating availability slot:`, err, formattedSlot);
+                console.error('Exception creating availability slot:', err, formattedSlot);
                 // Continue processing other slots
             }
         }
@@ -1354,7 +1386,7 @@ async function updateUserAvailability() {
             console.warn(`${failed} availability slot(s) failed to create (may be duplicates or validation errors)`);
             // Only show a warning if a significant portion failed
             if (failed > availability.length * 0.5) {
-                showError(`Warning: Some availability slots could not be saved. Please check your schedule.`);
+                showError('Warning: Some availability slots could not be saved. Please check your schedule.');
             }
         }
         
@@ -1387,6 +1419,7 @@ function showNotification(message) {
     const notification = document.createElement('div');
     notification.className = 'notification success';
     notification.textContent = message;
+    notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #48bb78; color: white; padding: 1rem; border-radius: 0.5rem; z-index: 10000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
     
     document.body.appendChild(notification);
     
@@ -2016,10 +2049,7 @@ function setupEventListeners() {
             editBtn.style.display = 'none';
         }
     }
-    
 }
-
-
 
 // Add ripple effect to buttons
 function createRipple(event) {
@@ -2055,6 +2085,3 @@ window.UserProfile = {
     populateProjects,
     populateStudyGroups
 };
-
-// Initialize event listeners when the script loads
-setupEventListeners();
