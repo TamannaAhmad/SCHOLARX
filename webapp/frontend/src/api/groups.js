@@ -18,12 +18,23 @@ async function fetchAPI(endpoint, options = {}) {
 
   let response;
   try {
+    console.log(`Making ${options.method || 'GET'} request to ${url}`, { options });
     response = await fetch(url, {
       ...options,
       headers,
       credentials: 'include',
     });
+    
+    console.log(`Response status: ${response.status} for ${url}`);
+    
+    // Log response headers for debugging
+    console.log('Response headers:');
+    for (const [key, value] of response.headers.entries()) {
+      console.log(`${key}: ${value}`);
+    }
+    
   } catch (networkError) {
+    console.error('Network error:', networkError);
     throw new Error('Unable to connect to server. Please check your internet connection.');
   }
 
@@ -34,12 +45,39 @@ async function fetchAPI(endpoint, options = {}) {
     throw new Error('Your session has expired. Please log in again.');
   }
 
-  const data = await response.json().catch(() => ({}));
+  // Clone the response so we can read it multiple times if needed
+  const responseClone = response.clone();
+  let data;
+  
+  try {
+    data = await response.json();
+    console.log('Response data:', data);
+  } catch (jsonError) {
+    console.error('Error parsing JSON response:', jsonError);
+    try {
+      // If JSON parsing fails, try to read as text
+      const text = await responseClone.text();
+      console.error('Raw response text:', text);
+      
+      // If the response is not JSON but has content, use it as the error message
+      if (text) {
+        throw new Error(text);
+      }
+      
+      throw new Error('Invalid response from server. Please try again later.');
+    } catch (textError) {
+      console.error('Error reading response as text:', textError);
+      throw new Error('Could not process server response. Please try again.');
+    }
+  }
+  
   if (!response.ok) {
     // Handle different error scenarios with specific messages
-    let errorMessage = 'Something went wrong';
+    let errorMessage = `Request failed with status ${response.status}: ${response.statusText}`;
     
     if (data) {
+      console.error('Error response data:', data);
+      
       if (data.detail) {
         errorMessage = data.detail;
       } else if (data.message) {
@@ -51,8 +89,17 @@ async function fetchAPI(endpoint, options = {}) {
       } else {
         // Extract field-specific errors
         const fieldErrors = Object.entries(data)
-          .filter(([key, value]) => Array.isArray(value) && value.length > 0)
-          .map(([key, value]) => `${key}: ${value[0]}`);
+          .filter(([key, value]) => {
+            // Handle both array and string error values
+            return (Array.isArray(value) && value.length > 0) || 
+                   (typeof value === 'string' && value.trim() !== '');
+          })
+          .map(([key, value]) => {
+            if (Array.isArray(value)) {
+              return `${key}: ${value[0]}`;
+            }
+            return `${key}: ${value}`;
+          });
         
         if (fieldErrors.length > 0) {
           errorMessage = fieldErrors.join(', ');
@@ -60,9 +107,13 @@ async function fetchAPI(endpoint, options = {}) {
       }
     }
     
-    console.error('API Error:', errorMessage);
-    throw new Error(errorMessage);
+    const error = new Error(errorMessage);
+    error.response = response;
+    error.data = data;
+    console.error('API Error:', errorMessage, { response, data });
+    throw error;
   }
+  
   return data;
 }
 
@@ -140,9 +191,18 @@ export const groupsAPI = {
     });
   },
   
-  async leaveGroup(groupId) {
+  async leaveGroup(groupId, message = '') {
+    const body = {};
+    if (message && message.trim() !== '') {
+      body.message = message.trim();
+    }
+    
     return fetchAPI(`/groups/${groupId}/leave/`, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: Object.keys(body).length > 0 ? JSON.stringify(body) : '{}',
     });
   },
 };

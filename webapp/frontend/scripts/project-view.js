@@ -170,7 +170,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Hide all buttons first
         if (findTeammatesBtn) findTeammatesBtn.style.display = 'none';
         if (findMeetingTimesBtn) findMeetingTimesBtn.style.display = 'none';
-        if (requestJoinBtn) requestJoinBtn.style.display = 'none';
+        if (requestJoinBtn) {
+            requestJoinBtn.style.display = 'none';
+            requestJoinBtn.disabled = false;
+            requestJoinBtn.style.opacity = '1';
+            requestJoinBtn.style.cursor = 'pointer';
+            requestJoinBtn.title = '';
+        }
         if (leaveProjectBtn) leaveProjectBtn.style.display = 'none';
         
         if (isOwner) {
@@ -195,7 +201,24 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             // Non-owner who is not a member sees "Request to Join Project" button
             if (requestJoinBtn) {
+                // Check if project team is full
+                const currentMembers = currentProject?.members?.length || 0;
+                const maxMembers = currentProject?.max_team_size || 0;
+                const isFull = maxMembers > 0 && currentMembers >= maxMembers;
+                
                 requestJoinBtn.style.display = 'inline-block';
+                
+                if (isFull) {
+                    requestJoinBtn.disabled = true;
+                    requestJoinBtn.style.opacity = '0.6';
+                    requestJoinBtn.style.cursor = 'not-allowed';
+                    requestJoinBtn.title = 'This project team has reached its maximum capacity';
+                } else {
+                    requestJoinBtn.disabled = false;
+                    requestJoinBtn.style.opacity = '1';
+                    requestJoinBtn.style.cursor = 'pointer';
+                    requestJoinBtn.title = '';
+                }
             }
         }
     }
@@ -424,6 +447,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const maxTeamSize = parseInt(maxTeamSizeInput.value);
             if (isNaN(maxTeamSize) || maxTeamSize < 1 || maxTeamSize > 10) {
                 throw new Error('Max team size must be between 1 and 10.');
+            }
+            
+            // Check if new max size is less than current number of members
+            const currentMemberCount = currentProject?.members?.length || 0;
+            if (maxTeamSize < currentMemberCount) {
+                throw new Error(`Cannot set max team size to ${maxTeamSize} because there are already ${currentMemberCount} members in the team.`);
             }
 
             // Ensure status is one of the select's current option values

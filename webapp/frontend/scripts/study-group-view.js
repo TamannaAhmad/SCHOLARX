@@ -107,7 +107,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Hide all buttons first
         if (findMembersBtn) findMembersBtn.style.display = 'none';
         if (findMeetingTimesBtn) findMeetingTimesBtn.style.display = 'none';
-        if (requestJoinBtn) requestJoinBtn.style.display = 'none';
+        if (requestJoinBtn) {
+            requestJoinBtn.style.display = 'none';
+            requestJoinBtn.disabled = false;
+            requestJoinBtn.style.opacity = '1';
+            requestJoinBtn.style.cursor = 'pointer';
+        }
         if (leaveGroupBtn) leaveGroupBtn.style.display = 'none';
         
         if (isOwner) {
@@ -132,7 +137,24 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             // Non-owner who is not a member sees "Request to Join Group" button
             if (requestJoinBtn) {
+                // Check if group is full
+                const currentMembers = currentGroup?.members?.length || 0;
+                const maxMembers = currentGroup?.max_size || 0;
+                const isFull = maxMembers > 0 && currentMembers >= maxMembers;
+                
                 requestJoinBtn.style.display = 'inline-block';
+                
+                if (isFull) {
+                    requestJoinBtn.disabled = true;
+                    requestJoinBtn.style.opacity = '0.6';
+                    requestJoinBtn.style.cursor = 'not-allowed';
+                    requestJoinBtn.title = 'This group has reached its maximum capacity';
+                } else {
+                    requestJoinBtn.disabled = false;
+                    requestJoinBtn.style.opacity = '1';
+                    requestJoinBtn.style.cursor = 'pointer';
+                    requestJoinBtn.title = '';
+                }
             }
         }
     }
@@ -324,6 +346,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isNaN(maxSize) || maxSize < 1 || maxSize > 10) {
                 throw new Error('Max group size must be between 1 and 10');
             }
+            
+            // Check if new max size is less than current number of members
+            const currentMemberCount = currentGroup?.members?.length || 0;
+            if (maxSize < currentMemberCount) {
+                throw new Error(`Cannot set max group size to ${maxSize} because there are already ${currentMemberCount} members in the group.`);
+            }
 
             const payload = {
                 name: nameInput.value.trim(),
@@ -384,25 +412,99 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Handle leave group
-    if (leaveGroupBtn) {
-        leaveGroupBtn.addEventListener('click', async (e) => {
-            e.preventDefault();
-            
-            // Confirm before leaving
-            if (!confirm('Are you sure you want to leave this study group?')) {
-                return;
-            }
-            
+    // Function to show leave group modal
+    function showLeaveGroupModal() {
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        `;
+
+        const modalContent = document.createElement('div');
+        modalContent.style.cssText = `
+            background: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        `;
+
+        const title = document.createElement('h3');
+        title.textContent = 'Leave Study Group';
+        title.style.marginTop = '0';
+        title.style.marginBottom = '1rem';
+        title.style.color = '#1f2937';
+
+        const messageLabel = document.createElement('label');
+        messageLabel.textContent = 'Leave a message (optional)';
+        messageLabel.style.display = 'block';
+        messageLabel.style.marginBottom = '0.5rem';
+        messageLabel.style.fontWeight = '500';
+        messageLabel.style.color = '#374151';
+
+        const textarea = document.createElement('textarea');
+        textarea.style.cssText = `
+            width: 100%;
+            min-height: 100px;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+            font-family: inherit;
+            resize: vertical;
+        `;
+        textarea.placeholder = 'Let the group owner know why you\'re leaving...';
+
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.display = 'flex';
+        buttonContainer.style.gap = '0.75rem';
+        buttonContainer.style.justifyContent = 'flex-end';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.style.cssText = `
+            padding: 0.5rem 1rem;
+            background-color: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-weight: 500;
+        `;
+        cancelBtn.onclick = () => document.body.removeChild(modal);
+
+        const leaveBtn = document.createElement('button');
+        leaveBtn.textContent = 'Leave Group';
+        leaveBtn.style.cssText = `
+            padding: 0.5rem 1rem;
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-weight: 500;
+        `;
+        leaveBtn.onclick = async () => {
             try {
-                hideError();
-                leaveGroupBtn.disabled = true;
-                leaveGroupBtn.textContent = 'Leaving...';
+                const message = textarea.value.trim();
+                leaveBtn.disabled = true;
+                leaveBtn.textContent = 'Leaving...';
                 
-                await groupsAPI.leaveGroup(groupId);
+                await groupsAPI.leaveGroup(groupId, message);
                 
                 // Show success and reload
                 showError('You have left the study group.', { type: 'info', duration: 3000 });
+                document.body.removeChild(modal);
+                
                 setTimeout(() => {
                     loadGroup(); // Reload to update membership status
                 }, 1000);
@@ -410,9 +512,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Error leaving group:', error);
                 const errorMsg = handleAPIError(error, 'Failed to leave the group. Please try again.');
                 showErrorMsg(errorMsg);
-                leaveGroupBtn.disabled = false;
-                leaveGroupBtn.textContent = 'Leave Group';
+                leaveBtn.disabled = false;
+                leaveBtn.textContent = 'Leave Group';
             }
+        };
+
+        buttonContainer.appendChild(cancelBtn);
+        buttonContainer.appendChild(leaveBtn);
+
+        modalContent.appendChild(title);
+        modalContent.appendChild(messageLabel);
+        modalContent.appendChild(textarea);
+        modalContent.appendChild(buttonContainer);
+        modal.appendChild(modalContent);
+        document.body.appendChild(modal);
+        
+        // Focus the textarea when modal opens
+        setTimeout(() => textarea.focus(), 100);
+    }
+
+    // Handle leave group
+    if (leaveGroupBtn) {
+        leaveGroupBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            showLeaveGroupModal();
         });
     }
 

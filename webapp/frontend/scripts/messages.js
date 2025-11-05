@@ -52,8 +52,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!requests || requests.length === 0) {
             messagesContainer.innerHTML = `
                 <div class="no-messages">
-                    <h3>No Join Requests</h3>
-                    <p>You haven't received any join requests yet.</p>
+                    <h3>No Incoming Messages</h3>
+                    <p>You don't have any incoming messages yet.</p>
                 </div>
             `;
             return;
@@ -141,8 +141,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!requests || requests.length === 0) {
             messagesContainer.innerHTML = `
                 <div class="no-messages">
-                    <h3>No Requests Sent</h3>
-                    <p>You haven't sent any join requests yet.</p>
+                    <h3>No Outgoing Messages</h3>
+                    <p>You don't have any outgoing messages yet.</p>
                 </div>
             `;
             return;

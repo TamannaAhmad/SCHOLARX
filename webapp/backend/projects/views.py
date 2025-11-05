@@ -327,6 +327,17 @@ def leave_project(request, project_id):
     if project.created_by == request.user:
         return Response({'detail': 'Project owners cannot leave their own project.'}, status=status.HTTP_400_BAD_REQUEST)
     
+    # Create notification for project owner before removing the member
+    requester_name = request.user.get_full_name() or request.user.email
+    JoinRequest.objects.create(
+        requester=project.created_by,  # Owner is the recipient of the notification
+        project=project,
+        request_type='project',
+        message=f"{requester_name} has left your project '{project.title}'",
+        status='approved',  # Using 'approved' status for leave notifications
+        is_read=False
+    )
+    
     # Remove from team members
     user_profile = UserProfile.objects.filter(user=request.user).first()
     if user_profile:
@@ -334,6 +345,17 @@ def leave_project(request, project_id):
         # Update current team size
         project.current_team_size = max(1, project.current_team_size - 1)
         project.save()
+    
+    # Send email notification to project owner
+    owner_email = getattr(project.created_by, 'email', None)
+    if owner_email:
+        msg_page_url = f"{getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:8000')}/messages.html"
+        subject = f"Member left your project: {project.title}"
+        body = (
+            f"Hello,\n\n{requester_name} has left your project '{project.title}'.\n\n"
+            f"View details: {msg_page_url}\n\n— ScholarX"
+        )
+        _safe_send_mail(subject, body, owner_email)
     
     return Response({'message': 'Successfully left the project'}, status=status.HTTP_200_OK)
 
@@ -410,8 +432,58 @@ def leave_group(request, group_id):
     if group.created_by == request.user:
         return Response({'detail': 'Study group owners cannot leave their own group.'}, status=status.HTTP_400_BAD_REQUEST)
     
+    # Get the member who is leaving
+    member = request.user
+    member_name = member.get_full_name() or member.email
+    
+    # Get the leave message if provided
+    leave_message = ''
+    try:
+        if request.content_type == 'application/json' and request.body:
+            try:
+                data = json.loads(request.body)
+                leave_message = data.get('message', '')
+            except json.JSONDecodeError:
+                pass  # Not JSON data
+        
+        # Also check request.data for form data
+        if not leave_message and hasattr(request, 'data') and request.data:
+            leave_message = request.data.get('message', '')
+    except Exception as e:
+        print(f"Error parsing request data: {e}")
+        return Response(
+            {'detail': 'Invalid request data'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Create notification for group owner
+    notification_message = f"{member_name} has left your study group '{group.name}'"
+    if leave_message and str(leave_message).strip():
+        notification_message += f": {leave_message.strip()}"
+    
+    JoinRequest.objects.create(
+        requester=member,  # The member who is leaving is the one creating the notification
+        recipient=group.created_by,  # Owner is the recipient of the notification
+        group=group,
+        request_type='study_group',
+        message=notification_message,
+        status='left',  # Using a new status 'left' for leave notifications
+        is_read=False
+    )
+    
     # Remove from group members
     StudyGroupMember.objects.filter(group=group, user=request.user).delete()
+    
+    # Send email notification to group owner
+    owner_email = getattr(group.created_by, 'email', None)
+    if owner_email:
+        msg_page_url = f"{getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:8000')}/messages.html"
+        subject = f"Member left your study group: {group.name}"
+        body = (
+            f"Hello,\n\n{notification_message}"
+            f"\n\nView details: {msg_page_url}\n\n— ScholarX"
+        )
+        _safe_send_mail(subject, body, owner_email)
     
     return Response({'message': 'Successfully left the study group'}, status=status.HTTP_200_OK)
 
