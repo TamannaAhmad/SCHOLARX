@@ -30,15 +30,19 @@ LOGGING = {
             'format': '{levelname} {asctime} {module} {message}',
             'style': '{',
         },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
     },
     'handlers': {
         'console': {
-            'level': 'INFO',
+            'level': 'DEBUG',  # Changed from INFO to DEBUG
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
         'file': {
-            'level': 'INFO',
+            'level': 'DEBUG',  # Changed from INFO to DEBUG
             'class': 'logging.FileHandler',
             'filename': os.path.join(BASE_DIR, 'django.log'),
             'formatter': 'verbose',
@@ -47,7 +51,13 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['console', 'file'],
-            'level': 'INFO',  
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'chatbot': {  # Specific logger for chatbot app
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',  # Set to DEBUG to see all logs
+            'propagate': False,
             'propagate': False, 
         },
         'django.utils.autoreload': {
@@ -207,7 +217,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'projects.apps.ProjectsConfig',
+    'projects',
     
     # Third-party apps
     'rest_framework',
@@ -216,7 +226,8 @@ INSTALLED_APPS = [
     'knox',
     
     # Local apps
-    'accounts.apps.AccountsConfig',
+    'accounts',
+    'chatbot',  # Chatbot application
 ]
 
 MIDDLEWARE = [
@@ -349,6 +360,9 @@ CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:5500',
     'http://127.0.0.1:8000'
 ]
+
+# Gemini AI Configuration
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')  # Add your Gemini API key to .env file
 
 # Email settings
 # Default to console backend for development; override via environment for real SMTP

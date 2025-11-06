@@ -156,17 +156,18 @@ class JoinRequest(models.Model):
     message = models.TextField(blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     is_read = models.BooleanField(default=False)
-    created_at = models.DateTimeField(default=timezone.now)
+    requested_time = models.DateTimeField(default=timezone.now, help_text='When the request was made')
+    created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     responded_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = 'join_requests'
-        unique_together = [('requester', 'project'), ('requester', 'group')]
         indexes = [
             models.Index(fields=['requester', 'status']),
             models.Index(fields=['project', 'status']),
             models.Index(fields=['group', 'status']),
+            models.Index(fields=['created_at']),  # New index for better querying by request time
         ]
 
     def clean(self):
@@ -185,3 +186,26 @@ class JoinRequest(models.Model):
     def save(self, *args, **kwargs):
         self.clean()
         super().save(*args, **kwargs)
+
+
+class LeaveRequest(models.Model):
+    """
+    Model to track when members leave study groups.
+    """
+    request_id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='leave_requests')
+    group = models.ForeignKey(StudyGroup, on_delete=models.CASCADE, related_name='leave_requests')
+    message = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    is_read = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'leave_requests'
+        verbose_name_plural = 'Leave Requests'
+        indexes = [
+            models.Index(fields=['user', 'group']),
+            models.Index(fields=['is_read']),
+        ]
+
+    def __str__(self):
+        return f"{self.user} left {self.group} on {self.created_at}"

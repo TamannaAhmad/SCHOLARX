@@ -7,10 +7,10 @@ from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
 import logging
-from .models import Project, StudyGroup, TeamMember, StudyGroupMember, JoinRequest
+from .models import Project, StudyGroup, TeamMember, StudyGroupMember, JoinRequest, LeaveRequest
 from django.contrib.auth import get_user_model
 from .meeting_slots import get_meeting_slots
-from accounts.models import UserAvailability
+from accounts.models import UserAvailability, Skill, UserProfile
 from django.db.models import Q
 from collections import defaultdict
 from datetime import time, datetime, timedelta
@@ -366,28 +366,40 @@ def join_group(request, group_id):
     """Request to join a study group"""
     group = get_object_or_404(StudyGroup, group_id=group_id)
     
-    # Check if user is already a member
-    if StudyGroupMember.objects.filter(group=group, user=request.user).exists():
-        return Response({'detail': 'You are already a member of this study group.'}, status=status.HTTP_400_BAD_REQUEST)
+    # Check if user is currently a member (not including if they've left)
+    is_currently_member = StudyGroupMember.objects.filter(group=group, user=request.user).exists()
+    if is_currently_member:
+        return Response(
+            {'detail': 'You are already a member of this study group.'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
     
     # Check if user is the owner
     if group.created_by == request.user:
         return Response({'detail': 'You cannot join your own study group.'}, status=status.HTTP_400_BAD_REQUEST)
     
-    # Check if there's already any request (unique regardless of status)
-    existing_any = JoinRequest.objects.filter(
+    # Check for existing pending requests
+    has_pending_request = JoinRequest.objects.filter(
         requester=request.user,
         group=group,
-    ).order_by('-created_at').first()
-    if existing_any:
-        msg = 'You already have a request for this study group.'
-        if existing_any.status == 'pending':
-            msg = 'You already have a pending request for this study group.'
-        elif existing_any.status == 'approved':
-            msg = 'You are already approved for this study group.'
-        elif existing_any.status == 'rejected':
-            msg = 'Your previous request was rejected.'
-        return Response({'detail': msg}, status=status.HTTP_400_BAD_REQUEST)
+        status='pending'
+    ).exists()
+    
+    if has_pending_request:
+        return Response(
+            {'detail': 'You already have a pending request for this study group.'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Check if user has left the group before
+    has_left_group = LeaveRequest.objects.filter(
+        user=request.user,
+        group=group
+    ).exists()
+    
+    # If user has left before, we'll allow them to rejoin by creating a new join request
+    
+    # If there are only rejected requests or no requests, allow creating a new one
     
     # Create join request
     message = request.data.get('message', '')
@@ -426,66 +438,103 @@ def join_group(request, group_id):
 @permission_classes([IsAuthenticated])
 def leave_group(request, group_id):
     """Leave a study group"""
-    group = get_object_or_404(StudyGroup, group_id=group_id)
-    
-    # Check if user is the owner
-    if group.created_by == request.user:
-        return Response({'detail': 'Study group owners cannot leave their own group.'}, status=status.HTTP_400_BAD_REQUEST)
-    
-    # Get the member who is leaving
-    member = request.user
-    member_name = member.get_full_name() or member.email
-    
-    # Get the leave message if provided
-    leave_message = ''
     try:
-        if request.content_type == 'application/json' and request.body:
-            try:
-                data = json.loads(request.body)
-                leave_message = data.get('message', '')
-            except json.JSONDecodeError:
-                pass  # Not JSON data
+        group = get_object_or_404(StudyGroup, group_id=group_id)
         
-        # Also check request.data for form data
-        if not leave_message and hasattr(request, 'data') and request.data:
-            leave_message = request.data.get('message', '')
-    except Exception as e:
-        print(f"Error parsing request data: {e}")
+        # Check if user is the owner
+        if group.created_by == request.user:
+            return Response(
+                {'detail': 'Study group owners cannot leave their own group. You can delete the group instead.'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if user is a member of the group
+        if not StudyGroupMember.objects.filter(group=group, user=request.user).exists():
+            return Response(
+                {'detail': 'You are not a member of this study group.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get the member who is leaving
+        member = request.user
+        member_name = member.get_full_name() or member.email
+        
+        # Get the leave message if provided
+        leave_message = ''
+        try:
+            # First try to get data from request.data (handled by DRF's JSONParser or FormParser)
+            if hasattr(request, 'data') and request.data:
+                if isinstance(request.data, dict):
+                    leave_message = request.data.get('message', '')
+            
+            # If no message found yet and content type is JSON, try parsing request.body directly
+            if not leave_message and request.content_type == 'application/json' and request.body:
+                try:
+                    body_str = request.body.decode('utf-8')
+                    if body_str.strip():  # Only parse if body is not empty
+                        try:
+                            data = json.loads(body_str)
+                            if isinstance(data, dict):
+                                leave_message = data.get('message', '')
+                        except json.JSONDecodeError as e:
+                            print(f"Warning: Could not parse request body as JSON: {e}")
+                except UnicodeDecodeError as e:
+                    print(f"Warning: Could not decode request body: {e}")
+        except Exception as e:
+            print(f"Error parsing request data: {e}")
+            # Don't fail the request if there's an error parsing the message
+            # Just continue with an empty message
+        
+        # Create the notification message
+        user_identifier = getattr(member, 'usn', '') or getattr(member, 'username', str(member))
+        notification_message = f"{member_name} ({user_identifier}) has left '{group.name}'"
+        if leave_message and str(leave_message).strip():
+            notification_message += f"\n\nMessage: {leave_message.strip()}"
+        
+        # Create a leave request record for tracking
+        leave_request = LeaveRequest.objects.create(
+            user=member,
+            group=group,
+            message=notification_message,
+            is_read=False
+        )
+        
+        # Create a notification in the message center
+        # Using JoinRequest with a special type to ensure it appears in the message center
+        JoinRequest.objects.create(
+            requester=member,
+            group=group,
+            request_type='member_left',
+            message=notification_message,
+            status='approved',  # Approved status to prevent showing in pending requests
+            is_read=False
+        )
+        
+        # Remove from group members
+        StudyGroupMember.objects.filter(group=group, user=request.user).delete()
+        
+        # Send email notification to group owner
+        owner_email = getattr(group.created_by, 'email', None)
+        if owner_email:
+            msg_page_url = f"{getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:8000')}/messages.html"
+            subject = f"Member left your study group: {group.name}"
+            body = (
+                f"Hello,\n\n{notification_message}"
+                f"\n\nView details: {msg_page_url}\n\n— ScholarX"
+            )
+            _safe_send_mail(subject, body, owner_email)
+        
         return Response(
-            {'detail': 'Invalid request data'}, 
-            status=status.HTTP_400_BAD_REQUEST
+            {'message': 'Successfully left the study group'}, 
+            status=status.HTTP_200_OK
         )
-    
-    # Create notification for group owner
-    notification_message = f"{member_name} has left your study group '{group.name}'"
-    if leave_message and str(leave_message).strip():
-        notification_message += f": {leave_message.strip()}"
-    
-    JoinRequest.objects.create(
-        requester=member,  # The member who is leaving is the one creating the notification
-        recipient=group.created_by,  # Owner is the recipient of the notification
-        group=group,
-        request_type='study_group',
-        message=notification_message,
-        status='left',  # Using a new status 'left' for leave notifications
-        is_read=False
-    )
-    
-    # Remove from group members
-    StudyGroupMember.objects.filter(group=group, user=request.user).delete()
-    
-    # Send email notification to group owner
-    owner_email = getattr(group.created_by, 'email', None)
-    if owner_email:
-        msg_page_url = f"{getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:8000')}/messages.html"
-        subject = f"Member left your study group: {group.name}"
-        body = (
-            f"Hello,\n\n{notification_message}"
-            f"\n\nView details: {msg_page_url}\n\n— ScholarX"
+        
+    except Exception as e:
+        logger.error(f"Error in leave_group: {str(e)}", exc_info=True)
+        return Response(
+            {'detail': 'An error occurred while processing your request. Please try again.'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-        _safe_send_mail(subject, body, owner_email)
-    
-    return Response({'message': 'Successfully left the study group'}, status=status.HTTP_200_OK)
 
 
 # Messages/Join Request Endpoints

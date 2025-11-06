@@ -16,6 +16,9 @@ urlpatterns = [
     # API URLs
     path('api/auth/', include('accounts.urls')),
     path('api/projects/', include('projects.urls')),
+    
+    # Chatbot API
+    path('api/chatbot/', include('chatbot.urls')),
 ]
 
 # Serve static and media files in development
