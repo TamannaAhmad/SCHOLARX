@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meeting Time Slots - ScholarX</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/userprofile.css">
+    <link rel="stylesheet" href="styles/meeting-slots.css">
+    <link rel="icon" href="favicon.ico">
+    <style>
+        .meeting-slots-container {
+            max-width: 1000px;
+            margin: 1.5rem auto;
+            padding: 2.5rem;
+            background: var(--card-background);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-large);
+            width: 90%;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-design">
+        <div class="gradient-overlay"></div>
+        <div class="geometric-pattern">
+            <div class="pattern-circle pattern-1"></div>
+            <div class="pattern-circle pattern-2"></div>
+            <div class="pattern-triangle pattern-3"></div>
+            <div class="pattern-square pattern-4"></div>
+        </div>
+    </div>
+
+    <header class="login-header">
+        <div class="logo-container">
+            <a href="index.html">
+                <h1 class="logo">ScholarX</h1>
+            </a>
+            <p class="tagline">AI-Driven Student<br> Collaboration</p>
+        </div>
+        <div class="profile-title-container">
+            <h1 class="profile-title" id="page-title">MEETING TIME SLOTS</h1>
+        </div>
+        <nav class="header-nav">
+            <a href="#" id="backBtn" class="profile-nav-btn">BACK TO GROUP</a>
+        </nav>
+    </header>
+
+    <div class="main-content">
+        <div class="meeting-slots-container">
+            <div id="error-container" class="error-message" style="display: none;"></div>
+            
+            <div id="loading" class="loading">
+                <p>Finding optimal meeting times for your group...</p>
+            </div>
+            
+            <div id="slots-container" style="display: none;">
+                <h2>Optimal Meeting Times</h2>
+                <p align="center">Based on member availability, here are the best times for your group to meet:</p>
+                
+                <div id="time-slots">
+                    <!-- Time slots will be inserted here by JavaScript -->
+                </div>
+            </div>
+            
+            <div id="no-slots" class="no-slots" style="display: none;">
+                <p>No optimal meeting times found. Please try again later or adjust your group's availability.</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="scripts/meeting-slots.js"></script>
+</body>
+</html>

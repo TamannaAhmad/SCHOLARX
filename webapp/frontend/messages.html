@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages - ScholarX</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/userprofile.css">
+    <link rel="icon" href="favicon.ico">
+</head>
+<body>
+    <div class="background-design">
+        <div class="gradient-overlay"></div>
+        <div class="geometric-pattern">
+            <div class="pattern-circle pattern-1"></div>
+            <div class="pattern-circle pattern-2"></div>
+            <div class="pattern-triangle pattern-3"></div>
+            <div class="pattern-square pattern-4"></div>
+        </div>
+    </div>
+
+    <header class="login-header">
+        <div class="logo-container">
+            <a href="index.html">
+                <h1 class="logo">ScholarX</h1>
+            </a>
+            <p class="tagline">AI-Driven Student<br> Collaboration</p>
+        </div>
+        <div class="profile-title-container">
+            <h1 class="profile-title">MESSAGES</h1>
+        </div>
+        <nav class="header-nav">
+            <a href="dashboard.html" class="profile-nav-btn" id="backBtn">BACK</a>
+        </nav>
+    </header>
+
+    <div class="main-content">
+        <div class="login-form-container">
+            <div id="error-container" class="error-message" style="display: none;"></div>
+
+            <div class="messages-tabs" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 2px solid #e5e7eb;">
+                <button class="tab-btn active" id="incoming-tab" style="padding: 0.75rem 1.5rem; background: none; border: none; border-bottom: 3px solid #2563EB; color: #2563EB; font-weight: 600; cursor: pointer;">
+                    Incoming
+                </button>
+                <button class="tab-btn" id="outgoing-tab" style="padding: 0.75rem 1.5rem; background: none; border: none; border-bottom: 3px solid transparent; color: #6b7280; font-weight: 600; cursor: pointer;">
+                    Outgoing
+                </button>
+            </div>
+
+            <div id="messages-container" style="min-height: 400px;">
+                <div class="loading-message" style="text-align: center; padding: 2rem; color: #6b7280;">
+                    Loading messages...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="scripts/messages.js?v=20250101-1"></script>
+    <style>
+        .message-item {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            transition: box-shadow 0.2s;
+        }
+        
+        .message-item:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .message-item.unread {
+            background: #eff6ff;
+            border-color: #2563EB;
+        }
+        
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+        
+        .message-info {
+            flex: 1;
+        }
+        
+        .message-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 0.25rem;
+        }
+        
+        .message-meta {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+        
+        .message-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-approved {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-rejected {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .message-body {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .message-text {
+            color: #4b5563;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+        
+        .message-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        
+        .btn-approve {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .btn-approve:hover {
+            background: #059669;
+        }
+        
+        .btn-reject {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .btn-reject:hover {
+            background: #dc2626;
+        }
+        
+        .btn-view-profile {
+            background: #2563EB;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-view-profile:hover {
+            background: #1d4ed8;
+        }
+        
+        .no-messages {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #6b7280;
+        }
+        
+        .no-messages h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+            color: #374151;
+        }
+        
+        .tab-btn.active {
+            border-bottom-color: #2563EB !important;
+            color: #2563EB !important;
+        }
+    </style>
+</body>
+</html>
+

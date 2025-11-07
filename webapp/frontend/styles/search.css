@@ -1,0 +1,199 @@
+.search-page {
+    width: min(100%, 1400px);
+    margin: 0 auto;
+    padding: var(--spacing-2xl) var(--spacing-xl);
+    gap: var(--spacing-xl);
+    align-items: stretch;
+}
+
+.search-bar-section {
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto var(--spacing-xl);
+    display: flex;
+    gap: var(--spacing-md);
+    align-items: center;
+    justify-content: center;
+}
+
+.search-input-wrapper {
+    flex: 1;
+}
+
+.search-input {
+    border-radius: var(--radius-md);
+    padding-left: var(--spacing-md);
+    padding-right: var(--spacing-md);
+}
+
+.search-content-layout {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+    max-width: 1000px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.search-results {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2xl);
+}
+
+.results-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+}
+
+.results-section {
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-light);
+    padding: var(--spacing-xl);
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+}
+
+.results-title {
+    font-family: var(--font-primary);
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-md);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.results-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+    flex: 1;
+}
+
+.result-card {
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-light);
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    overflow: hidden;
+}
+
+.result-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-medium);
+    border-color: rgba(37, 99, 235, 0.2);
+}
+
+.result-card-body {
+    padding: var(--spacing-lg);
+}
+
+.result-card-title {
+    margin: 0 0 var(--spacing-sm) 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.result-card-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+
+.result-card-link:hover {
+    color: var(--secondary-color);
+    text-decoration: underline;
+}
+
+.result-card-description {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin: 0 0 var(--spacing-md) 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.result-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-sm);
+}
+
+.meta-item {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    background: var(--card-background);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.meta-item:not(:last-child) {
+    margin-right: 4px;
+}
+
+.meta-item[data-field="status"] {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+/* Team/Group size styling - matches default meta item style */
+.meta-item[data-field="team_size"]::before,
+.meta-item[data-field="group_size"]::before {
+    content: '👥';
+    margin-right: 4px;
+    font-size: 1em;
+}
+
+.empty-state {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: var(--spacing-xl);
+    font-style: italic;
+}
+
+@media (max-width: 1024px) {
+    .search-content-layout {
+        gap: var(--spacing-lg);
+    }
+}
+
+@media (max-width: 768px) {
+    .search-page {
+        padding: var(--spacing-lg) var(--spacing-md) 0;
+    }
+
+    .search-bar-section {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+
+    .search-content-layout {
+        gap: var(--spacing-lg);
+    }
+
+    .results-section {
+        padding: var(--spacing-lg);
+        min-height: auto;
+    }
+
+    .results-list {
+        gap: var(--spacing-md);
+    }
+}
+
+

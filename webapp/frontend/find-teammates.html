@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find Project Teammates - ScholarX</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/userprofile.css">
+    <link rel="stylesheet" href="styles/find-teammates.css">
+</head>
+<body>
+    <div class="background-design">
+        <div class="gradient-overlay"></div>
+        <div class="geometric-pattern">
+            <div class="pattern-circle pattern-1"></div>
+            <div class="pattern-circle pattern-2"></div>
+            <div class="pattern-triangle pattern-3"></div>
+            <div class="pattern-square pattern-4"></div>
+        </div>
+    </div>
+
+    <header class="login-header">
+        <div class="logo-container">
+            <a href="index.html">
+                <h1 class="logo">ScholarX</h1>
+            </a>
+            <p class="tagline">AI-Driven Student<br> Collaboration</p>
+        </div>
+        <div class="profile-title-container">
+            <h1 class="profile-title" id="pageTitle">FIND TEAMMATES</h1>
+        </div>
+        <nav class="header-nav">
+            <a href="dashboard.html" class="profile-nav-btn" id="backBtn">BACK</a>
+        </nav>
+    </header>
+
+    <main class="main-content teammates-page">
+        <div id="error-container" class="error-message" style="display: none; margin-bottom: 1rem; max-width: 800px; margin-left: auto; margin-right: auto;"></div>
+        <section class="search-filter">
+            <div class="input-wrapper search-input-wrapper">
+                <input type="search" id="searchInput" class="form-input search-input" placeholder="Search" aria-label="Search teammates">
+            </div>
+            <!-- advanced filtering button-->
+            <div class="flex items-center space-x-4">
+                <button type="button" id="filterBtn" class="secondary-btn filter-btn">Filter</button>
+            </div>
+        </section>
+
+        <section class="profiles-section">
+            <div id="skillFilters" class="mb-6">
+                <!-- Skill filter buttons will be dynamically inserted here -->
+            </div>
+            <div id="profilesContainer" class="profiles-container" role="list"></div>
+            <p id="emptyState" class="empty-state" hidden>No teammates match your search yet. Adjust the filters to explore more profiles.</p>
+        </section>
+    </main>
+
+    <template id="profileCardTemplate">
+        <article class="profile-card" role="listitem">
+            <div class="profile-card-body">
+                <div class="profile-header">
+                    <h3 class="profile-name" data-field="name"></h3>
+                    <span class="match-badge" data-field="matchPercentage"></span>
+                </div>
+                <dl class="profile-details">
+                    <div class="detail-row">
+                        <dt>Skills:</dt>
+                        <dd data-field="skills"></dd>
+                    </div>
+                    <div class="detail-row availability-row">
+                        <dt>Availability:</dt>
+                        <dd data-field="availability"></dd>
+                    </div>
+                </dl>
+            </div>
+            <div class="profile-card-footer">
+                <div class="profile-card-actions">
+                    <button type="button" class="secondary-btn view-profile-btn" data-action="view-profile">View Profile</button>
+                    <button type="button" class="primary-btn add-btn" data-action="add" id="addButton">Add to Team</button>
+                </div>
+            </div>
+        </article>
+    </template>
+
+    <script type="module" src="scripts/find-teammates.js"></script>
+</body>
+</html>

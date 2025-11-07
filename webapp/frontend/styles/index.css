@@ -1,0 +1,27 @@
+/* Global CSS file for ScholarX Frontend */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap');
+
+/* Import main styles */
+@import url('./main.css');
+
+/* Import registration styles */
+@import url('./register.css');
+
+/* Import user profile styles */
+@import url('./userprofile.css');
+
+/* Import dashboard styles */
+@import url('./dashboard.css');
+
+:root {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  margin: auto;
+}
+
+/* Additional global styles can be added here */

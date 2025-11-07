@@ -1,0 +1,113 @@
+/* Skills Autocomplete Styles */
+.skills-autocomplete-wrapper {
+    position: relative;
+}
+
+.skills-input {
+    width: 100%;
+    padding-right: 2.5rem;
+}
+
+.skills-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: white;
+    border: 1px solid var(--border-color);
+    border-top: none;
+    z-index: 10;
+    box-shadow: var(--shadow-medium);
+    display: none;
+}
+
+.skill-suggestion {
+    padding: var(--spacing-sm);
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+}
+
+.skill-suggestion:hover {
+    background-color: var(--background-color);
+}
+
+.selected-skills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+    width: 100%;
+}
+
+.skill-tag {
+    display: flex;
+    align-items: center;
+    background-color: var(--primary-color);
+    color: white;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    margin-bottom: var(--spacing-sm);
+}
+
+.skill-tag span {
+    margin-right: var(--spacing-sm);
+}
+
+.skill-tag .remove-skill {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0;
+}
+
+.skill-tag .remove-skill:hover {
+    opacity: 0.8;
+}
+
+.input-note {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    margin-top: var(--spacing-xs);
+}
+
+/* Form Actions Styling */
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-xl);
+}
+
+.primary-btn.btn-secondary {
+    background-color: white;
+    color: var(--text-secondary);
+    border: 2px solid var(--border-color);
+    transition: all var(--transition-fast);
+}
+
+.primary-btn.btn-secondary:hover {
+    background-color: var(--background-color);
+    border-color: var(--text-secondary);
+}
+
+.primary-btn {
+    flex-grow: 1;
+    padding: var(--spacing-md) var(--spacing-lg);
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .primary-btn {
+        width: 100%;
+    }
+}

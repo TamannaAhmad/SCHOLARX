@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile - ScholarX</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/userprofile.css">
+</head>
+<body>
+    <div class="login-container">
+        <!-- Background Design -->
+        <div class="background-design">
+            <div class="gradient-overlay"></div>
+            <div class="geometric-pattern">
+                <div class="pattern-circle pattern-1"></div>
+                <div class="pattern-circle pattern-2"></div>
+                <div class="pattern-triangle pattern-3"></div>
+                <div class="pattern-square pattern-4"></div>
+            </div>
+        </div>
+
+        <!-- Profile Header -->
+        <header class="login-header">
+            <div class="logo-container">
+                <a href = "index.html">
+                    <h1 class="logo">ScholarX</h1>
+                </a>
+                <p class="tagline">AI-Driven Student<br> Collaboration</p>
+            </div>
+            <div class="profile-title-container">
+                <h1 class="profile-title">USER PROFILE</h1>
+            </div>
+            <nav class="header-nav">
+                <a href="dashboard.html" class="profile-nav-btn" id="backBtn">
+                    BACK
+                </a>
+            </nav>
+            <nav class="header-nav">
+                <a href="#" class="profile-nav-btn" id="editBtn">
+                    EDIT
+                </a>
+            </nav>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- User Information Section -->
+            <section class="login-form-container profile-section" id="userInfoSection">
+                <div class="info-field">
+                    <span class="info-label">Name</span>
+                    <div class="info-value" id="userName"></div>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">USN</span>
+                    <div class="info-value" id="userUSN"></div>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">Email</span>
+                    <div class="info-value" id="userEmail"></div>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">Department</span>
+                    <div class="info-value" id="userDepartment"></div>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">Year</span>
+                    <div class="info-value" id="userYear"></div>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">LinkedIn</span>
+                    <div class="info-value">
+                        <a href="#" id="userLinkedIn" class="profile-link" target="_blank"></a>
+                    </div>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">GitHub</span>
+                    <div class="info-value">
+                        <a href="#" id="userGitHub" class="profile-link" target="_blank"></a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Skills Section -->
+            <section class="login-form-container profile-section" id="skillsSection">
+                <div class="form-header">
+                    <h2 class="form-title">SKILLS</h2>
+                </div>
+                <div id="skillsContainer">
+                    <!-- Skills will be populated by JavaScript -->
+                </div>
+            </section>
+
+            <!-- Schedule Section -->
+            <section class="login-form-container schedule-container profile-section" id="scheduleSection">
+                <div class="form-header">
+                    <h2 class="form-title">SCHEDULE</h2>
+                    <div class="availability-indicator">
+                        <div class="available-dot"></div>
+                        <span class="available-text">Available</span>
+                    </div>
+                </div>
+                <div class="schedule-grid" id="scheduleGrid">
+                    <!-- Schedule grid will be populated by JavaScript -->
+                </div>
+            </section>
+
+            <!-- Projects and Study Groups -->
+            <div class="bottom-sections">
+                <!-- Projects Section -->
+                <section class="login-form-container profile-section projects-section" id="projectsSection">
+                    <div class="form-header">
+                        <h2 class="form-title">PROJECTS</h2>
+                    </div>
+                    <div id="projectsList">
+                        <!-- Projects will be populated by JavaScript -->
+                    </div>
+                </section>
+
+                <!-- Study Groups Section -->
+                <section class="login-form-container profile-section study-groups-section" id="studyGroupsSection">
+                    <div class="form-header">
+                        <h2 class="form-title">STUDY GROUPS</h2>
+                    </div>
+                    <div id="studyGroupsList">
+                        <!-- Study groups will be populated by JavaScript -->
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="scripts/userprofile.js"></script>
+</body>
+</html>

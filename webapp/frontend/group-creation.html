@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Group - ScholarX</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/userprofile.css">
+    <link rel="stylesheet" href="styles/project-creation.css">
+    <link rel="stylesheet" href="styles/group-creation.css">
+    <link rel="icon" href="favicon.ico">
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+</head>
+<body>
+    <div class="background-design">
+        <div class="gradient-overlay"></div>
+        <div class="geometric-pattern">
+            <div class="pattern-circle pattern-1"></div>
+            <div class="pattern-circle pattern-2"></div>
+            <div class="pattern-triangle pattern-3"></div>
+            <div class="pattern-square pattern-4"></div>
+        </div>
+    </div>
+
+    <header class="login-header">
+        <div class="logo-container">
+            <a href="index.html">
+                <h1 class="logo">ScholarX</h1>
+            </a>
+            <p class="tagline">AI-Driven Student<br> Collaboration</p>
+        </div>
+        <div class="profile-title-container">
+            <h1 class="profile-title">CREATE GROUP</h1>
+        </div>
+        <nav class="header-nav">
+            <a href="dashboard.html" class="profile-nav-btn" id="backBtn">
+                BACK
+            </a>
+        </nav>
+    </header>
+
+    <div class="main-content">
+        <div class="login-form-container">
+            <div id="error-container" class="error-message"></div>
+
+            <form id="group-creation-form" class="auth-form">
+                <div class="input-group">
+                    <label for="group-name" class="input-label">Group Name</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="text" 
+                            id="group-name" 
+                            name="group-name" 
+                            class="form-input"
+                            required 
+                            minlength="3" 
+                            maxlength="100" 
+                            placeholder="Enter group name"
+                        >
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="subject-code" class="input-label">Subject Code</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="text" 
+                            id="subject-code" 
+                            name="subject-code" 
+                            class="form-input"
+                            placeholder="e.g., CS101"
+                        >
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="subject" class="input-label">Subject</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="text" 
+                            id="subject" 
+                            name="subject" 
+                            class="form-input"
+                            required 
+                            minlength="2" 
+                            maxlength="100" 
+                            placeholder="Enter subject"
+                        >
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="group-description" class="input-label">Description</label>
+                    <div class="input-wrapper">
+                        <textarea 
+                            id="group-description" 
+                            name="group-description" 
+                            class="form-input"
+                            rows="4" 
+                            placeholder="Describe your group (optional)"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="topics-input" class="input-label">Topics</label>
+                    <div class="input-wrapper topics-input-wrapper">
+                        <input 
+                            type="text" 
+                            id="topics-input" 
+                            name="topics-input" 
+                            class="form-input topics-input"
+                            placeholder="Type and press Enter to add topics"
+                        >
+                        <div id="selected-topics" class="selected-topics"></div>
+                    </div>
+                    <small class="input-note">Press Enter to add a topic</small>
+                </div>
+
+                <div class="input-group">
+                    <label for="max-group-size" class="input-label">Maximum Group Size</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="number" 
+                            id="max-group-size" 
+                            name="max-group-size" 
+                            class="form-input"
+                            min="1" 
+                            max="5" 
+                            required 
+                            value="3"
+                        >
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button 
+                        type="submit" 
+                        id="create-group-btn" 
+                        class="primary-btn"
+                    >
+                        Create Group
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="scripts/group-creation.js?v=20250924-2"></script>
+</body>
+</html>
+
+
