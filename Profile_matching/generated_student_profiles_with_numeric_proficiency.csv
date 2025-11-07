@@ -1,0 +1,531 @@
+USN,Year,Department,Skill,Proficiency
+1KG22AD72,1,Artificial Intelligence and Data Science,AI Ethics,4
+1KG22AD72,1,Artificial Intelligence and Data Science,Deep Learning,3
+1KG22AD72,1,Artificial Intelligence and Data Science,Data Visualization,2
+1KG22ME48,4,Mechanical Engineering,AutoCAD,2
+1KG22ME48,4,Mechanical Engineering,3D Printing,0
+1KG22ME48,4,Mechanical Engineering,ANSYS,3
+1KG22CV98,4,Civil Engineering,Soil Mechanics,4
+1KG22CV98,4,Civil Engineering,Structural Analysis,0
+1KG22CV98,4,Civil Engineering,Civil 3D,5
+1KG22CV61,3,Civil Engineering,Soil Mechanics,2
+1KG22CV61,3,Civil Engineering,Urban Planning,5
+1KG22CV61,3,Civil Engineering,Civil 3D,4
+1KG22CV61,3,Civil Engineering,Revit,2
+1KG22AD71,3,Artificial Intelligence and Data Science,Computer Vision,4
+1KG22AD71,3,Artificial Intelligence and Data Science,AI Ethics,0
+1KG22AD71,3,Artificial Intelligence and Data Science,Deep Learning,2
+1KG22AD71,3,Artificial Intelligence and Data Science,Data Mining,2
+1KG22CB18,2,Computer Science and Business Systems,Data Analytics,0
+1KG22CB18,2,Computer Science and Business Systems,Business Intelligence,4
+1KG22CB18,2,Computer Science and Business Systems,Marketing Analytics,1
+1KG22CS69,3,Computer Science Engineering,Software Engineering,0
+1KG22CS69,3,Computer Science Engineering,Java,5
+1KG22CS69,3,Computer Science Engineering,Operating Systems,3
+1KG22ME41,1,Mechanical Engineering,Fluid Mechanics,1
+1KG22ME41,1,Mechanical Engineering,ANSYS,1
+1KG22ME41,1,Mechanical Engineering,3D Printing,4
+1KG22EC63,4,Electronics and Communication Engineering,Wireless Communication,1
+1KG22EC63,4,Electronics and Communication Engineering,Signal Processing,2
+1KG22EC63,4,Electronics and Communication Engineering,Digital Electronics,3
+1KG22EC63,4,Electronics and Communication Engineering,MATLAB,2
+1KG22CB19,4,Computer Science and Business Systems,Statistics,5
+1KG22CB19,4,Computer Science and Business Systems,Project Management,3
+1KG22CB19,4,Computer Science and Business Systems,Python,5
+1KG22CB19,4,Computer Science and Business Systems,Business Intelligence,5
+1KG22CV02,3,Civil Engineering,Surveying,2
+1KG22CV02,3,Civil Engineering,Urban Planning,5
+1KG22CV02,3,Civil Engineering,Estimation,2
+1KG22AD37,1,Artificial Intelligence and Data Science,Data Visualization,4
+1KG22AD37,1,Artificial Intelligence and Data Science,Python,0
+1KG22AD37,1,Artificial Intelligence and Data Science,Machine Learning,5
+1KG22CS45,4,Computer Science Engineering,Python,2
+1KG22CS45,4,Computer Science Engineering,Java,1
+1KG22CS45,4,Computer Science Engineering,Software Engineering,3
+1KG22CS87,2,Computer Science Engineering,Python,5
+1KG22CS87,2,Computer Science Engineering,C++,5
+1KG22CS87,2,Computer Science Engineering,Computer Networks,3
+1KG22CB38,2,Computer Science and Business Systems,Statistics,0
+1KG22CB38,2,Computer Science and Business Systems,Python,4
+1KG22CB38,2,Computer Science and Business Systems,SQL,4
+1KG22CB38,2,Computer Science and Business Systems,Business Intelligence,5
+1KG22CV93,1,Civil Engineering,Estimation,5
+1KG22CV93,1,Civil Engineering,AutoCAD,4
+1KG22CV93,1,Civil Engineering,Structural Analysis,0
+1KG22CV93,1,Civil Engineering,Civil 3D,0
+1KG22CV85,1,Civil Engineering,Construction Management,5
+1KG22CV85,1,Civil Engineering,Urban Planning,2
+1KG22CV85,1,Civil Engineering,Estimation,1
+1KG22CV85,1,Civil Engineering,Civil 3D,5
+1KG22ME11,1,Mechanical Engineering,3D Printing,0
+1KG22ME11,1,Mechanical Engineering,Thermodynamics,0
+1KG22ME11,1,Mechanical Engineering,CNC Programming,5
+1KG22ME11,1,Mechanical Engineering,SolidWorks,0
+1KG22ME08,2,Mechanical Engineering,3D Printing,4
+1KG22ME08,2,Mechanical Engineering,Mechanical Design,1
+1KG22ME08,2,Mechanical Engineering,SolidWorks,1
+1KG22CS38,3,Computer Science Engineering,DBMS,1
+1KG22CS38,3,Computer Science Engineering,Python,5
+1KG22CS38,3,Computer Science Engineering,Java,4
+1KG22CS38,3,Computer Science Engineering,Web Development,2
+1KG22CB32,2,Computer Science and Business Systems,Tableau,4
+1KG22CB32,2,Computer Science and Business Systems,Project Management,2
+1KG22CB32,2,Computer Science and Business Systems,Business Intelligence,5
+1KG22EC32,1,Electronics and Communication Engineering,IoT,2
+1KG22EC32,1,Electronics and Communication Engineering,MATLAB,5
+1KG22EC32,1,Electronics and Communication Engineering,Digital Electronics,1
+1KG22AD07,4,Artificial Intelligence and Data Science,TensorFlow,1
+1KG22AD07,4,Artificial Intelligence and Data Science,Deep Learning,5
+1KG22AD07,4,Artificial Intelligence and Data Science,Data Visualization,5
+1KG22AD07,4,Artificial Intelligence and Data Science,AI Ethics,4
+1KG22EC20,2,Electronics and Communication Engineering,VLSI Design,3
+1KG22EC20,2,Electronics and Communication Engineering,Digital Electronics,2
+1KG22EC20,2,Electronics and Communication Engineering,Microcontrollers,4
+1KG22EC20,2,Electronics and Communication Engineering,Wireless Communication,0
+1KG22CV50,4,Civil Engineering,Revit,5
+1KG22CV50,4,Civil Engineering,Construction Management,1
+1KG22CV50,4,Civil Engineering,Structural Analysis,2
+1KG22CV50,4,Civil Engineering,Estimation,5
+1KG22ME46,4,Mechanical Engineering,Fluid Mechanics,0
+1KG22ME46,4,Mechanical Engineering,SolidWorks,4
+1KG22ME46,4,Mechanical Engineering,Mechanical Design,2
+1KG22CB57,1,Computer Science and Business Systems,Excel,2
+1KG22CB57,1,Computer Science and Business Systems,Tableau,1
+1KG22CB57,1,Computer Science and Business Systems,Python,2
+1KG22CB57,1,Computer Science and Business Systems,SQL,4
+1KG22CB65,2,Computer Science and Business Systems,Business Intelligence,5
+1KG22CB65,2,Computer Science and Business Systems,Data Analytics,2
+1KG22CB65,2,Computer Science and Business Systems,Marketing Analytics,3
+1KG22EC31,1,Electronics and Communication Engineering,VLSI Design,0
+1KG22EC31,1,Electronics and Communication Engineering,Microcontrollers,2
+1KG22EC31,1,Electronics and Communication Engineering,Digital Electronics,2
+1KG22CV29,2,Civil Engineering,Estimation,4
+1KG22CV29,2,Civil Engineering,Civil 3D,2
+1KG22CV29,2,Civil Engineering,Revit,3
+1KG22EC57,2,Electronics and Communication Engineering,Wireless Communication,1
+1KG22EC57,2,Electronics and Communication Engineering,VLSI Design,2
+1KG22EC57,2,Electronics and Communication Engineering,Digital Electronics,0
+1KG22ME18,2,Mechanical Engineering,AutoCAD,4
+1KG22ME18,2,Mechanical Engineering,Fluid Mechanics,5
+1KG22ME18,2,Mechanical Engineering,CNC Programming,3
+1KG22ME18,2,Mechanical Engineering,Manufacturing,5
+1KG22CB67,1,Computer Science and Business Systems,Data Analytics,3
+1KG22CB67,1,Computer Science and Business Systems,SQL,3
+1KG22CB67,1,Computer Science and Business Systems,Business Intelligence,0
+1KG22CB67,1,Computer Science and Business Systems,Statistics,3
+1KG22ME12,2,Mechanical Engineering,AutoCAD,1
+1KG22ME12,2,Mechanical Engineering,3D Printing,2
+1KG22ME12,2,Mechanical Engineering,CNC Programming,1
+1KG22ME12,2,Mechanical Engineering,Fluid Mechanics,5
+1KG22CB88,3,Computer Science and Business Systems,Statistics,4
+1KG22CB88,3,Computer Science and Business Systems,Marketing Analytics,4
+1KG22CB88,3,Computer Science and Business Systems,Data Analytics,1
+1KG22CB88,3,Computer Science and Business Systems,Tableau,1
+1KG22CV25,2,Civil Engineering,Soil Mechanics,5
+1KG22CV25,2,Civil Engineering,Estimation,5
+1KG22CV25,2,Civil Engineering,AutoCAD,0
+1KG22CS24,3,Computer Science Engineering,Java,2
+1KG22CS24,3,Computer Science Engineering,Web Development,3
+1KG22CS24,3,Computer Science Engineering,Software Engineering,1
+1KG22CB55,2,Computer Science and Business Systems,Statistics,2
+1KG22CB55,2,Computer Science and Business Systems,Business Intelligence,0
+1KG22CB55,2,Computer Science and Business Systems,Excel,5
+1KG22CB55,2,Computer Science and Business Systems,SQL,1
+1KG22CV21,2,Civil Engineering,Revit,5
+1KG22CV21,2,Civil Engineering,Civil 3D,3
+1KG22CV21,2,Civil Engineering,Urban Planning,4
+1KG22CV21,2,Civil Engineering,Construction Management,3
+1KG22ME18,3,Mechanical Engineering,Thermodynamics,0
+1KG22ME18,3,Mechanical Engineering,Fluid Mechanics,2
+1KG22ME18,3,Mechanical Engineering,CNC Programming,0
+1KG22EC56,2,Electronics and Communication Engineering,Digital Electronics,3
+1KG22EC56,2,Electronics and Communication Engineering,PCB Design,5
+1KG22EC56,2,Electronics and Communication Engineering,Embedded Systems,2
+1KG22EC56,2,Electronics and Communication Engineering,Signal Processing,3
+1KG22CS08,2,Computer Science Engineering,Software Engineering,1
+1KG22CS08,2,Computer Science Engineering,Operating Systems,0
+1KG22CS08,2,Computer Science Engineering,DBMS,4
+1KG22CS08,2,Computer Science Engineering,Web Development,0
+1KG22ME62,2,Mechanical Engineering,Mechanical Design,4
+1KG22ME62,2,Mechanical Engineering,AutoCAD,5
+1KG22ME62,2,Mechanical Engineering,Fluid Mechanics,0
+1KG22ME62,2,Mechanical Engineering,Manufacturing,5
+1KG22AD75,1,Artificial Intelligence and Data Science,NLP,0
+1KG22AD75,1,Artificial Intelligence and Data Science,TensorFlow,3
+1KG22AD75,1,Artificial Intelligence and Data Science,Computer Vision,4
+1KG22AD75,1,Artificial Intelligence and Data Science,Python,3
+1KG22CB89,1,Computer Science and Business Systems,Excel,2
+1KG22CB89,1,Computer Science and Business Systems,Marketing Analytics,1
+1KG22CB89,1,Computer Science and Business Systems,Data Analytics,5
+1KG22CB46,1,Computer Science and Business Systems,Marketing Analytics,4
+1KG22CB46,1,Computer Science and Business Systems,Statistics,3
+1KG22CB46,1,Computer Science and Business Systems,Project Management,5
+1KG22CB46,1,Computer Science and Business Systems,Python,2
+1KG22ME82,2,Mechanical Engineering,Thermodynamics,5
+1KG22ME82,2,Mechanical Engineering,AutoCAD,3
+1KG22ME82,2,Mechanical Engineering,SolidWorks,5
+1KG22EC32,2,Electronics and Communication Engineering,Microcontrollers,2
+1KG22EC32,2,Electronics and Communication Engineering,IoT,5
+1KG22EC32,2,Electronics and Communication Engineering,Digital Electronics,1
+1KG22EC32,2,Electronics and Communication Engineering,PCB Design,4
+1KG22AD35,2,Artificial Intelligence and Data Science,NLP,2
+1KG22AD35,2,Artificial Intelligence and Data Science,AI Ethics,5
+1KG22AD35,2,Artificial Intelligence and Data Science,Computer Vision,5
+1KG22AD35,2,Artificial Intelligence and Data Science,Python,0
+1KG22CB49,1,Computer Science and Business Systems,Excel,5
+1KG22CB49,1,Computer Science and Business Systems,Python,5
+1KG22CB49,1,Computer Science and Business Systems,SQL,5
+1KG22CB49,1,Computer Science and Business Systems,Business Intelligence,5
+1KG22CB36,2,Computer Science and Business Systems,Excel,3
+1KG22CB36,2,Computer Science and Business Systems,Tableau,4
+1KG22CB36,2,Computer Science and Business Systems,Marketing Analytics,0
+1KG22EC39,2,Electronics and Communication Engineering,VLSI Design,0
+1KG22EC39,2,Electronics and Communication Engineering,MATLAB,2
+1KG22EC39,2,Electronics and Communication Engineering,IoT,0
+1KG22EC39,2,Electronics and Communication Engineering,PCB Design,4
+1KG22AD26,4,Artificial Intelligence and Data Science,Data Visualization,1
+1KG22AD26,4,Artificial Intelligence and Data Science,Machine Learning,4
+1KG22AD26,4,Artificial Intelligence and Data Science,TensorFlow,1
+1KG22AD26,4,Artificial Intelligence and Data Science,AI Ethics,0
+1KG22EC14,1,Electronics and Communication Engineering,VLSI Design,3
+1KG22EC14,1,Electronics and Communication Engineering,IoT,4
+1KG22EC14,1,Electronics and Communication Engineering,Signal Processing,4
+1KG22EC14,1,Electronics and Communication Engineering,Digital Electronics,3
+1KG22CS67,1,Computer Science Engineering,DBMS,2
+1KG22CS67,1,Computer Science Engineering,Software Engineering,5
+1KG22CS67,1,Computer Science Engineering,Operating Systems,0
+1KG22AD24,1,Artificial Intelligence and Data Science,Deep Learning,0
+1KG22AD24,1,Artificial Intelligence and Data Science,TensorFlow,0
+1KG22AD24,1,Artificial Intelligence and Data Science,Python,3
+1KG22AD24,1,Artificial Intelligence and Data Science,NLP,5
+1KG22EC19,1,Electronics and Communication Engineering,Microcontrollers,0
+1KG22EC19,1,Electronics and Communication Engineering,IoT,5
+1KG22EC19,1,Electronics and Communication Engineering,VLSI Design,1
+1KG22EC63,1,Electronics and Communication Engineering,MATLAB,2
+1KG22EC63,1,Electronics and Communication Engineering,VLSI Design,3
+1KG22EC63,1,Electronics and Communication Engineering,Wireless Communication,3
+1KG22CV13,4,Civil Engineering,Structural Analysis,5
+1KG22CV13,4,Civil Engineering,Civil 3D,0
+1KG22CV13,4,Civil Engineering,Construction Management,0
+1KG22CV13,4,Civil Engineering,Surveying,3
+1KG22EC17,4,Electronics and Communication Engineering,IoT,0
+1KG22EC17,4,Electronics and Communication Engineering,Digital Electronics,4
+1KG22EC17,4,Electronics and Communication Engineering,Microcontrollers,0
+1KG22CB72,2,Computer Science and Business Systems,Excel,4
+1KG22CB72,2,Computer Science and Business Systems,Data Analytics,3
+1KG22CB72,2,Computer Science and Business Systems,Tableau,3
+1KG22CV26,3,Civil Engineering,Estimation,2
+1KG22CV26,3,Civil Engineering,Structural Analysis,3
+1KG22CV26,3,Civil Engineering,Urban Planning,0
+1KG22CV26,3,Civil Engineering,Construction Management,1
+1KG22ME95,2,Mechanical Engineering,Mechanical Design,0
+1KG22ME95,2,Mechanical Engineering,3D Printing,4
+1KG22ME95,2,Mechanical Engineering,CNC Programming,5
+1KG22ME95,2,Mechanical Engineering,Thermodynamics,2
+1KG22CB04,3,Computer Science and Business Systems,Project Management,1
+1KG22CB04,3,Computer Science and Business Systems,Excel,0
+1KG22CB04,3,Computer Science and Business Systems,Marketing Analytics,2
+1KG22CB04,3,Computer Science and Business Systems,SQL,1
+1KG22EC19,4,Electronics and Communication Engineering,Embedded Systems,3
+1KG22EC19,4,Electronics and Communication Engineering,Signal Processing,2
+1KG22EC19,4,Electronics and Communication Engineering,Digital Electronics,3
+1KG22EC19,4,Electronics and Communication Engineering,PCB Design,3
+1KG22AD60,2,Artificial Intelligence and Data Science,Computer Vision,4
+1KG22AD60,2,Artificial Intelligence and Data Science,Data Mining,1
+1KG22AD60,2,Artificial Intelligence and Data Science,Machine Learning,2
+1KG22AD60,2,Artificial Intelligence and Data Science,Data Visualization,5
+1KG22EC03,3,Electronics and Communication Engineering,PCB Design,0
+1KG22EC03,3,Electronics and Communication Engineering,Wireless Communication,2
+1KG22EC03,3,Electronics and Communication Engineering,IoT,1
+1KG22CB28,4,Computer Science and Business Systems,Project Management,0
+1KG22CB28,4,Computer Science and Business Systems,SQL,4
+1KG22CB28,4,Computer Science and Business Systems,Tableau,2
+1KG22CB28,4,Computer Science and Business Systems,Statistics,0
+1KG22ME04,3,Mechanical Engineering,Mechanical Design,4
+1KG22ME04,3,Mechanical Engineering,CNC Programming,2
+1KG22ME04,3,Mechanical Engineering,Manufacturing,4
+1KG22ME04,3,Mechanical Engineering,Thermodynamics,0
+1KG22ME67,2,Mechanical Engineering,Mechanical Design,3
+1KG22ME67,2,Mechanical Engineering,AutoCAD,0
+1KG22ME67,2,Mechanical Engineering,ANSYS,4
+1KG22EC08,3,Electronics and Communication Engineering,Wireless Communication,1
+1KG22EC08,3,Electronics and Communication Engineering,VLSI Design,3
+1KG22EC08,3,Electronics and Communication Engineering,MATLAB,5
+1KG22EC08,3,Electronics and Communication Engineering,Microcontrollers,4
+1KG22CS62,4,Computer Science Engineering,Web Development,4
+1KG22CS62,4,Computer Science Engineering,Algorithms,1
+1KG22CS62,4,Computer Science Engineering,Java,5
+1KG22CV35,2,Civil Engineering,Estimation,2
+1KG22CV35,2,Civil Engineering,Urban Planning,4
+1KG22CV35,2,Civil Engineering,Revit,1
+1KG22ME66,2,Mechanical Engineering,AutoCAD,4
+1KG22ME66,2,Mechanical Engineering,Mechanical Design,5
+1KG22ME66,2,Mechanical Engineering,ANSYS,0
+1KG22CV05,4,Civil Engineering,Construction Management,5
+1KG22CV05,4,Civil Engineering,Surveying,2
+1KG22CV05,4,Civil Engineering,Soil Mechanics,5
+1KG22CV05,4,Civil Engineering,AutoCAD,2
+1KG22ME63,1,Mechanical Engineering,CNC Programming,4
+1KG22ME63,1,Mechanical Engineering,Manufacturing,4
+1KG22ME63,1,Mechanical Engineering,ANSYS,3
+1KG22ME63,1,Mechanical Engineering,SolidWorks,4
+1KG22CS93,1,Computer Science Engineering,Web Development,3
+1KG22CS93,1,Computer Science Engineering,DBMS,3
+1KG22CS93,1,Computer Science Engineering,Java,5
+1KG22CB99,2,Computer Science and Business Systems,SQL,4
+1KG22CB99,2,Computer Science and Business Systems,Tableau,0
+1KG22CB99,2,Computer Science and Business Systems,Project Management,0
+1KG22CS78,2,Computer Science Engineering,Computer Networks,4
+1KG22CS78,2,Computer Science Engineering,Python,1
+1KG22CS78,2,Computer Science Engineering,DBMS,1
+1KG22CS78,2,Computer Science Engineering,Java,3
+1KG22EC03,1,Electronics and Communication Engineering,Digital Electronics,1
+1KG22EC03,1,Electronics and Communication Engineering,Signal Processing,5
+1KG22EC03,1,Electronics and Communication Engineering,Embedded Systems,5
+1KG22ME48,1,Mechanical Engineering,3D Printing,3
+1KG22ME48,1,Mechanical Engineering,CNC Programming,3
+1KG22ME48,1,Mechanical Engineering,Manufacturing,2
+1KG22ME48,1,Mechanical Engineering,Thermodynamics,4
+1KG22AD51,4,Artificial Intelligence and Data Science,NLP,5
+1KG22AD51,4,Artificial Intelligence and Data Science,Deep Learning,0
+1KG22AD51,4,Artificial Intelligence and Data Science,Machine Learning,5
+1KG22CV24,2,Civil Engineering,Urban Planning,0
+1KG22CV24,2,Civil Engineering,AutoCAD,5
+1KG22CV24,2,Civil Engineering,Civil 3D,1
+1KG22CV24,2,Civil Engineering,Construction Management,5
+1KG22AD83,3,Artificial Intelligence and Data Science,Data Visualization,4
+1KG22AD83,3,Artificial Intelligence and Data Science,Data Mining,3
+1KG22AD83,3,Artificial Intelligence and Data Science,TensorFlow,3
+1KG22CS75,1,Computer Science Engineering,C++,5
+1KG22CS75,1,Computer Science Engineering,Python,1
+1KG22CS75,1,Computer Science Engineering,Java,0
+1KG22CS75,1,Computer Science Engineering,Algorithms,5
+1KG22CS59,3,Computer Science Engineering,Computer Networks,2
+1KG22CS59,3,Computer Science Engineering,Operating Systems,2
+1KG22CS59,3,Computer Science Engineering,C++,4
+1KG22CS59,3,Computer Science Engineering,Java,2
+1KG22CV92,1,Civil Engineering,AutoCAD,2
+1KG22CV92,1,Civil Engineering,Structural Analysis,5
+1KG22CV92,1,Civil Engineering,Urban Planning,0
+1KG22CV92,1,Civil Engineering,Civil 3D,2
+1KG22ME47,2,Mechanical Engineering,AutoCAD,4
+1KG22ME47,2,Mechanical Engineering,Manufacturing,0
+1KG22ME47,2,Mechanical Engineering,Fluid Mechanics,4
+1KG22ME47,2,Mechanical Engineering,ANSYS,3
+1KG22AD95,4,Artificial Intelligence and Data Science,AI Ethics,0
+1KG22AD95,4,Artificial Intelligence and Data Science,Machine Learning,3
+1KG22AD95,4,Artificial Intelligence and Data Science,TensorFlow,1
+1KG22CS95,1,Computer Science Engineering,Algorithms,4
+1KG22CS95,1,Computer Science Engineering,Operating Systems,2
+1KG22CS95,1,Computer Science Engineering,Java,2
+1KG22CS95,1,Computer Science Engineering,Computer Networks,0
+1KG22AD71,3,Artificial Intelligence and Data Science,Computer Vision,2
+1KG22AD71,3,Artificial Intelligence and Data Science,Deep Learning,1
+1KG22AD71,3,Artificial Intelligence and Data Science,TensorFlow,2
+1KG22CS45,3,Computer Science Engineering,Algorithms,3
+1KG22CS45,3,Computer Science Engineering,Software Engineering,5
+1KG22CS45,3,Computer Science Engineering,Computer Networks,2
+1KG22CS50,3,Computer Science Engineering,Python,5
+1KG22CS50,3,Computer Science Engineering,Java,0
+1KG22CS50,3,Computer Science Engineering,Operating Systems,3
+1KG22CS50,3,Computer Science Engineering,Computer Networks,0
+1KG22CS51,1,Computer Science Engineering,DBMS,4
+1KG22CS51,1,Computer Science Engineering,Java,0
+1KG22CS51,1,Computer Science Engineering,Algorithms,5
+1KG22CS51,1,Computer Science Engineering,C++,4
+1KG22CV59,1,Civil Engineering,Estimation,4
+1KG22CV59,1,Civil Engineering,Construction Management,4
+1KG22CV59,1,Civil Engineering,Structural Analysis,0
+1KG22AD04,3,Artificial Intelligence and Data Science,Deep Learning,5
+1KG22AD04,3,Artificial Intelligence and Data Science,TensorFlow,0
+1KG22AD04,3,Artificial Intelligence and Data Science,Computer Vision,2
+1KG22AD04,3,Artificial Intelligence and Data Science,Machine Learning,5
+1KG22AD14,3,Artificial Intelligence and Data Science,AI Ethics,3
+1KG22AD14,3,Artificial Intelligence and Data Science,Python,5
+1KG22AD14,3,Artificial Intelligence and Data Science,Machine Learning,5
+1KG22CV39,2,Civil Engineering,Structural Analysis,0
+1KG22CV39,2,Civil Engineering,Construction Management,3
+1KG22CV39,2,Civil Engineering,AutoCAD,5
+1KG22CV39,2,Civil Engineering,Estimation,1
+1KG22CV13,2,Civil Engineering,Urban Planning,5
+1KG22CV13,2,Civil Engineering,Structural Analysis,5
+1KG22CV13,2,Civil Engineering,AutoCAD,0
+1KG22CV13,2,Civil Engineering,Soil Mechanics,3
+1KG22ME89,4,Mechanical Engineering,SolidWorks,2
+1KG22ME89,4,Mechanical Engineering,AutoCAD,1
+1KG22ME89,4,Mechanical Engineering,3D Printing,0
+1KG22ME89,4,Mechanical Engineering,CNC Programming,2
+1KG22AD47,1,Artificial Intelligence and Data Science,Data Mining,3
+1KG22AD47,1,Artificial Intelligence and Data Science,Data Visualization,1
+1KG22AD47,1,Artificial Intelligence and Data Science,AI Ethics,0
+1KG22CV10,1,Civil Engineering,Revit,3
+1KG22CV10,1,Civil Engineering,Urban Planning,4
+1KG22CV10,1,Civil Engineering,Soil Mechanics,3
+1KG22CV10,1,Civil Engineering,Construction Management,5
+1KG22CB66,2,Computer Science and Business Systems,Statistics,2
+1KG22CB66,2,Computer Science and Business Systems,Business Intelligence,0
+1KG22CB66,2,Computer Science and Business Systems,SQL,1
+1KG22CB66,2,Computer Science and Business Systems,Python,4
+1KG22EC97,1,Electronics and Communication Engineering,Digital Electronics,0
+1KG22EC97,1,Electronics and Communication Engineering,Microcontrollers,0
+1KG22EC97,1,Electronics and Communication Engineering,Wireless Communication,0
+1KG22EC97,1,Electronics and Communication Engineering,Signal Processing,3
+1KG22EC01,4,Electronics and Communication Engineering,MATLAB,0
+1KG22EC01,4,Electronics and Communication Engineering,Digital Electronics,3
+1KG22EC01,4,Electronics and Communication Engineering,PCB Design,1
+1KG22CV99,4,Civil Engineering,AutoCAD,5
+1KG22CV99,4,Civil Engineering,Urban Planning,1
+1KG22CV99,4,Civil Engineering,Construction Management,0
+1KG22CS49,3,Computer Science Engineering,Software Engineering,1
+1KG22CS49,3,Computer Science Engineering,Python,4
+1KG22CS49,3,Computer Science Engineering,Algorithms,1
+1KG22ME32,2,Mechanical Engineering,Thermodynamics,0
+1KG22ME32,2,Mechanical Engineering,ANSYS,2
+1KG22ME32,2,Mechanical Engineering,CNC Programming,4
+1KG22ME32,2,Mechanical Engineering,Mechanical Design,5
+1KG22CB76,1,Computer Science and Business Systems,Python,1
+1KG22CB76,1,Computer Science and Business Systems,Statistics,4
+1KG22CB76,1,Computer Science and Business Systems,Business Intelligence,3
+1KG22CB48,1,Computer Science and Business Systems,Marketing Analytics,0
+1KG22CB48,1,Computer Science and Business Systems,Business Intelligence,1
+1KG22CB48,1,Computer Science and Business Systems,SQL,4
+1KG22CB48,1,Computer Science and Business Systems,Python,1
+1KG22ME78,3,Mechanical Engineering,3D Printing,5
+1KG22ME78,3,Mechanical Engineering,CNC Programming,5
+1KG22ME78,3,Mechanical Engineering,Manufacturing,2
+1KG22ME78,3,Mechanical Engineering,Thermodynamics,0
+1KG22CV64,3,Civil Engineering,Structural Analysis,3
+1KG22CV64,3,Civil Engineering,Civil 3D,4
+1KG22CV64,3,Civil Engineering,Urban Planning,2
+1KG22CS15,3,Computer Science Engineering,Software Engineering,3
+1KG22CS15,3,Computer Science Engineering,Python,2
+1KG22CS15,3,Computer Science Engineering,Operating Systems,5
+1KG22CV76,2,Civil Engineering,Estimation,4
+1KG22CV76,2,Civil Engineering,Soil Mechanics,1
+1KG22CV76,2,Civil Engineering,Urban Planning,4
+1KG22CV76,2,Civil Engineering,Structural Analysis,4
+1KG22CV56,2,Civil Engineering,Surveying,2
+1KG22CV56,2,Civil Engineering,Urban Planning,0
+1KG22CV56,2,Civil Engineering,Structural Analysis,5
+1KG22ME32,1,Mechanical Engineering,Mechanical Design,4
+1KG22ME32,1,Mechanical Engineering,Fluid Mechanics,1
+1KG22ME32,1,Mechanical Engineering,AutoCAD,3
+1KG22CS61,4,Computer Science Engineering,Computer Networks,1
+1KG22CS61,4,Computer Science Engineering,Operating Systems,2
+1KG22CS61,4,Computer Science Engineering,C++,4
+1KG22EC38,3,Electronics and Communication Engineering,PCB Design,0
+1KG22EC38,3,Electronics and Communication Engineering,Digital Electronics,3
+1KG22EC38,3,Electronics and Communication Engineering,VLSI Design,5
+1KG22CB97,2,Computer Science and Business Systems,Business Intelligence,0
+1KG22CB97,2,Computer Science and Business Systems,Statistics,0
+1KG22CB97,2,Computer Science and Business Systems,Tableau,2
+1KG22CB12,1,Computer Science and Business Systems,Python,0
+1KG22CB12,1,Computer Science and Business Systems,Project Management,2
+1KG22CB12,1,Computer Science and Business Systems,SQL,3
+1KG22CB12,1,Computer Science and Business Systems,Tableau,5
+1KG22CS09,3,Computer Science Engineering,Computer Networks,4
+1KG22CS09,3,Computer Science Engineering,Python,5
+1KG22CS09,3,Computer Science Engineering,Software Engineering,1
+1KG22CS09,3,Computer Science Engineering,Algorithms,5
+1KG22CV56,3,Civil Engineering,Construction Management,2
+1KG22CV56,3,Civil Engineering,Civil 3D,3
+1KG22CV56,3,Civil Engineering,Surveying,1
+1KG22CB92,4,Computer Science and Business Systems,Statistics,1
+1KG22CB92,4,Computer Science and Business Systems,SQL,4
+1KG22CB92,4,Computer Science and Business Systems,Project Management,0
+1KG22CB92,4,Computer Science and Business Systems,Data Analytics,5
+1KG22EC04,1,Electronics and Communication Engineering,Embedded Systems,3
+1KG22EC04,1,Electronics and Communication Engineering,Microcontrollers,4
+1KG22EC04,1,Electronics and Communication Engineering,Digital Electronics,5
+1KG22CB27,3,Computer Science and Business Systems,Business Intelligence,0
+1KG22CB27,3,Computer Science and Business Systems,Data Analytics,3
+1KG22CB27,3,Computer Science and Business Systems,Tableau,3
+1KG22CB27,3,Computer Science and Business Systems,Python,3
+1KG22AD89,1,Artificial Intelligence and Data Science,Computer Vision,1
+1KG22AD89,1,Artificial Intelligence and Data Science,Deep Learning,1
+1KG22AD89,1,Artificial Intelligence and Data Science,Python,3
+1KG22AD89,1,Artificial Intelligence and Data Science,TensorFlow,3
+1KG22CS94,2,Computer Science Engineering,Python,0
+1KG22CS94,2,Computer Science Engineering,Web Development,5
+1KG22CS94,2,Computer Science Engineering,C++,5
+1KG22CV18,3,Civil Engineering,Estimation,1
+1KG22CV18,3,Civil Engineering,Construction Management,3
+1KG22CV18,3,Civil Engineering,Structural Analysis,1
+1KG22CV18,3,Civil Engineering,Surveying,4
+1KG22CS92,2,Computer Science Engineering,Operating Systems,0
+1KG22CS92,2,Computer Science Engineering,Algorithms,2
+1KG22CS92,2,Computer Science Engineering,DBMS,1
+1KG22CS92,2,Computer Science Engineering,Python,0
+1KG22AD02,1,Artificial Intelligence and Data Science,Computer Vision,3
+1KG22AD02,1,Artificial Intelligence and Data Science,TensorFlow,4
+1KG22AD02,1,Artificial Intelligence and Data Science,AI Ethics,1
+1KG22AD02,1,Artificial Intelligence and Data Science,Machine Learning,1
+1KG22CB71,1,Computer Science and Business Systems,Project Management,2
+1KG22CB71,1,Computer Science and Business Systems,Statistics,1
+1KG22CB71,1,Computer Science and Business Systems,Marketing Analytics,2
+1KG22CS59,3,Computer Science Engineering,DBMS,0
+1KG22CS59,3,Computer Science Engineering,Operating Systems,4
+1KG22CS59,3,Computer Science Engineering,Software Engineering,1
+1KG22CS59,3,Computer Science Engineering,Web Development,4
+1KG22EC65,2,Electronics and Communication Engineering,Signal Processing,3
+1KG22EC65,2,Electronics and Communication Engineering,Digital Electronics,1
+1KG22EC65,2,Electronics and Communication Engineering,Wireless Communication,1
+1KG22CB59,2,Computer Science and Business Systems,Excel,0
+1KG22CB59,2,Computer Science and Business Systems,Tableau,2
+1KG22CB59,2,Computer Science and Business Systems,Statistics,2
+1KG22EC70,3,Electronics and Communication Engineering,VLSI Design,2
+1KG22EC70,3,Electronics and Communication Engineering,Wireless Communication,0
+1KG22EC70,3,Electronics and Communication Engineering,MATLAB,4
+1KG22EC70,3,Electronics and Communication Engineering,Embedded Systems,2
+1KG22ME05,2,Mechanical Engineering,Fluid Mechanics,0
+1KG22ME05,2,Mechanical Engineering,SolidWorks,2
+1KG22ME05,2,Mechanical Engineering,Thermodynamics,5
+1KG22CS33,2,Computer Science Engineering,Software Engineering,1
+1KG22CS33,2,Computer Science Engineering,Algorithms,1
+1KG22CS33,2,Computer Science Engineering,Operating Systems,4
+1KG22CV30,2,Civil Engineering,Surveying,2
+1KG22CV30,2,Civil Engineering,Urban Planning,5
+1KG22CV30,2,Civil Engineering,Construction Management,3
+1KG22CS15,1,Computer Science Engineering,Java,2
+1KG22CS15,1,Computer Science Engineering,Computer Networks,0
+1KG22CS15,1,Computer Science Engineering,C++,5
+1KG22CS15,1,Computer Science Engineering,Python,3
+1KG22CV21,4,Civil Engineering,Construction Management,2
+1KG22CV21,4,Civil Engineering,Estimation,0
+1KG22CV21,4,Civil Engineering,Civil 3D,2
+1KG22CV21,4,Civil Engineering,AutoCAD,1
+1KG22AD27,2,Artificial Intelligence and Data Science,AI Ethics,0
+1KG22AD27,2,Artificial Intelligence and Data Science,Computer Vision,4
+1KG22AD27,2,Artificial Intelligence and Data Science,Python,0
+1KG22AD27,2,Artificial Intelligence and Data Science,Data Visualization,5
+1KG22AD64,3,Artificial Intelligence and Data Science,NLP,4
+1KG22AD64,3,Artificial Intelligence and Data Science,Deep Learning,5
+1KG22AD64,3,Artificial Intelligence and Data Science,Machine Learning,2
+1KG22AD64,3,Artificial Intelligence and Data Science,Python,2
+1KG22CS76,3,Computer Science Engineering,DBMS,0
+1KG22CS76,3,Computer Science Engineering,C++,0
+1KG22CS76,3,Computer Science Engineering,Operating Systems,4
+1KG22CV98,1,Civil Engineering,Soil Mechanics,1
+1KG22CV98,1,Civil Engineering,Estimation,3
+1KG22CV98,1,Civil Engineering,Revit,1
+1KG22AD30,3,Artificial Intelligence and Data Science,TensorFlow,0
+1KG22AD30,3,Artificial Intelligence and Data Science,Computer Vision,4
+1KG22AD30,3,Artificial Intelligence and Data Science,Python,1
+1KG22AD30,3,Artificial Intelligence and Data Science,Data Visualization,4
+1KG22CV60,4,Civil Engineering,Urban Planning,3
+1KG22CV60,4,Civil Engineering,Surveying,1
+1KG22CV60,4,Civil Engineering,Revit,1
+1KG22CV60,4,Civil Engineering,Civil 3D,2
+1KG22ME97,3,Mechanical Engineering,Manufacturing,2
+1KG22ME97,3,Mechanical Engineering,Fluid Mechanics,2
+1KG22ME97,3,Mechanical Engineering,Mechanical Design,2
+1KG22AD61,1,Artificial Intelligence and Data Science,Data Visualization,5
+1KG22AD61,1,Artificial Intelligence and Data Science,TensorFlow,2
+1KG22AD61,1,Artificial Intelligence and Data Science,Deep Learning,1
+1KG22AD61,1,Artificial Intelligence and Data Science,AI Ethics,3
+1KG22EC09,1,Electronics and Communication Engineering,VLSI Design,2
+1KG22EC09,1,Electronics and Communication Engineering,Microcontrollers,4
+1KG22EC09,1,Electronics and Communication Engineering,Wireless Communication,4
+1KG22CS46,3,Computer Science Engineering,Web Development,1
+1KG22CS46,3,Computer Science Engineering,C++,4
+1KG22CS46,3,Computer Science Engineering,Software Engineering,4
