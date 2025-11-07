@@ -186,12 +186,13 @@ def compute_scores(
                 sentiment_val = 0.0
 
         weighted = avg_sim + 0.05 * dept_bonus + 0.02 * sentiment_val
+        weighted = min(weighted, 1.0)  # Cap at 1.0
         avg_similarities.append((avg_sim, weighted))
         matched_skill_details_by_usn[usn] = matched_details
 
     df = df.copy()
     df["Average_Similarity"] = [v[0] for v in avg_similarities]
-    df["Weighted_Score"] = [v[1] for v in avg_similarities]
+    df["Weighted_Score"] = [min(v[1], 1.0) for v in avg_similarities]  # Ensure capped at 1.0
     df = df.sort_values("Weighted_Score", ascending=False).reset_index(drop=True)
     return df, matched_skill_details_by_usn
 
