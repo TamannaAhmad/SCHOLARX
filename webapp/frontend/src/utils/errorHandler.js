@@ -113,6 +113,19 @@ export function hideError(containerId) {
 }
 
 /**
+ * Shows an informational notification
+ * @param {string} message - The info message
+ * @param {Object} options - Additional options
+ */
+export function showInfo(message, options = {}) {
+    return showError(message, { 
+        ...options, 
+        type: 'info',
+        ...(options.duration === undefined && { duration: 3000 })
+    });
+}
+
+/**
  * Shows a success notification
  * @param {string} message - The success message
  * @param {Object} options - Additional options
@@ -289,6 +302,7 @@ export default {
     showError,
     hideError,
     showSuccess,
+    showInfo,  // Add showInfo to the default export
     handleAPIError,
     validateEmail,
     validatePassword,

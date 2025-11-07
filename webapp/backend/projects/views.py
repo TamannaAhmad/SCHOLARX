@@ -7,18 +7,22 @@ from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
 import logging
-from .models import Project, StudyGroup, TeamMember, StudyGroupMember, JoinRequest, LeaveRequest
+from .models import Project, StudyGroup, TeamMember, StudyGroupMember, JoinRequest, LeaveRequest, ProjectSkill
 from django.contrib.auth import get_user_model
 from .meeting_slots import get_meeting_slots
-from accounts.models import UserAvailability, Skill, UserProfile
-from django.db.models import Q
-from collections import defaultdict
+from accounts.models import UserAvailability, Skill, UserProfile, UserSkill
+from django.db.models import Q, Count, Avg
+from django.db.models.functions import Coalesce
+from collections import defaultdict, Counter
 from datetime import time, datetime, timedelta
+from typing import List, Dict, Any, Optional
 import logging
 
 logger = logging.getLogger(__name__)
-from django.db import IntegrityError
-from .serializers import ProjectSerializer, SkillSerializer, StudyGroupSerializer, JoinRequestSerializer
+from django.db import IntegrityError, models
+from .serializers import ProjectSerializer, SkillSerializer, StudyGroupSerializer, JoinRequestSerializer, UserProfileSerializer
+from .advanced_matching import get_advanced_matches, ADVANCED_MATCHING_AVAILABLE
+from django.db.models.functions import Coalesce
 from accounts.models import Skill, UserProfile
 
 @api_view(['GET'])
@@ -632,50 +636,83 @@ def add_team_member(request, project_id):
     """Add a team member directly to a project (for project owners)"""
     project = get_object_or_404(Project, project_id=project_id)
 
-    # Check if user is the project owner
-    if project.created_by != request.user:
-        return Response({'detail': 'Only project owners can add team members.'}, status=status.HTTP_403_FORBIDDEN)
+    # Check if user is the project owner or has permission to add members
+    if project.created_by != request.user and not request.user.is_staff:
+        return Response(
+            {'detail': 'Only project owners can add team members.'}, 
+            status=status.HTTP_403_FORBIDDEN
+        )
 
-    # Get the user to add
-    user_usn = request.data.get('user_usn')
-    if not user_usn:
-        return Response({'detail': 'User USN is required.'}, status=status.HTTP_400_BAD_REQUEST)
+    # Get the user to add - can be by USN or user ID
+    user_identifier = request.data.get('user_usn') or request.data.get('user_id')
+    if not user_identifier:
+        return Response(
+            {'detail': 'User USN or ID is required.'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     try:
-        user_to_add = User.objects.get(usn__iexact=user_usn)
+        # Try to find user by USN or ID
+        if str(user_identifier).isnumeric():
+            user_to_add = User.objects.get(id=user_identifier)
+        else:
+            user_to_add = User.objects.get(usn__iexact=user_identifier)
     except User.DoesNotExist:
-        return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {'detail': 'User not found.'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
 
     # Check if user is already a member
-    user_profile = UserProfile.objects.filter(user=user_to_add).first()
-    if user_profile and TeamMember.objects.filter(project=project, user=user_profile).exists():
-        return Response({'detail': 'User is already a member of this project.'}, status=status.HTTP_400_BAD_REQUEST)
+    user_profile, _ = UserProfile.objects.get_or_create(user=user_to_add)
+    if TeamMember.objects.filter(project=project, user=user_profile).exists():
+        return Response(
+            {'detail': 'User is already a member of this project.'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     # Check if project has space
     if project.max_team_size and project.current_team_size >= project.max_team_size:
-        return Response({'detail': 'Project has reached maximum team size.'}, status=status.HTTP_400_BAD_REQUEST)
-
-    # Add user to project
-    user_profile, _ = UserProfile.objects.get_or_create(user=user_to_add)
-    TeamMember.objects.create(project=project, user=user_profile)
-    project.current_team_size += 1
-    project.save()
-
-    # Send notification email
-    owner_email = getattr(user_to_add, 'email', None)
-    if owner_email:
-        msg_page_url = f"{getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:8000')}/project-view.html?id={project.project_id}"
-        subject = f"You've been added to project: {project.title}"
-        body = (
-            f"Hello,\n\nYou have been added to the project '{project.title}' by the project owner."
-            f"\n\nView project: {msg_page_url}\n\n— ScholarX"
+        return Response(
+            {'detail': 'Project has reached maximum team size.'}, 
+            status=status.HTTP_400_BAD_REQUEST
         )
-        _safe_send_mail(subject, body, owner_email)
 
-    return Response({
-        'message': 'Team member added successfully',
-        'project': ProjectSerializer(project, context={'request': request}).data
-    }, status=status.HTTP_200_OK)
+    try:
+        # Add user to project
+        TeamMember.objects.create(project=project, user=user_profile)
+        project.current_team_size = TeamMember.objects.filter(project=project).count() + 1  # +1 for creator
+        project.save(update_fields=['current_team_size'])
+
+        # Send notification email
+        owner_email = getattr(user_to_add, 'email', None)
+        if owner_email:
+            msg_page_url = f"{getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:8000')}/project-view.html?id={project.project_id}"
+            subject = f"You've been added to project: {project.title}"
+            body = (
+                f"Hello {user_to_add.get_full_name() or user_to_add.usn or 'there'},\n\n"
+                f"You have been added to the project '{project.title}' by the project owner.\n\n"
+                f"View project: {msg_page_url}\n\n— ScholarX"
+            )
+            _safe_send_mail(subject, body, owner_email)
+
+        return Response({
+            'message': 'Team member added successfully',
+            'project': ProjectSerializer(project, context={'request': request}).data,
+            'user': {
+                'id': user_to_add.id,
+                'usn': user_to_add.usn,
+                'name': user_to_add.get_full_name(),
+                'email': user_to_add.email
+            }
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        logger.error(f"Error adding team member: {str(e)}", exc_info=True)
+        return Response(
+            {'detail': 'An error occurred while adding the team member.'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 @api_view(['POST'])
@@ -763,28 +800,353 @@ def reject_request(request, request_id):
     return Response({
         'message': 'Request rejected',
         'request': serializer.data
-    }, status=status.HTTP_200_OK)
+    })
 
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
 def mark_message_read(request, message_id):
     """Mark a message as read"""
-    join_request = get_object_or_404(JoinRequest, request_id=message_id)
-    
-    # Check if user has permission to mark this as read
-    if join_request.requester != request.user:
-        # Check if user is owner of the project/group
-        is_owner = False
-        if join_request.project and join_request.project.created_by == request.user:
-            is_owner = True
-        elif join_request.group and join_request.group.created_by == request.user:
-            is_owner = True
+    try:
+        join_request = JoinRequest.objects.get(id=message_id)
         
-        if not is_owner:
-            return Response({'detail': 'You do not have permission to mark this message as read.'}, status=status.HTTP_403_FORBIDDEN)
+        # Check if the current user is the recipient
+        if join_request.project and join_request.project.created_by != request.user and join_request.requester != request.user:
+            return Response(
+                {'error': 'You do not have permission to mark this message as read'}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        if join_request.group and join_request.group.created_by != request.user and join_request.requester != request.user:
+            return Response(
+                {'error': 'You do not have permission to mark this message as read'}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        join_request.is_read = True
+        join_request.save()
+        return Response({'message': 'Message marked as read'})
+        
+    except JoinRequest.DoesNotExist:
+        return Response(
+            {'error': 'Message not found'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def find_teammates(request, project_id):
+    """
+    Find potential teammates for a project based on required skills.
+    Returns a list of users ranked by their skill match percentage.
+    """
+    try:
+        # Get the project and its required skills
+        project = get_object_or_404(Project, project_id=project_id)
+        
+        # Check if the current user is the project creator or a team member
+        if project.created_by != request.user and not TeamMember.objects.filter(
+            project=project, user__user=request.user
+        ).exists():
+            return Response(
+                {'error': 'You do not have permission to view this project'}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Get required skill IDs for the project
+        required_skill_ids = list(ProjectSkill.objects.filter(project=project).values_list('skill_id', flat=True))
+        
+        if not required_skill_ids:
+            return Response({
+                'message': 'No required skills defined for this project',
+                'profiles': []
+            })
+        
+        # Get all users who have at least one of the required skills
+        # and are not already team members
+        current_member_ids = list(
+            TeamMember.objects
+            .filter(project=project)
+            .values_list('user__user_id', flat=True)
+        )
+        current_member_ids.append(project.created_by_id)  # Include project creator
+        
+        # Get users with matching skills
+        user_skills = (
+            UserSkill.objects
+            .filter(skill_id__in=required_skill_ids)
+            .exclude(user__in=current_member_ids)
+            .select_related('user', 'skill')
+            .values('user_id')
+            .annotate(
+                match_count=Count('id', distinct=True),
+                avg_proficiency=Coalesce(models.Avg('proficiency_level'), 0.0)
+            )
+        )
+        
+        if not user_skills.exists():
+            return Response({
+                'message': 'No potential teammates found with matching skills',
+                'profiles': []
+            })
+        
+        # Calculate match percentage and prepare response
+        total_required_skills = len(required_skill_ids)
+        user_profiles = []
+        
+        for us in user_skills:
+            user = UserProfile.objects.get(user_id=us['user_id'])
+            match_percentage = round((us['match_count'] / total_required_skills) * 100, 1)
+            
+            # Get user's skills that match the project's required skills
+            matched_skills = (
+                UserSkill.objects
+                .filter(
+                    user_id=us['user_id'],
+                    skill_id__in=required_skill_ids
+                )
+                .select_related('skill')
+                .values('skill__name', 'proficiency_level')
+            )
+            
+            # Get user's availability - use user.user to get the CustomUser instance
+            availability = (
+                UserAvailability.objects
+                .filter(user=user.user)  # user is a UserProfile, user.user is the CustomUser
+                .values('day_of_week', 'time_slot_start', 'time_slot_end', 'is_available')
+            )
+            
+            user_profiles.append({
+                'id': user.user_id,
+                'name': user.user.get_full_name(),
+                'email': user.user.email,
+                'department': user.user.department.name if user.user.department else None,
+                'year': user.user.study_year,
+                'match_percentage': match_percentage,
+                'avg_proficiency': us['avg_proficiency'],
+                'matched_skills': [
+                    {
+                        'name': skill['skill__name'],
+                        'proficiency': skill['proficiency_level']
+                    }
+                    for skill in matched_skills
+                ],
+                'availability': list(availability)  # Convert queryset to list for JSON serialization
+            })
+        
+        # Sort by match percentage (descending)
+        user_profiles.sort(key=lambda x: x['match_percentage'], reverse=True)
+        
+        return Response({
+            'project_id': project_id,
+            'project_title': project.title,
+            'required_skills': list(
+                ProjectSkill.objects
+                .filter(project=project)
+                .select_related('skill')
+                .values('skill__name', 'skill__id')
+            ),
+            'profiles': user_profiles,
+            'matching_algorithm': 'basic'  # Indicate which algorithm was used
+        })
+        
+    except Exception as e:
+        logger.error(f"Error finding teammates: {str(e)}", exc_info=True)
+        return Response(
+            {'error': 'An error occurred while searching for teammates'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def advanced_find_teammates(request, project_id):
+    """
+    Find potential teammates for a project using advanced matching algorithms.
+    This uses GNN and social network analysis for better matching.
+    """
+    if not ADVANCED_MATCHING_AVAILABLE:
+        return Response(
+            {'error': 'Advanced matching features are not available'},
+            status=status.HTTP_501_NOT_IMPLEMENTED
+        )
     
-    join_request.is_read = True
-    join_request.save()
-    
-    return Response({'message': 'Message marked as read'}, status=status.HTTP_200_OK)
+    try:
+        project = get_object_or_404(Project, project_id=project_id)
+        
+        # Check if the current user has permission to view this project
+        if project.created_by != request.user and not TeamMember.objects.filter(
+            project=project, user__user=request.user
+        ).exists():
+            return Response(
+                {'error': 'You do not have permission to view this project'}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Get selected skills from query parameters
+        selected_skills = request.query_params.get('skills', '').split(',')
+        selected_skills = [s.strip() for s in selected_skills if s.strip()]
+        print(f"[DEBUG] Selected skills from request: {selected_skills}")
+        
+        # Get advanced matches with selected skills
+        matches = get_advanced_matches(project_id, selected_skills=selected_skills)
+        
+        # Get required skills for the response
+        required_skills = list(
+            ProjectSkill.objects
+            .filter(project=project)
+            .select_related('skill')
+            .values('skill__name', 'skill__id')
+        )
+        
+        return Response({
+            'project_id': project_id,
+            'project_title': project.title,
+            'required_skills': required_skills,
+            'profiles': matches or [],
+            'matching_algorithm': 'advanced'
+        })
+        
+    except Project.DoesNotExist:
+        return Response(
+            {'error': 'Project not found'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        logger.error(f"Error in advanced teammate finding: {str(e)}", exc_info=True)
+        return Response(
+            {'error': 'An error occurred while finding teammates'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def find_group_members(request, group_id):
+    """
+    Find potential members for a study group based on skills and interests.
+    This is similar to find_teammates but for study groups.
+    """
+    try:
+        # Get the study group
+        study_group = get_object_or_404(StudyGroup, group_id=group_id)
+        
+        # Check if the current user has permission to view this group
+        if study_group.created_by != request.user and not StudyGroupMember.objects.filter(
+            group=study_group, user__user=request.user
+        ).exists():
+            return Response(
+                {'error': 'You do not have permission to view this group'}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Get required skills for the group
+        required_skills = list(
+            study_group.skills.all().values('name', 'id')
+        )
+        
+        if not required_skills:
+            return Response({
+                'group_id': group_id,
+                'group_title': study_group.title,
+                'required_skills': [],
+                'profiles': [],
+                'message': 'No required skills defined for this group'
+            })
+        
+        required_skill_ids = [skill['id'] for skill in required_skills]
+        
+        # Get current group members to exclude them from results
+        current_member_ids = list(
+            StudyGroupMember.objects
+            .filter(group=study_group)
+            .values_list('user__user_id', flat=True)
+        )
+        
+        # Get users with matching skills who are not already members
+        user_skills = (
+            UserSkill.objects
+            .filter(skill_id__in=required_skill_ids)
+            .exclude(user_id__in=current_member_ids)
+            .exclude(user=study_group.created_by)  # Exclude group creator
+            .select_related('user__userprofile', 'skill')
+            .values('user_id')
+            .annotate(
+                match_count=Count('id', distinct=True),
+                avg_proficiency=Coalesce(models.Avg('proficiency_level'), 0.0)
+            )
+        )
+        
+        if not user_skills.exists():
+            return Response({
+                'group_id': group_id,
+                'group_title': study_group.title,
+                'required_skills': required_skills,
+                'profiles': [],
+                'message': 'No potential members found with matching skills'
+            })
+        
+        # Calculate match percentage and prepare response
+        total_required_skills = len(required_skill_ids)
+        user_profiles = []
+        
+        for us in user_skills:
+            user = UserProfile.objects.get(user_id=us['user_id'])
+            match_percentage = round((us['match_count'] / total_required_skills) * 100, 1)
+            
+            # Get user's skills that match the group's required skills
+            matched_skills = (
+                UserSkill.objects
+                .filter(
+                    user_id=us['user_id'],
+                    skill_id__in=required_skill_ids
+                )
+                .select_related('skill')
+                .values('skill__name', 'proficiency_level')
+            )
+            
+            # Get user's availability
+            availability = (
+                UserAvailability.objects
+                .filter(user=user.user, is_available=True)
+                .values('day_of_week', 'time_slot_start', 'time_slot_end')
+            )
+            
+            user_profiles.append({
+                'id': user.user_id,
+                'name': user.user.get_full_name(),
+                'email': user.user.email,
+                'department': user.user.department.name if user.user.department else None,
+                'year': user.user.study_year,
+                'match_percentage': match_percentage,
+                'avg_proficiency': us['avg_proficiency'],
+                'matched_skills': [
+                    {
+                        'name': skill['skill__name'],
+                        'proficiency': skill['proficiency_level']
+                    }
+                    for skill in matched_skills
+                ],
+                'availability': list(availability)
+            })
+        
+        # Sort by match percentage (descending)
+        user_profiles.sort(key=lambda x: x['match_percentage'], reverse=True)
+        
+        return Response({
+            'group_id': group_id,
+            'group_title': study_group.title,
+            'required_skills': required_skills,
+            'profiles': user_profiles,
+            'matching_algorithm': 'basic'  # Basic matching for groups
+        })
+        
+    except StudyGroup.DoesNotExist:
+        return Response(
+            {'error': 'Study group not found'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        logger.error(f"Error finding group members: {str(e)}", exc_info=True)
+        return Response(
+            {'error': 'An error occurred while searching for group members'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

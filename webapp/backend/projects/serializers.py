@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import Project, ProjectSkill, StudyGroup, StudyGroupMember, TeamMember, JoinRequest
-from accounts.models import Skill
+from accounts.models import Skill, UserProfile
 
 class SkillSerializer(serializers.ModelSerializer):
     class Meta:
@@ -371,3 +371,31 @@ class JoinRequestSerializer(serializers.ModelSerializer):
             return obj.requester.pk  # USN is the primary key
         except Exception:
             return None
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    """Serializer for user profile information."""
+    user_id = serializers.IntegerField(source='user.id', read_only=True)
+    email = serializers.EmailField(source='user.email', read_only=True)
+    first_name = serializers.CharField(source='user.first_name', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
+    full_name = serializers.SerializerMethodField()
+    department = serializers.CharField(source='department.name', allow_null=True)
+    skills = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = UserProfile
+        fields = [
+            'user_id', 'email', 'first_name', 'last_name', 'full_name',
+            'department', 'year', 'bio', 'linkedin_url', 'github_url',
+            'profile_picture', 'skills'
+        ]
+        read_only_fields = ['user_id', 'email', 'first_name', 'last_name', 'full_name']
+    
+    def get_full_name(self, obj):
+        return obj.user.get_full_name()
+    
+    def get_skills(self, obj):
+        from accounts.serializers import UserSkillSerializer
+        skills = obj.user_skills.select_related('skill').all()
+        return UserSkillSerializer(skills, many=True).data

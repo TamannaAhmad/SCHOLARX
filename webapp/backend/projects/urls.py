@@ -27,6 +27,9 @@ urlpatterns = [
     path('groups/<int:group_id>/join/', views.join_group, name='join_group'),
     path('groups/<int:group_id>/leave/', views.leave_group, name='leave_group'),
     path('groups/<int:group_id>/add-member/', views.add_group_member, name='add_group_member'),
+    # Teammate finding - only advanced matching is available
+    path('<int:project_id>/find-teammates/', views.advanced_find_teammates, name='find_teammates'),
+    path('groups/<int:group_id>/find-members/', views.find_group_members, name='find_group_members'),
     # Messages/Join Requests
     path('messages/incoming/', views.get_incoming_requests, name='get_incoming_requests'),
     path('messages/outgoing/', views.get_outgoing_requests, name='get_outgoing_requests'),

@@ -42,10 +42,16 @@
             <div class="input-wrapper search-input-wrapper">
                 <input type="search" id="searchInput" class="form-input search-input" placeholder="Search" aria-label="Search teammates">
             </div>
-            <button type="button" id="filterBtn" class="secondary-btn filter-btn">Filter</button>
+            <!-- advanced filtering button-->
+            <div class="flex items-center space-x-4">
+                <button type="button" id="filterBtn" class="secondary-btn filter-btn">Filter</button>
+            </div>
         </section>
 
         <section class="profiles-section">
+            <div id="skillFilters" class="mb-6">
+                <!-- Skill filter buttons will be dynamically inserted here -->
+            </div>
             <div id="profilesContainer" class="profiles-container" role="list"></div>
             <p id="emptyState" class="empty-state" hidden>No teammates match your search yet. Adjust the filters to explore more profiles.</p>
         </section>
@@ -54,36 +60,24 @@
     <template id="profileCardTemplate">
         <article class="profile-card" role="listitem">
             <div class="profile-card-body">
+                <div class="profile-header">
+                    <h3 class="profile-name" data-field="name"></h3>
+                    <span class="match-badge" data-field="matchPercentage"></span>
+                </div>
                 <dl class="profile-details">
-                    <div class="detail-row">
-                        <dt>Name:</dt>
-                        <dd data-field="name"></dd>
-                    </div>
-                    <div class="detail-row">
-                        <dt>Department:</dt>
-                        <dd data-field="department"></dd>
-                    </div>
-                    <div class="detail-row">
-                        <dt>Semester:</dt>
-                        <dd data-field="semester"></dd>
-                    </div>
                     <div class="detail-row">
                         <dt>Skills:</dt>
                         <dd data-field="skills"></dd>
                     </div>
-                    <div class="detail-row">
+                    <div class="detail-row availability-row">
                         <dt>Availability:</dt>
                         <dd data-field="availability"></dd>
-                    </div>
-                    <div class="detail-row">
-                        <dt>Match (%):</dt>
-                        <dd data-field="matchPercentage" class="match-value"></dd>
                     </div>
                 </dl>
             </div>
             <div class="profile-card-footer">
                 <div class="profile-card-actions">
-                    <button type="button" class="secondary-btn contact-btn" data-action="contact">Contact</button>
+                    <button type="button" class="secondary-btn view-profile-btn" data-action="view-profile">View Profile</button>
                     <button type="button" class="primary-btn add-btn" data-action="add" id="addButton">Add to Team</button>
                 </div>
             </div>
