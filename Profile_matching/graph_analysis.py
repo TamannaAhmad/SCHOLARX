@@ -253,6 +253,7 @@ def enhance_scores_with_graph(
         comm_bonus = 0.0
         
         enhanced_score = base_score + cent_bonus + comm_bonus
+        enhanced_score = min(enhanced_score, 1.0)  # Cap at 1.0
         network_scores.append(enhanced_score)
     
     enhanced_df["Network_Enhanced_Score"] = network_scores
