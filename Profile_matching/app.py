@@ -314,7 +314,7 @@ def main() -> None:
                                 default_checked = usn in set(st.session_state.selected_usns)
                                 key = f"sel-{usn}"
                                 st.checkbox("Select", value=default_checked, key=key)
-                                pending_checkbox_keys.append((usn, key, name))
+                                pending_checkbox_keys.append((usn, key))
 
                             # Relevant vs Other skills columns
                             rel_col, other_col = st.columns(2)
@@ -340,10 +340,10 @@ def main() -> None:
             if submitted_global:
                 # Update selection state only on submit to avoid reruns per toggle
                 current = set(st.session_state.selected_usns)
-                for usn, key, name in pending_checkbox_keys:
+                for usn, key in pending_checkbox_keys:
                     if st.session_state.get(key):
                         current.add(usn)
-                        selected_blocks.append((usn, name))
+                        selected_blocks.append((usn))
                     else:
                         if usn in current:
                             current.discard(usn)
