@@ -15,6 +15,7 @@ urlpatterns = [
     path('<int:project_id>/update/', views.update_project, name='update_project'),
     path('<int:project_id>/join/', views.join_project, name='join_project'),
     path('<int:project_id>/leave/', views.leave_project, name='leave_project'),
+    path('<int:project_id>/add-member/', views.add_team_member, name='add_team_member'),
     # Study groups
     path('groups/create/', views.create_study_group, name='create_study_group'),
     path('groups/my-groups/', views.get_user_study_groups, name='get_user_study_groups'),
@@ -25,6 +26,7 @@ urlpatterns = [
     path('groups/<int:group_id>/update/', views.update_study_group, name='update_study_group'),
     path('groups/<int:group_id>/join/', views.join_group, name='join_group'),
     path('groups/<int:group_id>/leave/', views.leave_group, name='leave_group'),
+    path('groups/<int:group_id>/add-member/', views.add_group_member, name='add_group_member'),
     # Messages/Join Requests
     path('messages/incoming/', views.get_incoming_requests, name='get_incoming_requests'),
     path('messages/outgoing/', views.get_outgoing_requests, name='get_outgoing_requests'),

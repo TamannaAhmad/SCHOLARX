@@ -233,6 +233,13 @@ export const projectsAPI = {
       method: 'POST',
     });
   },
+
+  async addTeamMember(projectId, userUsn) {
+    return fetchAPI(`/${projectId}/add-member/`, {
+      method: 'POST',
+      body: JSON.stringify({ user_usn: userUsn }),
+    });
+  },
 };
 
 export default projectsAPI;

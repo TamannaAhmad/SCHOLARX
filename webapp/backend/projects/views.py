@@ -573,39 +573,39 @@ def get_outgoing_requests(request):
 def approve_request(request, request_id):
     """Approve a join request"""
     join_request = get_object_or_404(JoinRequest, request_id=request_id)
-    
+
     # Check if user is the owner of the project/group
     if join_request.project:
         if join_request.project.created_by != request.user:
             return Response({'detail': 'You do not have permission to approve this request.'}, status=status.HTTP_403_FORBIDDEN)
-        
+
         # Check if project has space
         if join_request.project.max_team_size and join_request.project.current_team_size >= join_request.project.max_team_size:
             return Response({'detail': 'Project has reached maximum team size.'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         # Add user to project
         user_profile, _ = UserProfile.objects.get_or_create(user=join_request.requester)
         TeamMember.objects.get_or_create(project=join_request.project, user=user_profile)
         join_request.project.current_team_size += 1
         join_request.project.save()
-        
+
     elif join_request.group:
         if join_request.group.created_by != request.user:
             return Response({'detail': 'You do not have permission to approve this request.'}, status=status.HTTP_403_FORBIDDEN)
-        
+
         # Check if group has space
         current_size = StudyGroupMember.objects.filter(group=join_request.group).count()
         if join_request.group.max_size and current_size >= join_request.group.max_size:
             return Response({'detail': 'Study group has reached maximum size.'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         # Add user to group
         StudyGroupMember.objects.get_or_create(group=join_request.group, user=join_request.requester)
-    
+
     # Update request status
     join_request.status = 'approved'
     join_request.responded_at = timezone.now()
     join_request.save()
-    
+
     serializer = JoinRequestSerializer(join_request, context={'request': request})
 
     # Notify requester via email (best-effort)
@@ -623,6 +623,107 @@ def approve_request(request, request_id):
     return Response({
         'message': 'Request approved successfully',
         'request': serializer.data
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_team_member(request, project_id):
+    """Add a team member directly to a project (for project owners)"""
+    project = get_object_or_404(Project, project_id=project_id)
+
+    # Check if user is the project owner
+    if project.created_by != request.user:
+        return Response({'detail': 'Only project owners can add team members.'}, status=status.HTTP_403_FORBIDDEN)
+
+    # Get the user to add
+    user_usn = request.data.get('user_usn')
+    if not user_usn:
+        return Response({'detail': 'User USN is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user_to_add = User.objects.get(usn__iexact=user_usn)
+    except User.DoesNotExist:
+        return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Check if user is already a member
+    user_profile = UserProfile.objects.filter(user=user_to_add).first()
+    if user_profile and TeamMember.objects.filter(project=project, user=user_profile).exists():
+        return Response({'detail': 'User is already a member of this project.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Check if project has space
+    if project.max_team_size and project.current_team_size >= project.max_team_size:
+        return Response({'detail': 'Project has reached maximum team size.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Add user to project
+    user_profile, _ = UserProfile.objects.get_or_create(user=user_to_add)
+    TeamMember.objects.create(project=project, user=user_profile)
+    project.current_team_size += 1
+    project.save()
+
+    # Send notification email
+    owner_email = getattr(user_to_add, 'email', None)
+    if owner_email:
+        msg_page_url = f"{getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:8000')}/project-view.html?id={project.project_id}"
+        subject = f"You've been added to project: {project.title}"
+        body = (
+            f"Hello,\n\nYou have been added to the project '{project.title}' by the project owner."
+            f"\n\nView project: {msg_page_url}\n\n— ScholarX"
+        )
+        _safe_send_mail(subject, body, owner_email)
+
+    return Response({
+        'message': 'Team member added successfully',
+        'project': ProjectSerializer(project, context={'request': request}).data
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_group_member(request, group_id):
+    """Add a member directly to a study group (for group owners)"""
+    group = get_object_or_404(StudyGroup, group_id=group_id)
+
+    # Check if user is the group owner
+    if group.created_by != request.user:
+        return Response({'detail': 'Only group owners can add members.'}, status=status.HTTP_403_FORBIDDEN)
+
+    # Get the user to add
+    user_usn = request.data.get('user_usn')
+    if not user_usn:
+        return Response({'detail': 'User USN is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user_to_add = User.objects.get(usn__iexact=user_usn)
+    except User.DoesNotExist:
+        return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Check if user is already a member
+    if StudyGroupMember.objects.filter(group=group, user=user_to_add).exists():
+        return Response({'detail': 'User is already a member of this study group.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Check if group has space
+    current_size = StudyGroupMember.objects.filter(group=group).count()
+    if group.max_size and current_size >= group.max_size:
+        return Response({'detail': 'Study group has reached maximum size.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Add user to group
+    StudyGroupMember.objects.create(group=group, user=user_to_add)
+
+    # Send notification email
+    owner_email = getattr(user_to_add, 'email', None)
+    if owner_email:
+        msg_page_url = f"{getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:8000')}/study-group-view.html?id={group.group_id}"
+        subject = f"You've been added to study group: {group.name}"
+        body = (
+            f"Hello,\n\nYou have been added to the study group '{group.name}' by the group owner."
+            f"\n\nView group: {msg_page_url}\n\n— ScholarX"
+        )
+        _safe_send_mail(subject, body, owner_email)
+
+    return Response({
+        'message': 'Group member added successfully',
+        'group': StudyGroupSerializer(group, context={'request': request}).data
     }, status=status.HTTP_200_OK)
 
 

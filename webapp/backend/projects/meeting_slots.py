@@ -19,7 +19,7 @@ def get_team_availability(team_member_ids):
     """
     # Get all availability entries for team members
     availabilities = UserAvailability.objects.filter(
-        user__usn__in=team_member_ids,
+        user__in=team_member_ids,
         is_available=True
     ).select_related('user')
     
@@ -119,7 +119,7 @@ def get_meeting_slots(request, entity_type, entity_id):
         if entity_type == 'project':
             # Get project and verify user has access
             project = get_object_or_404(Project, pk=entity_id)
-            if not TeamMember.objects.filter(project=project, user=request.user).exists() and project.created_by != request.user:
+            if not TeamMember.objects.filter(project=project, user__user=request.user).exists() and project.created_by != request.user:
                 return Response(
                     {"error": "You don't have permission to view this project's schedule"},
                     status=status.HTTP_403_FORBIDDEN
@@ -127,7 +127,7 @@ def get_meeting_slots(request, entity_type, entity_id):
             # Get team member USNs
             team_member_ids = list(TeamMember.objects
                                  .filter(project=project)
-                                 .values_list('user__usn', flat=True))
+                                 .values_list('user__user__usn', flat=True))
             
             # Add the creator if not already in the list
             if project.created_by.usn not in team_member_ids:
@@ -145,7 +145,7 @@ def get_meeting_slots(request, entity_type, entity_id):
             team_member_ids = list(StudyGroupMember.objects
                                  .filter(group=study_group)
                                  .values_list('user__usn', flat=True))
-            
+
             # Add the creator if not already in the list
             if study_group.created_by.usn not in team_member_ids:
                 team_member_ids.append(study_group.created_by.usn)

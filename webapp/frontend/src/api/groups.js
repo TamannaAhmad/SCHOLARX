@@ -196,13 +196,20 @@ export const groupsAPI = {
     if (message && message.trim() !== '') {
       body.message = message.trim();
     }
-    
+
     return fetchAPI(`/groups/${groupId}/leave/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: Object.keys(body).length > 0 ? JSON.stringify(body) : '{}',
+    });
+  },
+
+  async addGroupMember(groupId, userUsn) {
+    return fetchAPI(`/groups/${groupId}/add-member/`, {
+      method: 'POST',
+      body: JSON.stringify({ user_usn: userUsn }),
     });
   },
 };

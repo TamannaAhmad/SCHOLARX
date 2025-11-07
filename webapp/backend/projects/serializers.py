@@ -33,7 +33,7 @@ class TeamMemberBriefSerializer(serializers.ModelSerializer):
 
     def get_usn(self, obj):
         try:
-            return obj.user.pk  # UserProfile primary key is CustomUser.usn
+            return obj.user.user.usn  # Get USN from the related CustomUser
         except Exception:
             return None
 

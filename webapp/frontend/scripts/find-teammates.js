@@ -371,23 +371,46 @@ document.addEventListener('click', (event) => {
   }
 
   if (action === 'add') {
-    // Determine context-appropriate message
+    // Get the user USN from the profile data
+    const userUsn = card.querySelector('[data-field="userId"]')?.textContent || name;
+
+    // Determine context-appropriate message and API call
     let message;
-    if (contextType === 'project') {
-      message = `${name} has been invited to join your project team.`;
-    } else if (contextType === 'study-group') {
-      message = `${name} has been invited to join your study group.`;
+    let apiCall;
+
+    if (contextType === 'project' && contextId) {
+      message = `Adding ${name} to your project team...`;
+      apiCall = async () => {
+        const result = await projectsAPI.addTeamMember(contextId, userUsn);
+        return `Successfully added ${name} to your project team.`;
+      };
+    } else if (contextType === 'study-group' && contextId) {
+      message = `Adding ${name} to your study group...`;
+      apiCall = async () => {
+        const result = await groupsAPI.addGroupMember(contextId, userUsn);
+        return `Successfully added ${name} to your study group.`;
+      };
     } else {
       message = `${name} has been invited to join your team.`;
+      alert(message);
+      return;
     }
+
+    // Show loading message
     alert(message);
-    
-    // TODO: Implement actual API calls to add member based on contextType and contextId
-    // if (contextType === 'project' && contextId) {
-    //   // Call project API to add team member
-    // } else if (contextType === 'study-group' && contextId) {
-    //   // Call study group API to add member
-    // }
+
+    // Execute the API call
+    apiCall()
+      .then(successMessage => {
+        alert(successMessage);
+        // Optionally refresh the profiles list to update the UI
+        loadProfiles();
+      })
+      .catch(error => {
+        console.error('Failed to add member:', error);
+        const errorMsg = handleAPIError(error, `Failed to add ${name}. Please try again.`);
+        showError(errorMsg);
+      });
   }
 });
 
