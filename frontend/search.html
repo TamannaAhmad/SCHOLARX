@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search - ScholarX</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/userprofile.css">
+    <link rel="stylesheet" href="styles/search.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lenis@1.0.6/dist/lenis.css" />
+</head>
+<body>
+    <div class="background-design">
+        <div class="gradient-overlay"></div>
+        <div class="geometric-pattern">
+            <div class="pattern-circle pattern-1"></div>
+            <div class="pattern-circle pattern-2"></div>
+            <div class="pattern-triangle pattern-3"></div>
+            <div class="pattern-square pattern-4"></div>
+        </div>
+    </div>
+
+    <header class="login-header">
+        <div class="logo-container">
+            <a href="index.html">
+                <h1 class="logo">ScholarX</h1>
+            </a>
+            <p class="tagline">AI-Driven Student<br> Collaboration</p>
+        </div>
+        <div class="profile-title-container">
+            <h1 class="profile-title">SEARCH PAGE</h1>
+        </div>
+        <nav class="header-nav">
+            <a href="dashboard.html" class="profile-nav-btn" id="backBtn">BACK</a>
+            <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme"><span class="icon">🌞</span></button>
+        </nav>
+    </header>
+
+    <main class="main-content search-page search-page">
+        <section class="search-bar-section">
+            <div id="error-container" class="error-message" style="display: none; margin-bottom: 1rem;"></div>
+            <div class="input-wrapper search-input-wrapper">
+                <input type="search" id="searchInput" class="form-input search-input" placeholder="Search" aria-label="Search projects and study groups">
+            </div>
+        </section>
+
+        <div class="search-content-layout">
+            <div class="results-container">
+                <section class="results-section" id="groupsSection">
+                    <h2 class="results-title">GROUP NAME</h2>
+                    <div class="results-list" id="groupsResults">
+                        <!-- Study group results will be populated here -->
+                    </div>
+                    <p class="empty-state" id="groupsEmptyState" hidden>No study groups match your search.</p>
+                </section>
+
+                <section class="results-section" id="projectsSection">
+                    <h2 class="results-title">PROJECT NAME</h2>
+                    <div class="results-list" id="projectsResults">
+                        <!-- Project results will be populated here -->
+                    </div>
+                    <p class="empty-state" id="projectsEmptyState" hidden>No projects match your search.</p>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <template id="groupCardTemplate">
+        <article class="result-card group-card">
+            <div class="result-card-body">
+                <h3 class="result-card-title">
+                    <a href="#" class="result-card-link" data-group-id=""></a>
+                </h3>
+                <p class="result-card-description"></p>
+                <div class="result-card-meta">
+                    <span class="meta-item" data-field="subject"></span>
+                    <span class="meta-item" data-field="course_code"></span>
+                    <span class="meta-item" data-field="group_size"></span>
+                    <span class="meta-item" data-field="topics"></span>
+                </div>
+            </div>
+        </article>
+    </template>
+
+    <template id="projectCardTemplate">
+        <article class="result-card project-card">
+            <div class="result-card-body">
+                <h3 class="result-card-title">
+                    <a href="#" class="result-card-link" data-project-id=""></a>
+                </h3>
+                <p class="result-card-description"></p>
+                <div class="result-card-meta">
+                    <span class="meta-item" data-field="status"></span>
+                    <span class="meta-item" data-field="team_size"></span>
+                    <span class="meta-item" data-field="skills"></span>
+                </div>
+            </div>
+        </article>
+    </template>
+
+    <script src="https://cdn.jsdelivr.net/npm/lenis@1.0.6/dist/lenis.min.js"></script>
+    <script type="module" src="scripts/search.js"></script>
+    <script src="scripts/smooth-scroll.js" type="module"></script>
+    <script>
+        // Theme toggle
+        const root=document.documentElement,toggle=document.getElementById('themeToggle'),icon=toggle.querySelector('.icon');
+        let theme=localStorage.getItem('theme')||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+        function setTheme(t){theme=t;localStorage.setItem('theme',t);
+            if(t==='dark'){root.classList.add('dark-mode');icon.textContent='🌙';}
+            else{root.classList.remove('dark-mode');icon.textContent='🌞';}
+            icon.classList.remove('anim');void icon.offsetWidth;icon.classList.add('anim');}
+        setTheme(theme);toggle.addEventListener('click',()=>setTheme(theme==='dark'?'light':'dark'));
+
+        // Wobbly background effect
+        document.addEventListener('mousemove', (e) => {
+            const x = (e.clientX / window.innerWidth - 0.5) * 20;
+            const y = (e.clientY / window.innerHeight - 0.5) * 20;
+            document.body.style.backgroundPosition = `calc(50% + ${x}px) calc(50% + ${y}px)`;
+        });
+    </script>
+</body>
+</html>
+

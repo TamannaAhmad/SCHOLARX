@@ -1,0 +1,50 @@
+/* Global CSS file for ScholarX Frontend */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap');
+
+/* Import landing page styles */
+@import url('./styles/landing.css');
+
+/* Import main styles (for login + home page animations) */
+@import url('./styles/main.css');
+
+/* Import registration styles */
+@import url('./styles/register.css');
+
+/* Import user profile styles */
+@import url('./styles/userprofile.css');
+
+/* Import dashboard styles */
+@import url('./styles/dashboard.css');
+
+/* ---------- Global Theme + Transition Defaults ---------- */
+:root {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ensure global fade transitions across all views */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  transition: background 1s ease, color 1s ease, opacity 1s ease;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Add consistent scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Optional: improve link/button feedback globally */
+a, button {
+  cursor: pointer;
+  transition: filter 0.2s ease, background-color 0.3s ease;
+}
+
+/* Keep root centered for pages using flex/grid layouts */
+#root {
+  margin: auto;
+  min-height: 100vh;
+}

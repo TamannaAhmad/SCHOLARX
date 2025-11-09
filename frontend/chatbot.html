@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot - ScholarX</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/userprofile.css">
+    <link rel="stylesheet" href="styles/chatbot.css">
+</head>
+<body>
+    <div class="login-container">
+        <!-- Background Design -->
+        <div class="background-design">
+            <div class="gradient-overlay"></div>
+            <div class="geometric-pattern">
+                <div class="pattern-circle pattern-1"></div>
+                <div class="pattern-circle pattern-2"></div>
+                <div class="pattern-triangle pattern-3"></div>
+                <div class="pattern-square pattern-4"></div>
+            </div>
+        </div>
+
+        <!-- Header -->
+        <header class="login-header">
+            <div class="logo-container">
+                <a href="index.html">
+                    <h1 class="logo">ScholarX</h1>
+                </a>
+                <p class="tagline">AI-Driven Student<br> Collaboration</p>
+            </div>
+            <div class="profile-title-container">
+                <h1 class="profile-title">CHATBOT</h1>
+            </div>
+            <nav class="header-nav">
+                <a href="dashboard.html" class="profile-nav-btn" id="backBtn">BACK</a>
+                <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme"><span class="icon">🌞</span></button>
+            </nav>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content chatbot-page">
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Messages will be dynamically added here -->
+                </div>
+                <div class="chat-input-container">
+                    <input 
+                        type="text" 
+                        id="chatInput" 
+                        class="chat-input" 
+                        placeholder="Type here..." 
+                        aria-label="Enter your message"
+                    >
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="scripts/chatbot.js"></script>
+    <script>
+        // Theme toggle
+        const root=document.documentElement,toggle=document.getElementById('themeToggle'),icon=toggle.querySelector('.icon');
+        let theme=localStorage.getItem('theme')||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+        function setTheme(t){theme=t;localStorage.setItem('theme',t);
+            if(t==='dark'){root.classList.add('dark-mode');icon.textContent='🌙';}
+            else{root.classList.remove('dark-mode');icon.textContent='🌞';}
+            icon.classList.remove('anim');void icon.offsetWidth;icon.classList.add('anim');}
+        setTheme(theme);toggle.addEventListener('click',()=>setTheme(theme==='dark'?'light':'dark'));
+
+        // Wobbly background effect
+        document.addEventListener('mousemove', (e) => {
+            const x = (e.clientX / window.innerWidth - 0.5) * 20;
+            const y = (e.clientY / window.innerHeight - 0.5) * 20;
+            document.body.style.backgroundPosition = `calc(50% + ${x}px) calc(50% + ${y}px)`;
+        });
+    </script>
+</body>
+</html>

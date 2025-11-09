@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ScholarX — Dashboard</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lenis@1.0.6/dist/lenis.css" />
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.0.6/dist/lenis.min.js"></script>
+
+  <link rel="stylesheet" href="styles/dashboard.css?v=25.1" />
+</head>
+<body class="dashboard-body">
+
+  <div class="gradient-mesh-bg" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="topbar-left">
+      <h2 class="topbar-logo gradient-text-animated">ScholarX</h2>
+    </div>
+    <div class="topbar-center"><span class="topbar-section">Dashboard</span></div>
+    <div class="topbar-right">
+      <a href="messages.html" class="topbar-link">Messages</a>
+      <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme"><span class="icon">🌞</span></button>
+      </div>
+  </header>
+
+  <section class="hero-section fade-up parallax-card">
+    <div class="hero-left">
+      <h1 class="hero-title gradient-text-animated">Welcome back, <span id="userName">User</span></h1>
+      <p class="hero-sub">Let’s create something <span class="accent">legendary</span> today.</p>
+    </div>
+    </section>
+
+  <main class="dashboard-wrapper">
+
+    <section class="stats-section fade-up">
+      <div class="stat-card glow-wrapper"><h3 id="statProjects" class="counter">0</h3><p>Active Projects</p></div>
+      <div class="stat-card glow-wrapper"><h3 id="statGroups" class="counter">0</h3><p>Study Groups</p></div>
+      <div class="stat-card glow-wrapper"><h3 id="statMessages" class="counter">0</h3><p>Unread Messages</p></div>
+    </section>
+
+    <section class="dashboard-grid fade-up">
+      <div class="glow-wrapper parallax-card">
+        <div class="card">
+          <h3 class="card-title"><span class="highlight">Your</span> Projects</h3>
+          <p>Manage your current and completed work.</p>
+          <a href="project-creation.html" class="btn">Create Project</a>
+        </div>
+      </div>
+
+      <div class="glow-wrapper parallax-card">
+        <div class="card">
+          <h3 class="card-title"><span class="highlight">Study</span> Groups</h3>
+          <p>Join or create groups with like-minded learners.</p>
+          <a href="group-creation.html" class="btn">Create Group</a>
+        </div>
+      </div>
+
+      <div class="glow-wrapper parallax-card">
+        <div class="card">
+          <h3>🤖 AI Chatbot</h3>
+          <p>Your personal AI learning companion.</p>
+          <a href="chatbot.html" class="btn">Open Chatbot</a>
+        </div>
+      </div>
+
+      <div class="glow-wrapper parallax-card">
+        <div class="card">
+          <h3>✉️ Messages</h3>
+          <p>Stay updated with project and group notifications.</p>
+          <a href="messages.html" class="btn">View Messages</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-section fade-up parallax-card">
+      <h2 class="cta-heading gradient-text-animated">Let’s build something legendary together 🚀</h2>
+      <a href="group-creation.html" class="btn large">Start a Group →</a>
+    </section>
+  </main>
+
+  <script>
+    const lenis = new Lenis({ duration: 1.2, smooth: true, easing: t => 1 - Math.pow(1 - t, 4) });
+    function raf(t){ lenis.raf(t); requestAnimationFrame(raf); }
+    requestAnimationFrame(raf);
+  </script>
+
+  <script>
+    const root=document.documentElement,toggle=document.getElementById('themeToggle'),icon=toggle.querySelector('.icon');
+    let theme=localStorage.getItem('theme')||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+    function setTheme(t){theme=t;localStorage.setItem('theme',t);
+      if(t==='dark'){root.classList.add('dark-mode');icon.textContent='🌙';}
+      else{root.classList.remove('dark-mode');icon.textContent='🌞';}
+      icon.classList.remove('anim');void icon.offsetWidth;icon.classList.add('anim');}
+    setTheme(theme);toggle.addEventListener('click',()=>setTheme(theme==='dark'?'light':'dark'));
+  </sCRIPT>
+
+  <script>
+    const parallaxEls=document.querySelectorAll('.parallax-card');
+    parallaxEls.forEach(el=>{
+      el.addEventListener('mousemove',e=>{
+        const rect=el.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top;
+        const rotateX=(y/rect.height-0.5)*8,rotateY=(x/rect.width-0.5)*-8;
+        el.style.transform=`rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+      });
+      el.addEventListener('mouseleave',()=>el.style.transform='rotateX(0) rotateY(0) scale(1)');
+    });
+  </script>
+
+  <script>
+    const bg = document.querySelector('.gradient-mesh-bg');
+    window.addEventListener('mousemove', e => {
+      const x = (e.clientX / window.innerWidth - 0.5) * 15;
+      const y = (e.clientY / window.innerHeight - 0.5) * 15;
+      bg.style.transform = `translate(${x}px, ${y}px) scale(1.05)`;
+    });
+    window.addEventListener('mouseleave', () => {
+      bg.style.transform = 'translate(0, 0) scale(1.05)';
+    });
+  </script>
+
+  <script>
+    document.querySelectorAll('.glow-wrapper').forEach(el => {
+      el.addEventListener('mousemove', e => {
+        // Get mouse position relative to the element
+        const rect = el.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        // Set the CSS variables on this specific element
+        el.style.setProperty('--x', `${x}px`);
+        el.style.setProperty('--y', `${y}px`);
+      });
+      
+      // Reset on mouse leave
+      el.addEventListener('mouseleave', () => {
+        el.style.removeProperty('--x');
+        el.style.removeProperty('--y');
+      });
+    });
+  </script>
+
+</body>
+</html>

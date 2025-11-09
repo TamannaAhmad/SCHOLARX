@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project View - ScholarX</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/userprofile.css">
+    <link rel="stylesheet" href="styles/project-creation.css">
+    <link rel="icon" href="favicon.ico">
+</head>
+<body>
+    <div class="background-design">
+        <div class="gradient-overlay"></div>
+        <div class="geometric-pattern">
+            <div class="pattern-circle pattern-1"></div>
+            <div class="pattern-circle pattern-2"></div>
+            <div class="pattern-triangle pattern-3"></div>
+            <div class="pattern-square pattern-4"></div>
+        </div>
+    </div>
+
+    <header class="login-header">
+        <div class="logo-container">
+            <a href="index.html">
+                <h1 class="logo">ScholarX</h1>
+            </a>
+            <p class="tagline">AI-Driven Student<br> Collaboration</p>
+        </div>
+        <div class="profile-title-container">
+            <h1 class="profile-title" id="project-title-heading">PROJECT NAME</h1>
+        </div>
+        <nav class="header-nav">
+            <a href="dashboard.html" class="profile-nav-btn" id="backBtn">BACK</a>
+        </nav>
+        <nav class="header-nav">
+            <a href="#" class="profile-nav-btn" id="editBtn">EDIT PROJECT</a>
+            <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme"><span class="icon">🌞</span></button>
+        </nav>
+    </header>
+
+    <div class="main-content project-view-page">
+        <div class="login-form-container">
+            <div id="error-container" class="error-message" style="display: none;"></div>
+
+            <form id="project-view-form" class="auth-form">
+                <div class="input-group">
+                    <label for="project-title" class="input-label">Project Title</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="project-title" class="form-input" readonly>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="project-type" class="input-label">Project Type</label>
+                    <div class="input-wrapper">
+                        <select id="project-type" class="form-input" disabled>
+                            <option value="">Select Project Type</option>
+                            <option value="research">Research</option>
+                            <option value="software">Software Development</option>
+                            <option value="hardware">Hardware Project</option>
+                            <option value="design">Design</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="project-status" class="input-label">Status</label>
+                    <div class="input-wrapper">
+                        <select id="project-status" class="form-input" disabled>
+                            <option value="planning">Planning</option>
+                            <option value="active">Active</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="project-description" class="input-label">Project Description</label>
+                    <div class="input-wrapper">
+                        <textarea id="project-description" class="form-input" rows="4" readonly></textarea>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label">Required Skills</label>
+                    <div class="input-wrapper skills-autocomplete-wrapper">
+                        <div id="skills-search-wrapper" style="display:none">
+                            <input 
+                                type="text" 
+                                id="skills-input" 
+                                name="skills-input" 
+                                class="form-input skills-input"
+                                placeholder="Type to search and add skills"
+                                disabled
+                            >
+                            <div id="skills-suggestions" class="skills-suggestions"></div>
+                            <small id="skills-note" class="input-note">Start typing to add/remove skills</small>
+                        </div>
+                        <div id="selected-skills" class="selected-skills"></div>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="max-team-size" class="input-label">Max Team Size</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="max-team-size" class="form-input" min="1" max="10" readonly>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="project-deadline" class="input-label">Deadline</label>
+                    <div class="input-wrapper">
+                        <input type="date" id="project-deadline" class="form-input" readonly>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label">Team Members</label>
+                    <div class="input-wrapper">
+                        <ul id="team-members" class="form-input" style="list-style:none; padding-left:0; background: transparent; border: none;"></ul>
+                    </div>
+                </div>
+
+                <div class="form-actions" style="display: flex; gap: var(--spacing-md); flex-wrap: wrap;">
+                    <a href="#" id="find-teammates-btn" class="primary-btn" style="text-decoration: none; display: none; text-align: center; width: auto; min-width: 150px;">Find Teammates</a>
+                    <a href="#" id="find-meeting-times-btn" class="primary-btn" style="text-decoration: none; display: none; text-align: center; width: auto; min-width: 180px; background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);">Find Meeting Times</a>
+                    <button type="button" id="request-join-btn" class="primary-btn" style="display: none; width: auto; min-width: 150px;">Request to Join Project</button>
+                    <button type="button" id="leave-project-btn" class="secondary-btn" style="display: none; width: auto; min-width: 150px;">Leave Project</button>
+                    <button type="button" id="save-btn" class="primary-btn" style="display:none; width: auto;">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="scripts/project-view.js?v=20251004-5"></script>
+    <style>
+        /* Error container styling for project view */
+        #error-container.error-message {
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            color: #dc2626;
+        }
+        
+        #error-container.error-message h2 {
+            color: #dc2626;
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        #error-container.error-message p {
+            color: #6b7280;
+            margin-bottom: 1rem;
+        }
+        
+        #error-container.error-message .primary-btn {
+            background: linear-gradient(135deg, #2563EB 0%, #7C3AED 100%);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.375rem;
+            text-decoration: none;
+            display: inline-block;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        #error-container.error-message .primary-btn:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+    <script>
+        // Theme toggle
+        const root=document.documentElement,toggle=document.getElementById('themeToggle'),icon=toggle.querySelector('.icon');
+        let theme=localStorage.getItem('theme')||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+        function setTheme(t){theme=t;localStorage.setItem('theme',t);
+            if(t==='dark'){root.classList.add('dark-mode');icon.textContent='🌙';}
+            else{root.classList.remove('dark-mode');icon.textContent='🌞';}
+            icon.classList.remove('anim');void icon.offsetWidth;icon.classList.add('anim');}
+        setTheme(theme);toggle.addEventListener('click',()=>setTheme(theme==='dark'?'light':'dark'));
+
+        // Wobbly background effect
+        document.addEventListener('mousemove', (e) => {
+            const x = (e.clientX / window.innerWidth - 0.5) * 20;
+            const y = (e.clientY / window.innerHeight - 0.5) * 20;
+            document.body.style.backgroundPosition = `calc(50% + ${x}px) calc(50% + ${y}px)`;
+        });
+    </script>
+</body>
+</html>
+
+
