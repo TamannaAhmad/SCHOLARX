@@ -308,7 +308,7 @@ function showLoading(isLoading) {
 async function fetchAvailableDepartments() {
     try {
         const token = localStorage.getItem('authToken');
-        const departmentsResponse = await fetch(`${API_BASE_URL}/departments/`, {
+        const departmentsResponse = await fetch(`${API_AUTH_BASE_URL}/departments/`, {
             method: 'GET',
             headers: {
                 'Authorization': `Token ${token}`,
@@ -362,7 +362,7 @@ async function fetchAvailableDepartments() {
 async function fetchAvailableSkills() {
     try {
         const token = localStorage.getItem('authToken');
-        const availableSkillsResponse = await fetch(`${API_BASE_URL}/skills/`, {
+        const availableSkillsResponse = await fetch(`${API_AUTH_BASE_URL}/skills/`, {
             method: 'GET',
             headers: {
                 'Authorization': `Token ${token}`,
@@ -942,7 +942,7 @@ async function saveProfileChanges() {
         const usn = getUrlParameter('usn') || currentUser.usn;
         
         // Update basic profile info
-        const profileResponse = await fetch(`${API_BASE_URL}/profile/${usn}/`, {
+        const profileResponse = await fetch(`${API_AUTH_BASE_URL}/profile/${usn}/`, {
             method: 'PATCH',
             headers: {
                 'Authorization': `Token ${token}`,
@@ -1071,7 +1071,7 @@ async function updateUserSkills() {
         for (const skill of skillsToDelete) {
             if (skill.id) {
                 updatePromises.push(
-                    fetch(`${API_BASE_URL}/user/skills/${skill.id}/`, {
+                    fetch(`${API_AUTH_BASE_URL}/user/skills/${skill.id}/`, {
                         method: 'DELETE',
                         headers: {
                             'Authorization': `Token ${token}`,
@@ -1089,7 +1089,7 @@ async function updateUserSkills() {
         // Create new skills
         for (const newSkill of newSkillsInUI) {
             updatePromises.push(
-                fetch(`${API_BASE_URL}/user/skills/`, {
+                fetch(`${API_AUTH_BASE_URL}/user/skills/`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Token ${token}`,
@@ -1118,7 +1118,7 @@ async function updateUserSkills() {
                 // Update existing skill if level changed
                 if (existingSkill.proficiency_level !== skillData.proficiency_level) {
                     updatePromises.push(
-                        fetch(`${API_BASE_URL}/user/skills/${skillId}/`, {
+                        fetch(`${API_AUTH_BASE_URL}/user/skills/${skillId}/`, {
                             method: 'PATCH',
                             headers: {
                                 'Authorization': `Token ${token}`,
@@ -1252,7 +1252,7 @@ async function updateUserAvailability() {
             const deletePromises = existingAvailability.map(async (slot) => {
                 if (slot.id) {
                     try {
-                        const deleteResponse = await fetch(`${API_BASE_URL}/user/availability/${slot.id}/`, {
+                        const deleteResponse = await fetch(`${API_AUTH_BASE_URL}/user/availability/${slot.id}/`, {
                             method: 'DELETE',
                             headers: {
                                 'Authorization': `Token ${token}`,
@@ -1294,7 +1294,7 @@ async function updateUserAvailability() {
             };
             
             try {
-                const response = await fetch(`${API_BASE_URL}/user/availability/`, {
+                const response = await fetch(`${API_AUTH_BASE_URL}/user/availability/`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Token ${token}`,

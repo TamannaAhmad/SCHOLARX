@@ -212,6 +212,13 @@ export const groupsAPI = {
       body: JSON.stringify({ user_usn: userUsn }),
     });
   },
+
+  async inviteToGroup(groupId, userUsn, message = '') {
+    return fetchAPI(`/groups/${groupId}/invite/`, {
+      method: 'POST',
+      body: JSON.stringify({ user_usn: userUsn, message: message }),
+    });
+  },
 };
 
 export default groupsAPI;

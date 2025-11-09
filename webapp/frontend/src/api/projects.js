@@ -228,9 +228,10 @@ export const projectsAPI = {
     });
   },
   
-  async leaveProject(projectId) {
+  async leaveProject(projectId, message = '') {
     return fetchAPI(`/${projectId}/leave/`, {
       method: 'POST',
+      body: JSON.stringify({ message }),
     });
   },
 
@@ -238,6 +239,13 @@ export const projectsAPI = {
     return fetchAPI(`/${projectId}/add-member/`, {
       method: 'POST',
       body: JSON.stringify({ user_usn: userUsn }),
+    });
+  },
+
+  async inviteToProject(projectId, userUsn, message = '') {
+    return fetchAPI(`/${projectId}/invite/`, {
+      method: 'POST',
+      body: JSON.stringify({ user_usn: userUsn, message: message }),
     });
   },
 };

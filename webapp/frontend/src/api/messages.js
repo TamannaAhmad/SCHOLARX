@@ -65,36 +65,54 @@ async function fetchAPI(endpoint, options = {}) {
 
 export const messagesAPI = {
   // Get all messages for the current user
-  async getMessages() {
+  getMessages() {
     return fetchAPI('/messages/');
   },
 
   // Get incoming join requests (for owners)
-  async getIncomingRequests() {
+  getIncomingRequests() {
     return fetchAPI('/messages/incoming/');
   },
 
   // Get outgoing join requests (for requesters)
-  async getOutgoingRequests() {
+  getOutgoingRequests() {
     return fetchAPI('/messages/outgoing/');
   },
 
+  // Get incoming invitations (for invitees)
+  getIncomingInvitations() {
+    return fetchAPI('/invitations/');
+  },
+
+  // Get sent invitations (for inviters)
+  getSentInvitations() {
+    return fetchAPI('/invitations/sent/');
+  },
+
+  // Respond to an invitation (accept/decline)
+  respondToInvitation(inviteId, accepted) {
+    return fetchAPI(`/invitations/${inviteId}/respond/`, {
+      method: 'POST',
+      body: JSON.stringify({ action: accepted ? 'accept' : 'decline' }),
+    });
+  },
+
   // Approve a join request
-  async approveRequest(requestId) {
+  approveRequest(requestId) {
     return fetchAPI(`/messages/${requestId}/approve/`, {
       method: 'POST',
     });
   },
 
   // Reject a join request
-  async rejectRequest(requestId) {
+  rejectRequest(requestId) {
     return fetchAPI(`/messages/${requestId}/reject/`, {
       method: 'POST',
     });
   },
 
   // Mark message as read
-  async markAsRead(messageId) {
+  markAsRead(messageId) {
     return fetchAPI(`/messages/${messageId}/read/`, {
       method: 'POST',
     });

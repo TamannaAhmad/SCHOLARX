@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import invite_views
 
 app_name = 'projects'
 
@@ -16,6 +17,7 @@ urlpatterns = [
     path('<int:project_id>/join/', views.join_project, name='join_project'),
     path('<int:project_id>/leave/', views.leave_project, name='leave_project'),
     path('<int:project_id>/add-member/', views.add_team_member, name='add_team_member'),
+    path('<int:project_id>/invite/', invite_views.invite_to_project, name='invite_to_project'),
     # Study groups
     path('groups/create/', views.create_study_group, name='create_study_group'),
     path('groups/my-groups/', views.get_user_study_groups, name='get_user_study_groups'),
@@ -27,6 +29,7 @@ urlpatterns = [
     path('groups/<int:group_id>/join/', views.join_group, name='join_group'),
     path('groups/<int:group_id>/leave/', views.leave_group, name='leave_group'),
     path('groups/<int:group_id>/add-member/', views.add_group_member, name='add_group_member'),
+    path('groups/<int:group_id>/invite/', invite_views.invite_to_group, name='invite_to_group'),
     # Teammate finding - only advanced matching is available
     path('<int:project_id>/find-teammates/', views.advanced_find_teammates, name='find_teammates'),
     path('groups/<int:group_id>/find-members/', views.find_group_members, name='find_group_members'),
@@ -36,6 +39,10 @@ urlpatterns = [
     path('messages/<int:request_id>/approve/', views.approve_request, name='approve_request'),
     path('messages/<int:request_id>/reject/', views.reject_request, name='reject_request'),
     path('messages/<int:message_id>/read/', views.mark_message_read, name='mark_message_read'),
+    # Invitations
+    path('invitations/', invite_views.get_my_invitations, name='get_my_invitations'),
+    path('invitations/sent/', invite_views.get_sent_invitations, name='get_sent_invitations'),
+    path('invitations/<int:invite_id>/respond/', invite_views.respond_to_invitation, name='respond_to_invitation'),
     # Meeting slots
     path('<str:entity_type>/<int:entity_id>/meeting-slots/', views.get_meeting_slots, name='get_meeting_slots'),
 ]

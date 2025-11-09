@@ -1,6 +1,9 @@
 from rest_framework import serializers
-from .models import Project, ProjectSkill, StudyGroup, StudyGroupMember, TeamMember, JoinRequest
+from .models import Project, ProjectSkill, StudyGroup, StudyGroupMember, TeamMember, JoinRequest, InviteRequest, LeaveRequest
 from accounts.models import Skill, UserProfile
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 class SkillSerializer(serializers.ModelSerializer):
     class Meta:
@@ -373,6 +376,105 @@ class JoinRequestSerializer(serializers.ModelSerializer):
             return None
 
 
+class InviteRequestSerializer(serializers.ModelSerializer):
+    """Serializer for project/group invitations."""
+    inviter_name = serializers.SerializerMethodField()
+    inviter_usn = serializers.SerializerMethodField()
+    invitee_name = serializers.SerializerMethodField()
+    invitee_usn = serializers.SerializerMethodField()
+    project = ProjectSerializer(read_only=True)
+    group = StudyGroupSerializer(read_only=True)
+    request_type = serializers.CharField(read_only=True)
+    
+    class Meta:
+        model = InviteRequest
+        fields = [
+            'invite_id', 'inviter', 'inviter_name', 'inviter_usn',
+            'invitee', 'invitee_name', 'invitee_usn',
+            'project', 'group', 'request_type', 'message', 'status',
+            'is_read', 'created_at', 'updated_at', 'responded_at'
+        ]
+        read_only_fields = [
+            'invite_id', 'inviter', 'inviter_name', 'inviter_usn',
+            'invitee_name', 'invitee_usn', 'created_at', 'updated_at',
+            'responded_at', 'status'
+        ]
+    
+    def get_inviter_name(self, obj):
+        try:
+            return f"{obj.inviter.first_name} {obj.inviter.last_name}"
+        except Exception:
+            return ''
+    
+    def get_inviter_usn(self, obj):
+        try:
+            return obj.inviter.usn
+        except Exception:
+            return None
+    
+    def get_invitee_name(self, obj):
+        try:
+            return f"{obj.invitee.first_name} {obj.invitee.last_name}"
+        except Exception:
+            return ''
+    
+    def get_invitee_usn(self, obj):
+        try:
+            return obj.invitee.usn
+        except Exception:
+            return None
+    
+    def validate(self, data):
+        # Ensure the user can only update their own invitations
+        request = self.context.get('request')
+        if request and hasattr(self, 'instance'):
+            if self.instance.invitee != request.user:
+                raise serializers.ValidationError("You can only respond to your own invitations.")
+        return data
+
+
+class LeaveRequestSerializer(serializers.ModelSerializer):
+    """Serializer for leave requests."""
+    user_name = serializers.SerializerMethodField()
+    user_usn = serializers.SerializerMethodField()
+    project = ProjectSerializer(read_only=True)
+    group = StudyGroupSerializer(read_only=True)
+    request_type = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
+    created_at = serializers.DateTimeField(format='%Y-%m-%dT%H:%M:%S')
+    
+    class Meta:
+        model = LeaveRequest
+        fields = [
+            'request_id', 'user', 'user_name', 'user_usn',
+            'project', 'group', 'request_type', 'message',
+            'status', 'is_read', 'created_at'
+        ]
+        read_only_fields = ['request_id', 'created_at']
+    
+    def get_user_name(self, obj):
+        try:
+            return obj.user.get_full_name() or obj.user.username
+        except Exception:
+            return ''
+    
+    def get_user_usn(self, obj):
+        try:
+            return obj.user.usn or obj.user.username
+        except Exception:
+            return ''
+    
+    def get_request_type(self, obj):
+        if obj.project:
+            return 'project_leave'
+        elif obj.group:
+            return 'study_group_leave'
+        return 'leave'
+    
+    def get_status(self, obj):
+        return 'approved'  # Leave requests are always considered approved
+
+
 class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer for user profile information."""
     user_id = serializers.IntegerField(source='user.id', read_only=True)
@@ -382,20 +484,18 @@ class UserProfileSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
     department = serializers.CharField(source='department.name', allow_null=True)
     skills = serializers.SerializerMethodField()
-    
+
+    def get_full_name(self, obj):
+        return f"{obj.user.first_name} {obj.user.last_name}"
+
+    def get_skills(self, obj):
+        # Get the user's skills from their profile
+        return [{"id": skill.id, "name": skill.name} for skill in obj.skills.all()]
+
     class Meta:
         model = UserProfile
         fields = [
             'user_id', 'email', 'first_name', 'last_name', 'full_name',
-            'department', 'year', 'bio', 'linkedin_url', 'github_url',
-            'profile_picture', 'skills'
+            'usn', 'department', 'skills', 'bio', 'profile_picture',
+            'github_url', 'linkedin_url', 'website_url'
         ]
-        read_only_fields = ['user_id', 'email', 'first_name', 'last_name', 'full_name']
-    
-    def get_full_name(self, obj):
-        return obj.user.get_full_name()
-    
-    def get_skills(self, obj):
-        from accounts.serializers import UserSkillSerializer
-        skills = obj.user_skills.select_related('skill').all()
-        return UserSkillSerializer(skills, many=True).data

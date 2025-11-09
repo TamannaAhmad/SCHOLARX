@@ -7,20 +7,43 @@ from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
 import logging
-from .models import Project, StudyGroup, TeamMember, StudyGroupMember, JoinRequest, LeaveRequest, ProjectSkill
 from django.contrib.auth import get_user_model
-from .meeting_slots import get_meeting_slots
-from accounts.models import UserAvailability, Skill, UserProfile, UserSkill
-from django.db.models import Q, Count, Avg
+from django.db import models
+from django.db.models import Q, Count, Avg, F, Case, When, Value, IntegerField, Exists, OuterRef, Subquery, Prefetch
 from django.db.models.functions import Coalesce
+from django.utils import timezone
+from django.core.mail import send_mail
+from django.conf import settings
+from django.shortcuts import get_object_or_404
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from collections import defaultdict, Counter
 from datetime import time, datetime, timedelta
 from typing import List, Dict, Any, Optional
 import logging
 
+# Import models
+from .models import Project, StudyGroup, TeamMember, StudyGroupMember, JoinRequest, LeaveRequest, ProjectSkill
+from accounts.models import UserAvailability, Skill, UserProfile, UserSkill
+
+# Import serializers
+from .serializers import (
+    ProjectSerializer, 
+    SkillSerializer, 
+    StudyGroupSerializer, 
+    JoinRequestSerializer, 
+    UserProfileSerializer,
+    LeaveRequestSerializer
+)
+
+# Import other local modules
+from .meeting_slots import get_meeting_slots
+from .advanced_matching import get_advanced_matches, ADVANCED_MATCHING_AVAILABLE
+
 logger = logging.getLogger(__name__)
-from django.db import IntegrityError, models
-from .serializers import ProjectSerializer, SkillSerializer, StudyGroupSerializer, JoinRequestSerializer, UserProfileSerializer
+User = get_user_model()
 from .advanced_matching import get_advanced_matches, ADVANCED_MATCHING_AVAILABLE
 from django.db.models.functions import Coalesce
 from accounts.models import Skill, UserProfile
@@ -268,25 +291,33 @@ def join_project(request, project_id):
     if user_profile:
         if TeamMember.objects.filter(project=project, user=user_profile).exists():
             return Response({'detail': 'You are already a member of this project.'}, status=status.HTTP_400_BAD_REQUEST)
-    
     # Check if user is the owner
     if project.created_by == request.user:
         return Response({'detail': 'You cannot join your own project.'}, status=status.HTTP_400_BAD_REQUEST)
     
-    # Check if there's already any request (due to unique constraint regardless of status)
-    existing_any = JoinRequest.objects.filter(
+    # Check if user is already a member of the project
+    user_profile = UserProfile.objects.filter(user=request.user).first()
+    if user_profile and TeamMember.objects.filter(project=project, user=user_profile).exists():
+        return Response({'detail': 'You are already a member of this project.'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check if there's a pending request
+    existing_pending = JoinRequest.objects.filter(
         requester=request.user,
         project=project,
+        status='pending'
+    ).exists()
+    
+    if existing_pending:
+        return Response({'detail': 'You already have a pending request for this project.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    # Check if there's a previous approved request where the user left
+    previous_approved = JoinRequest.objects.filter(
+        requester=request.user,
+        project=project,
+        status='approved'
     ).order_by('-created_at').first()
-    if existing_any:
-        msg = 'You already have a request for this project.'
-        if existing_any.status == 'pending':
-            msg = 'You already have a pending request for this project.'
-        elif existing_any.status == 'approved':
-            msg = 'You are already approved for this project.'
-        elif existing_any.status == 'rejected':
-            msg = 'Your previous request was rejected.'
-        return Response({'detail': msg}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # If there's a previous approved request, we'll allow creating a new one (user left and wants to rejoin)
     
     # Create join request
     message = request.data.get('message', '')
@@ -331,14 +362,20 @@ def leave_project(request, project_id):
     if project.created_by == request.user:
         return Response({'detail': 'Project owners cannot leave their own project.'}, status=status.HTTP_400_BAD_REQUEST)
     
+    # Get leave message from request
+    leave_message = request.data.get('message', '').strip()
+    requester_name = request.user.get_full_name() or request.user.username
+    
     # Create notification for project owner before removing the member
-    requester_name = request.user.get_full_name() or request.user.email
-    JoinRequest.objects.create(
-        requester=project.created_by,  # Owner is the recipient of the notification
+    message = f"{requester_name} has left your project '{project.title}'"
+    if leave_message:
+        message += f"\n\nMessage: {leave_message}"
+        
+    # Create leave request record
+    LeaveRequest.objects.create(
+        user=request.user,
         project=project,
-        request_type='project',
-        message=f"{requester_name} has left your project '{project.title}'",
-        status='approved',  # Using 'approved' status for leave notifications
+        message=leave_message,
         is_read=False
     )
     
@@ -503,17 +540,6 @@ def leave_group(request, group_id):
             is_read=False
         )
         
-        # Create a notification in the message center
-        # Using JoinRequest with a special type to ensure it appears in the message center
-        JoinRequest.objects.create(
-            requester=member,
-            group=group,
-            request_type='member_left',
-            message=notification_message,
-            status='approved',  # Approved status to prevent showing in pending requests
-            is_read=False
-        )
-        
         # Remove from group members
         StudyGroupMember.objects.filter(group=group, user=request.user).delete()
         
@@ -546,21 +572,41 @@ def leave_group(request, group_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_incoming_requests(request):
-    """Get incoming join requests for projects/groups owned by the user"""
+    """
+    Get incoming join/leave requests for projects/groups owned by the user
+    Returns a combined list of join requests and leave notifications
+    """
     from django.db.models import Q
     
-    # Get projects owned by user
+    # Get projects and groups owned by user
     user_projects = Project.objects.filter(created_by=request.user)
-    # Get groups owned by user
     user_groups = StudyGroup.objects.filter(created_by=request.user)
     
-    # Get all requests for user's projects and groups (all statuses for reference)
-    all_requests = JoinRequest.objects.filter(
-        Q(project__in=user_projects) | Q(group__in=user_groups)
-    ).order_by('-created_at')
+    # Get join requests for user's projects and groups
+    join_requests = JoinRequest.objects.filter(
+        Q(project__in=user_projects) | Q(group__in=user_groups),
+        status='pending'  # Only show pending join requests
+    ).select_related('project', 'group', 'requester')
     
-    serializer = JoinRequestSerializer(all_requests, many=True, context={'request': request})
-    return Response(serializer.data)
+    # Get leave requests for user's projects and groups
+    leave_requests = LeaveRequest.objects.filter(
+        Q(project__in=user_projects) | Q(group__in=user_groups),
+        is_read=False  # Only show unread leave requests
+    ).select_related('project', 'group', 'user')
+    
+    # Serialize both types of requests
+    join_serializer = JoinRequestSerializer(join_requests, many=True, context={'request': request})
+    leave_serializer = LeaveRequestSerializer(leave_requests, many=True, context={'request': request})
+    
+    # Combine and sort by creation date (newest first)
+    all_requests = join_serializer.data + leave_serializer.data
+    all_requests_sorted = sorted(
+        all_requests, 
+        key=lambda x: x.get('created_at', ''), 
+        reverse=True
+    )
+    
+    return Response(all_requests_sorted)
 
 
 @api_view(['GET'])
@@ -803,32 +849,50 @@ def reject_request(request, request_id):
     })
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def mark_message_read(request, message_id):
     """Mark a message as read"""
     try:
-        join_request = JoinRequest.objects.get(id=message_id)
-        
-        # Check if the current user is the recipient
-        if join_request.project and join_request.project.created_by != request.user and join_request.requester != request.user:
-            return Response(
-                {'error': 'You do not have permission to mark this message as read'}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
+        # Try to find the message in JoinRequest
+        try:
+            message = JoinRequest.objects.get(request_id=message_id)
+            # Check if user is the owner of the project/group
+            if (message.project and message.project.created_by != request.user) or \
+               (message.group and message.group.created_by != request.user):
+                return Response(
+                    {'detail': 'You do not have permission to mark this message as read.'}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
             
-        if join_request.group and join_request.group.created_by != request.user and join_request.requester != request.user:
-            return Response(
-                {'error': 'You do not have permission to mark this message as read'}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
+            message.is_read = True
+            message.save()
+            return Response({'message': 'Join request marked as read'}, status=status.HTTP_200_OK)
             
-        join_request.is_read = True
-        join_request.save()
-        return Response({'message': 'Message marked as read'})
-        
-    except JoinRequest.DoesNotExist:
+        except JoinRequest.DoesNotExist:
+            # If not found in JoinRequest, try LeaveRequest
+            try:
+                leave_request = LeaveRequest.objects.get(request_id=message_id)
+                # Check if user is the owner of the project/group
+                if (leave_request.project and leave_request.project.created_by != request.user) or \
+                   (leave_request.group and leave_request.group.created_by != request.user):
+                    return Response(
+                        {'detail': 'You do not have permission to mark this message as read.'}, 
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+                
+                leave_request.is_read = True
+                leave_request.save()
+                return Response({'message': 'Leave notification marked as read'}, status=status.HTTP_200_OK)
+                
+            except LeaveRequest.DoesNotExist:
+                return Response({'detail': 'Message not found'}, status=status.HTTP_404_NOT_FOUND)
+                
+    except Exception as e:
+        logger.error(f"Error marking message as read: {str(e)}", exc_info=True)
         return Response(
-            {'error': 'Message not found'}, 
-            status=status.HTTP_404_NOT_FOUND
+            {'detail': 'An error occurred while processing your request. Please try again.'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 
@@ -981,10 +1045,17 @@ def advanced_find_teammates(request, project_id):
                 status=status.HTTP_403_FORBIDDEN
             )
         
-        # Get selected skills from query parameters
-        selected_skills = request.query_params.get('skills', '').split(',')
-        selected_skills = [s.strip() for s in selected_skills if s.strip()]
-        print(f"[DEBUG] Selected skills from request: {selected_skills}")
+        # Get and decode selected skills from query parameters
+        from urllib.parse import unquote
+        
+        # Get the raw skills parameter and decode it
+        raw_skills = request.query_params.get('skills', '')
+        decoded_skills = unquote(raw_skills)
+        
+        # Split and clean the skills
+        selected_skills = [s.strip() for s in decoded_skills.split(',') if s.strip()]
+        print(f"[DEBUG] Raw skills from request: {raw_skills}")
+        print(f"[DEBUG] Decoded skills: {selected_skills}")
         
         # Get advanced matches with selected skills
         matches = get_advanced_matches(project_id, selected_skills=selected_skills)
@@ -1038,34 +1109,42 @@ def find_group_members(request, group_id):
                 status=status.HTTP_403_FORBIDDEN
             )
         
-        # Get required skills for the group
-        required_skills = list(
-            study_group.skills.all().values('name', 'id')
-        )
-        
-        if not required_skills:
+        # Get required topics for the group from the comma-separated topics field
+        if not study_group.topics:
             return Response({
                 'group_id': group_id,
                 'group_title': study_group.title,
                 'required_skills': [],
                 'profiles': [],
-                'message': 'No required skills defined for this group'
+                'message': 'No topics defined for this group'
             })
+            
+        # Convert comma-separated topics to a list and clean up whitespace
+        topics = [topic.strip() for topic in study_group.topics.split(',') if topic.strip()]
         
-        required_skill_ids = [skill['id'] for skill in required_skills]
+        # Create a list of skill-like objects with name and id
+        required_skills = [{'name': topic, 'id': i+1} for i, topic in enumerate(topics)]
+        required_skill_ids = list(range(1, len(topics) + 1))  # Generate sequential IDs
         
         # Get current group members to exclude them from results
         current_member_ids = list(
             StudyGroupMember.objects
             .filter(group=study_group)
-            .values_list('user__user_id', flat=True)
+            .values_list('user__usn', flat=True)
         )
         
-        # Get users with matching skills who are not already members
+        # Get users with matching skills (from topics) who are not already members
+        from django.db.models import Q
+        
+        # Create a query to find users with any of the required topics in their skills
+        topic_queries = Q()
+        for topic in topics:
+            topic_queries |= Q(skill__name__icontains=topic)
+        
         user_skills = (
             UserSkill.objects
-            .filter(skill_id__in=required_skill_ids)
-            .exclude(user_id__in=current_member_ids)
+            .filter(topic_queries)
+            .exclude(user__usn__in=current_member_ids)
             .exclude(user=study_group.created_by)  # Exclude group creator
             .select_related('user__userprofile', 'skill')
             .values('user_id')
@@ -1078,7 +1157,7 @@ def find_group_members(request, group_id):
         if not user_skills.exists():
             return Response({
                 'group_id': group_id,
-                'group_title': study_group.title,
+                'group_title': study_group.name,
                 'required_skills': required_skills,
                 'profiles': [],
                 'message': 'No potential members found with matching skills'

@@ -38,13 +38,29 @@
 
     <main class="main-content teammates-page">
         <div id="error-container" class="error-message" style="display: none; margin-bottom: 1rem; max-width: 800px; margin-left: auto; margin-right: auto;"></div>
-        <section class="search-filter">
-            <div class="input-wrapper search-input-wrapper">
-                <input type="search" id="searchInput" class="form-input search-input" placeholder="Search" aria-label="Search teammates">
+        <div class="info-box">
+            <div class="info-header">
+                <h3>How Matching Works</h3>
+                <button id="toggleInfo" class="info-toggle" aria-expanded="true" aria-controls="infoContent">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="18 15 12 9 6 15"></polyline>
+                    </svg>
+                </button>
             </div>
-            <!-- advanced filtering button-->
-            <div class="flex items-center space-x-4">
-                <button type="button" id="filterBtn" class="secondary-btn filter-btn">Filter</button>
+            <div id="infoContent" class="info-content" aria-hidden="false">
+                <p>Your matches are calculated based on the following criteria:</p>
+                <ul>
+                    <li><strong>Overall Match</strong>: Combined score of all matching factors</li>
+                    <li><strong>Skill Match</strong>: How well the user's skills match the project requirements</li>
+                    <li><strong>Availability Match</strong>: How well your available times overlap with the user's schedule</li>
+                </ul>
+                <p>Scores range from 0% (no match) to 100% (perfect match).</p>
+            </div>
+        </div>
+
+        <section class="search-filter">
+            <div class="input-wrapper search-input-wrapper" style="width: 100%;">
+                <input type="search" id="searchInput" class="form-input search-input" placeholder="Search" aria-label="Search teammates">
             </div>
         </section>
 
@@ -69,21 +85,45 @@
                         <dt>Skills:</dt>
                         <dd data-field="skills"></dd>
                     </div>
-                    <div class="detail-row availability-row">
-                        <dt>Availability:</dt>
-                        <dd data-field="availability"></dd>
-                    </div>
                 </dl>
             </div>
             <div class="profile-card-footer">
                 <div class="profile-card-actions">
                     <button type="button" class="secondary-btn view-profile-btn" data-action="view-profile">View Profile</button>
-                    <button type="button" class="primary-btn add-btn" data-action="add" id="addButton">Add to Team</button>
+                    <button type="button" class="secondary-btn request-btn" data-action="request">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                        Send Request
+                    </button>
                 </div>
             </div>
         </article>
     </template>
 
     <script type="module" src="scripts/find-teammates.js"></script>
+    <script>
+        // Debug script
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM fully loaded');
+            
+            // Check for request buttons after a short delay to ensure dynamic content is loaded
+            setTimeout(() => {
+                const requestButtons = document.querySelectorAll('.request-btn');
+                console.log(`Found ${requestButtons.length} request buttons`);
+                
+                requestButtons.forEach((btn, index) => {
+                    console.log(`Button ${index + 1}:`, {
+                        display: window.getComputedStyle(btn).display,
+                        visibility: window.getComputedStyle(btn).visibility,
+                        opacity: window.getComputedStyle(btn).opacity,
+                        parentDisplay: window.getComputedStyle(btn.parentElement).display,
+                        parentVisibility: window.getComputedStyle(btn.parentElement).visibility,
+                        rect: btn.getBoundingClientRect()
+                    });
+                });
+            }, 1000);
+        });
+    </script>
 </body>
 </html>

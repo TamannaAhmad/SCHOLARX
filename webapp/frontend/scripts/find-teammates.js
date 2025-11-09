@@ -2,7 +2,11 @@ import { authAPI } from '../src/api/auth.js';
 import { projectsAPI } from '../src/api/projects.js';
 import { groupsAPI } from '../src/api/groups.js';
 import errorHandler from '../src/utils/errorHandler.js';
+import { createMessageModal } from '../src/utils/modal.js';
 const { showError, showSuccess, showInfo, handleAPIError } = errorHandler;
+
+// Global state for selected skills
+let selectedSkills = [];
 
 // Helper function to get CSRF token from cookies
 function getCookie(name) {
@@ -24,7 +28,6 @@ function getCookie(name) {
 const profilesContainer = document.getElementById('profilesContainer');
 const emptyState = document.getElementById('emptyState');
 const searchInput = document.getElementById('searchInput');
-const filterBtn = document.getElementById('filterBtn');
 const profileCardTemplate = document.getElementById('profileCardTemplate');
 const pageTitle = document.getElementById('pageTitle');
 const addButton = document.getElementById('addButton');
@@ -52,6 +55,9 @@ function renderSkillFilters(skills) {
     return;
   }
   
+  // Preserve current selection if it exists
+  const currentSelectedSkills = getSelectedSkills();
+  
   console.log('Rendering skills:', skills);
   
   // Extract skill names from objects if needed
@@ -68,58 +74,87 @@ function renderSkillFilters(skills) {
   
   skillsContainer.hidden = false;
   skillsContainer.innerHTML = `
-    <div class="mb-4">
-      <div class="flex justify-between items-center mb-2">
-        <p class="text-sm font-medium text-gray-700">Filter by skills:</p>
+    <div class="skill-filters-container">
+      <div class="skill-filters-header">
+        <h3 class="skill-filters-title">Filter by Skills</h3>
         <button 
           type="button" 
           id="clearFiltersBtn"
-          class="text-xs text-gray-500 hover:text-gray-700 underline focus:outline-none"
+          class="clear-filters-btn"
+          aria-label="Clear all skill filters"
         >
-          Clear filters
+          Clear all
         </button>
       </div>
-      <div class="flex flex-wrap gap-2" id="skillButtons">
+      <div class="skill-buttons-container" id="skillButtons">
         ${skillNames.map(skillName => `
           <button 
             type="button" 
-            class="skill-filter-btn px-3 py-1 rounded-full text-sm font-medium transition-colors border
-                   border-blue-500 text-blue-600 hover:bg-blue-50 active:bg-blue-100"
+            class="skill-filter-btn"
             data-skill="${encodeURIComponent(skillName)}"
+            aria-pressed="false"
           >
             ${skillName}
+            <span class="skill-checkmark">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </span>
           </button>
         `).join('')}
       </div>
     </div>
   `;
   
+    // Helper function to update button states
+  const updateButtonStates = () => {
+    document.querySelectorAll('.skill-filter-btn').forEach(btn => {
+      const skillName = btn.getAttribute('data-skill');
+      const isSelected = selectedSkills.includes(skillName);
+      btn.setAttribute('aria-pressed', isSelected);
+      btn.classList.toggle('skill-filter-btn--selected', isSelected);
+    });
+  };
+
+  // Set initial button states
+  updateButtonStates();
+
   // Add click handlers for skill buttons
   document.querySelectorAll('.skill-filter-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      // Toggle the selected state
-      this.classList.toggle('bg-blue-100');
-      this.classList.toggle('font-semibold');
-      this.classList.toggle('text-white');
-      this.classList.toggle('bg-blue-600');
+    btn.addEventListener('click', function() {  
+      const skillName = this.getAttribute('data-skill');
+      const isNowSelected = this.getAttribute('aria-pressed') !== 'true';
       
-      // Log the selected skills for debugging
-      const selectedSkills = getSelectedSkills();
-      console.log('Selected skills:', selectedSkills);
+      // Update the selectedSkills array
+      if (isNowSelected) {
+        if (!selectedSkills.includes(skillName)) {
+          selectedSkills.push(skillName);
+          console.log(`[DEBUG] Added skill: ${skillName}`);
+        }
+      } else {
+        const index = selectedSkills.indexOf(skillName);
+        if (index > -1) {
+          selectedSkills.splice(index, 1);
+        }
+      }
+      
+      // Update all button states to ensure consistency
+      updateButtonStates();      
       
       // Reload profiles with the new filter
       loadProfiles();
     });
   });
   
-  // Add click handler for clear filters button
+    // Add click handler for clear filters button
   const clearFiltersBtn = document.getElementById('clearFiltersBtn');
   if (clearFiltersBtn) {
     clearFiltersBtn.addEventListener('click', function() {
-      // Remove all active states from skill buttons
-      document.querySelectorAll('.skill-filter-btn').forEach(btn => {
-        btn.classList.remove('bg-blue-100', 'font-semibold', 'text-white', 'bg-blue-600');
-      });
+      // Clear the global selectedSkills array
+      selectedSkills = [];
+      
+      // Update button states to reflect cleared selection
+      updateButtonStates();
       
       console.log('Cleared all skill filters');
       
@@ -131,13 +166,79 @@ function renderSkillFilters(skills) {
 
 // Get currently selected skills
 function getSelectedSkills() {
-  const selectedBtns = document.querySelectorAll('.skill-filter-btn.bg-blue-100');
+  const selectedBtns = document.querySelectorAll('.skill-filter-btn[aria-pressed="true"]');
   return Array.from(selectedBtns).map(btn => decodeURIComponent(btn.dataset.skill));
 }
 
 // Render profile cards
 function renderProfiles(profiles) {
   profilesContainer.innerHTML = '';
+  
+  const parsePercentage = (value) => {
+    if (value === undefined || value === null) return null;
+    if (typeof value === 'string') {
+      const numericString = value.replace(/[^0-9.\-]/g, '');
+      if (!numericString) return null;
+      const parsed = parseFloat(numericString);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : null;
+  };
+
+  const formatPercentage = (value) => {
+    if (value === null) return null;
+    const rounded = Math.round(value * 10) / 10;
+    return `${Number.isInteger(rounded) ? rounded : rounded.toFixed(1)}%`;
+  };
+
+  const toNumber = (value) => {
+    if (value === undefined || value === null) return null;
+    if (typeof value === 'string') {
+      const numericString = value.replace(/[^0-9.\-]/g, '');
+      if (!numericString) return null;
+      const parsed = parseFloat(numericString);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : null;
+  };
+
+  const rawToPercent = (rawValue) => {
+    const raw = toNumber(rawValue);
+    if (raw === null) return null;
+    return raw <= 1 ? raw * 100 : raw;
+  };
+
+  const extractPercentage = (source, fallback) => {
+    if (source) {
+      if (source.percentage !== undefined) {
+        const pct = toNumber(source.percentage);
+        if (pct !== null) return pct;
+      }
+      if (source.raw !== undefined) {
+        const pctFromRaw = rawToPercent(source.raw);
+        if (pctFromRaw !== null) return pctFromRaw;
+      }
+    }
+
+    if (fallback !== undefined) {
+      const normalizedFallback = rawToPercent(fallback);
+      if (normalizedFallback !== null) return normalizedFallback;
+
+      const directFallback = toNumber(fallback);
+      if (directFallback !== null) return directFallback;
+    }
+
+    return null;
+  };
+
+  const formatPercentageOrPlaceholder = (value) => {
+    if (value === null) return '—';
+    return formatPercentage(value);
+  };
   
   if (profiles.length === 0) {
     emptyState.hidden = false;
@@ -148,133 +249,152 @@ function renderProfiles(profiles) {
   emptyState.hidden = true;
   
   profiles.forEach(profile => {
-    const card = document.createElement('div');
-    card.className = 'bg-white rounded-lg shadow-md p-6 mb-4';
+    const card = document.createElement('article');
+    card.className = 'profile-card';
     
-    // Format match percentage
-    const matchPercentage = typeof profile.matchPercentage === 'number' 
-      ? Math.round(profile.matchPercentage * 100) + '%' 
-      : profile.matchPercentage || 'N/A';
-      
-    // Get skill similarity from profile or match_details
-    const skillSimilarity = (() => {
-      // Check in various possible locations
-      if (profile.skill_similarity !== undefined) {
-        return Math.round(profile.skill_similarity * 100) + '%';
+    // Get match score from profile data with proper type conversion
+    let matchScore = 0;
+    let rawScore = profile.match_score ?? 
+                 profile.matchScore ?? 
+                 profile.match_percentage ?? 
+                 profile.matchPercentage;
+    
+    if (rawScore !== undefined && rawScore !== null) {
+      // Handle percentage strings (e.g., '79.8%')
+      if (typeof rawScore === 'string') {
+        // Remove any non-numeric characters except decimal point
+        const numericString = rawScore.replace(/[^\d.]/g, '');
+        const numScore = parseFloat(numericString);
+        matchScore = !isNaN(numScore) ? Math.round(numScore) : 0;
+      } else {
+        // Handle numbers
+        const numScore = Number(rawScore);
+        matchScore = !isNaN(numScore) && isFinite(numScore) ? Math.round(numScore) : 0;
       }
-      if (profile.match_details?.skill_similarity !== undefined) {
-        return Math.round(profile.match_details.skill_similarity * 100) + '%';
-      }
-      if (profile.match_details?.skill_similarity_score !== undefined) {
-        return Math.round(profile.match_details.skill_similarity_score * 100) + '%';
-      }
-      return 'N/A';
-    })();
+    }
+    
+    // Debug log to verify match score
+    console.log('Profile data:', { 
+      name: profile.name, 
+      matchScore,
+      hasMatchScore: matchScore > 0,
+      rawMatchScore: rawScore,
+      profileData: profile
+    });
+    
+    // Store match score on the profile object for template access
+    profile._matchScore = matchScore;
+    const breakdown = profile.score_breakdown ?? {};
+    const overallPercentage = extractPercentage(breakdown.overall, rawScore);
+    const skillPercentage = extractPercentage(
+      breakdown.skill,
+      profile.skill_match ?? profile.skillMatch
+    );
+    const availabilityPercentage = extractPercentage(
+      breakdown.availability,
+      profile.availability_match ?? profile.availabilityMatch
+    );
+
+    const baseSkillComponent = rawToPercent(
+      breakdown.skill_components?.base_skill_component
+    );
+    const proficiencyBonus = rawToPercent(
+      breakdown.skill_components?.proficiency_bonus
+    );
+
+    const breakdownItems = [
+      { label: 'Overall Match', value: overallPercentage },
+      { label: 'Skill Match', value: skillPercentage },
+      { label: 'Availability Match', value: availabilityPercentage }
+    ];
+
+    if (baseSkillComponent !== null || proficiencyBonus !== null) {
+      breakdownItems.push({ label: 'Proficiency Bonus', value: proficiencyBonus });
+    }
+
+    const scoreBreakdownHtml = `
+      <div class="detail-row score-breakdown-row">
+        <span class="detail-label">Score Breakdown</span>
+        <div class="detail-value">
+          <ul class="score-breakdown-list">
+            ${breakdownItems.map(item => `
+              <li class="score-breakdown-item">
+                <span class="score-breakdown-label">${item.label}</span>
+                <span class="score-breakdown-value">${formatPercentageOrPlaceholder(item.value)}</span>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      </div>
+    `;
+
+    // Format skills
+    let skillsHtml = 'No skills specified';
+    if (Array.isArray(profile.skills) && profile.skills.length > 0) {
+      skillsHtml = `
+        <div class="skills-list">
+          ${profile.skills.map(skill => 
+            `<span class="skill-tag">
+              ${typeof skill === 'string' ? skill : (skill.name || skill.skill?.name || '')}
+            </span>`
+          ).join('')}
+        </div>`;
+    } else if (typeof profile.skills === 'string' && profile.skills.trim()) {
+      skillsHtml = profile.skills;
+    }
+    
+    // Get profile details for display
+    const department = profile.department || '';
+    const year = profile.year ? `Year ${profile.year}` : '';
+    
+    // Determine button text based on ownership
+    const currentUserId = parseInt(localStorage.getItem('user_id'));
+    const isOwner = contextData && (contextData.owner_id === currentUserId || contextData.created_by === currentUserId);
+    const buttonText = isOwner ? 'Send Invite' : 'Send Request';
+    const buttonIcon = '<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>';
     
     card.innerHTML = `
-      <div class="flex justify-between items-start mb-4">
-        <div>
-          <h3 class="text-xl font-semibold">${profile.name || 'Anonymous User'}</h3>
-          <p class="text-gray-600">${profile.department || ''}${profile.department && profile.year ? ' • ' : ''}${profile.year || ''}</p>
-        </div>
-        <div class="text-right">
-          <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium inline-block">
-            ${matchPercentage} Match
+      <div class="profile-header">
+        <div class="profile-info">
+          <div class="profile-name-row">
+            <h3 class="profile-name">${profile.name || 'Anonymous User'}</h3>
+          </div>
+          <div class="profile-meta">
+            ${department ? `<div class="profile-department">${department}</div>` : ''}
+            ${year ? `<div class="profile-year">${year}</div>` : ''}
+            ${matchScore > 0 ? `<div class="match-score-text">Match: ${matchScore}%</div>` : ''}
           </div>
         </div>
       </div>
       
-      ${skillSimilarity !== 'N/A' ? `
-      <div class="mb-4">
-        <h4 class="font-medium text-gray-700 mb-1">Skill Match</h4>
-        <div class="text-sm text-gray-600">
-          <div class="flex justify-between items-center">
-            <span>Skill Similarity:</span>
-            <span class="font-medium text-blue-600">${skillSimilarity}</span>
+      <div class="profile-card-body">
+        <div class="profile-details">
+          <div class="detail-row">
+            <span class="detail-label">Skills</span>
+            <div class="detail-value">${skillsHtml}</div>
           </div>
-        </div>
-      </div>` : ''}
-      
-      <div class="mb-4">
-        <h4 class="font-medium text-gray-700 mb-1">Skills</h4>
-        <p class="text-gray-600">${profile.skills}</p>
-      </div>
-      
-      <div class="mb-4">
-        <h4 class="font-medium text-gray-700 mb-1">Availability</h4>
-        <div class="text-gray-600">
-          ${profile.availabilityIsHtml ? profile.availability : (profile.availability || 'Not specified')}
+          
+          ${scoreBreakdownHtml}
         </div>
       </div>
       
-      <div class="flex justify-between items-center">
-        <button class="text-blue-600 hover:text-blue-800 font-medium"
-                data-action="view-availability" data-user-id="${profile.id}">
-          View Detailed Availability
-        </button>
-        <button class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-                data-action="view-profile" data-user-id="${profile.id}">
-          View Profile
-        </button>
+      <div class="profile-card-footer">
+        <div class="profile-card-actions">
+          <a href="userprofile.html?usn=${encodeURIComponent(profile.usn || profile.id || profile.user_id || '')}" class="secondary-btn view-profile-btn">
+            View Profile
+          </a>
+          <button type="button" class="primary-btn request-btn" data-action="request" data-user-usn="${profile.usn || profile.id || profile.user_id || ''}" data-user-name="${profile.name || 'User'}">
+            ${buttonIcon}
+            ${buttonText}
+          </button>
+        </div>
       </div>
     `;
     
     profilesContainer.appendChild(card);
   });
   
-  // Add event listeners for the new buttons
-  document.querySelectorAll('[data-action="view-availability"]').forEach(button => {
-    button.addEventListener('click', (e) => {
-      const userId = e.target.dataset.userId;
-      // Show a modal with detailed availability
-      showAvailabilityModal(userId);
-    });
-  });
-}
-
-// Show detailed availability in a modal
-function showAvailabilityModal(userId) {
-  const user = allProfiles.find(p => p.id === userId || p.usn === userId);
-  if (!user) return;
-  
-  // Create modal
-  const modal = document.createElement('div');
-  modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50';
-  
-  modal.innerHTML = `
-    <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-      <div class="p-6">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-xl font-semibold">${user.name}'s Availability</h3>
-          <button class="text-gray-500 hover:text-gray-700" id="closeAvailabilityModal">
-            &times;
-          </button>
-        </div>
-        
-        <div class="space-y-4">
-          ${user.availabilityIsHtml 
-            ? user.availability 
-            : (user.availability || 'No availability information available.')}
-        </div>
-      </div>
-    </div>
-  `;
-  
-  // Add to DOM
-  document.body.appendChild(modal);
-  
-  // Add close button handler
-  const closeButton = modal.querySelector('#closeAvailabilityModal');
-  closeButton.addEventListener('click', () => {
-    document.body.removeChild(modal);
-  });
-  
-  // Close when clicking outside the modal
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      document.body.removeChild(modal);
-    }
-  });
+  // View profile links are now direct HTML links, no need for click handlers
 }
 
 function filterProfiles(term) {
@@ -286,17 +406,11 @@ function filterProfiles(term) {
   }
 
   const filtered = allProfiles.filter((profile) => {
-    // Strip HTML tags from availability for searching
-    const availabilityText = profile.availabilityIsHtml
-      ? profile.availability.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ')
-      : profile.availability;
-    
     const searchableFields = [
       profile.name,
       profile.department,
       profile.year,
       profile.skills,
-      availabilityText,
       profile.matchPercentage?.toString() ?? '',
     ];
 
@@ -306,62 +420,6 @@ function filterProfiles(term) {
   });
 
   renderProfiles(filtered);
-}
-
-function formatAvailability(availability = []) {
-  if (!availability || availability.length === 0) {
-    return { text: 'Not specified', isHtml: false };
-  }
-
-  // Group by day
-  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const dayMap = {};
-
-  // Debug log the input
-  console.log('Raw availability data:', availability);
-
-  availability
-    .filter(a => a && a.is_available)
-    .forEach(a => {
-      if (a.day_of_week === undefined || a.time_slot_start === undefined || a.time_slot_end === undefined) {
-        console.warn('Invalid availability entry:', a);
-        return;
-      }
-      
-      const dayName = dayNames[a.day_of_week];
-      if (!dayMap[dayName]) {
-        dayMap[dayName] = [];
-      }
-      
-      // Format time (e.g., "09:00:00" -> "9:00 AM")
-      const formatTime = (timeStr) => {
-        if (!timeStr) return '';
-        const [hours, minutes] = timeStr.split(':');
-        const hour = parseInt(hours, 10);
-        const ampm = hour >= 12 ? 'PM' : 'AM';
-        const displayHour = hour % 12 || 12;
-        return `${displayHour}:${minutes} ${ampm}`;
-      };
-
-      const timeSlot = `${formatTime(a.time_slot_start)}-${formatTime(a.time_slot_end)}`;
-      dayMap[dayName].push(timeSlot);
-    });
-
-  if (Object.keys(dayMap).length === 0) {
-    return { text: 'Not available', isHtml: false };
-  }
-
-  // Format with each day on a new line
-  const formatted = Object.entries(dayMap)
-    .map(([day, times]) => {
-      const dayAbbrev = day.substring(0, 3);
-      const timeSlots = times.join(', ');
-      return `<div class="availability-line"><span class="availability-day">${dayAbbrev}:</span> <span class="availability-times">${timeSlots}</span></div>`;
-    })
-    .join('');
-
-  console.log('Formatted availability:', formatted);
-  return { text: formatted, isHtml: true };  // Set isHtml to true to render HTML content
 }
 
 function calculateMatchPercentage(userSkillIds, requiredSkillIds) {
@@ -392,12 +450,8 @@ function normalizeProfile(profile, skills = [], userSkillIds = []) {
     .filter(Boolean)
     .join(' ');
 
-  // Format availability first
-  const availability = formatAvailability(profile.availability || []);
-  console.log('Formatted availability in normalizeProfile:', availability);
-  
-  // Calculate match percentage only if we have required skills
-  // When no parameters are provided, match percentage will always be "—"
+    // Calculate match percentage only if we have required skills
+    // When no parameters are provided, match percentage will always be "—"
   let matchPercentage = '—';
   if (requiredSkillIds.length > 0) {
     const match = calculateMatchPercentage(userSkillIds, requiredSkillIds);
@@ -436,6 +490,7 @@ async function loadContextData() {
     if (contextType === 'project') {
       // Fetch project details
       contextData = await projectsAPI.getProjectDetails(contextId);
+      console.log('Loaded project context data:', contextData);
       
       // Extract required skill IDs for matching
       if (contextData.skills && Array.isArray(contextData.skills)) {
@@ -456,9 +511,26 @@ async function loadContextData() {
     } else if (contextType === 'study-group') {
       // Fetch study group details
       contextData = await groupsAPI.getGroup(contextId);
+      console.log('Loaded study group context data:', contextData);
       
-      // For study groups, matching logic will be added later
-      // For now, we'll show all users
+      // Extract required skill IDs for matching from study group
+      if (contextData.skills && Array.isArray(contextData.skills)) {
+        requiredSkillIds = contextData.skills
+          .map(skill => {
+            // Handle different skill object structures
+            if (typeof skill === 'object' && skill !== null) {
+              return skill.id || skill.skill_id || skill.skill?.id;
+            }
+            return skill;
+          })
+          .filter(id => id != null);
+      } else if (contextData.required_skills && Array.isArray(contextData.required_skills)) {
+        requiredSkillIds = contextData.required_skills
+          .map(skill => skill.id || skill.skill_id || skill.skill?.id)
+          .filter(id => id != null);
+      }
+      
+      console.log('Required skill IDs for study group:', requiredSkillIds);
       
       // Extract existing member IDs
       if (contextData.members && Array.isArray(contextData.members)) {
@@ -477,8 +549,15 @@ async function loadContextData() {
 
 async function loadProfiles() {
   try {
-    // Show loading state
-    profilesContainer.innerHTML = '<div class="text-center py-8">Loading potential teammates...</div>';
+    // Show loading state in a card
+    profilesContainer.innerHTML = `
+      <div class="loading-card">
+        <div class="loading-spinner">
+          <div class="spinner"></div>
+        </div>
+        <p class="loading-text">Finding potential teammates...</p>
+      </div>
+    `;
     emptyState.hidden = true;
 
     // Get the current user's authentication token
@@ -490,22 +569,32 @@ async function loadProfiles() {
 
     // Load context data first if we have a context
     await loadContextData();
-
-    // Get selected skills
-    const selectedSkills = getSelectedSkills();
     
     // Make API call to get potential teammates using advanced matching
-    const url = new URL(`/api/projects/${contextId}/find-teammates/`, window.location.origin);
+    const endpoint = contextType === 'project' 
+      ? `/api/projects/projects/${contextId}/find-teammates/`
+      : `/api/projects/groups/${contextId}/find-members/`;
+    const url = new URL(endpoint, window.location.origin);
+    
+    // Only include skills in the URL if any are selected
+    // This will make the backend use only the selected skills for matching
     if (selectedSkills.length > 0) {
-      url.searchParams.append('skills', selectedSkills.join(','));
+      // Clear any existing skills parameter to avoid duplicates
+      url.searchParams.delete('skills');
+      // Add each selected skill as a separate parameter
+      selectedSkills.forEach(skill => {
+        url.searchParams.append('skills', skill);
+      });
     }
     
+    const startTime = performance.now();
     const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
+    const endTime = performance.now();
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -516,30 +605,27 @@ async function loadProfiles() {
     }
 
     const data = await response.json();
-    console.log('API Response:', data); // Debug log
     
     // Extract the profiles array from the response
     const profilesData = data.profiles?.profiles || data.profiles || [];
     
     if (profilesData.length > 0) {
-      // Update page title with project name
-      if (data.project_title) {
-        document.title = `Find Teammates - ${data.project_title} | ScholarX`;
-        pageTitle.textContent = `Find Teammates for "${data.project_title}"`;
-      } else if (data.profiles?.project_title) {
-        document.title = `Find Teammates - ${data.profiles.project_title} | ScholarX`;
-        pageTitle.textContent = `Find Teammates for "${data.profiles.project_title}"`;
+      // Update page title with project/group name
+      const title = data.project_title || data.group_title || data.profiles?.project_title || data.profiles?.group_title;
+      if (title) {
+        const pageTitleText = contextType === 'project' 
+          ? `Find Teammates for "${title}"`
+          : `Find Members for "${title}"`;
+        document.title = `${pageTitleText} | ScholarX`;
+        pageTitle.textContent = pageTitleText;
       }
 
             // Update skill filters if not already set
       const requiredSkills = data.required_skills || data.profiles?.required_skills || [];
-      console.log('Required skills from API:', requiredSkills);
       
       const skillFiltersContainer = document.getElementById('skillFilters');
-      console.log('Skill filters container:', skillFiltersContainer);
       
       if (requiredSkills.length > 0) {
-        console.log('Rendering skill filters...');
         renderSkillFilters(requiredSkills);
       } else {
         console.log('No skills to render or skills array is empty');
@@ -547,43 +633,54 @@ async function loadProfiles() {
       
       // Process and display profiles
       allProfiles = profilesData.map(profile => {
-        // Format availability first
-        const availability = profile.availability && Array.isArray(profile.availability) 
-          ? formatAvailability(profile.availability)
-          : { text: 'Not specified', isHtml: false };
-          
         // Handle both basic and advanced response formats
         const matchPercentage = profile.match_percentage || profile.match_percentage === 0
           ? `${profile.match_percentage}%`
           : (profile.match_percentage !== undefined ? `${Math.round(profile.match_percentage * 10) / 10}%` : 'N/A');
           
-        const skills = profile.skills || 
-          (profile.matched_skills && Array.isArray(profile.matched_skills)
-            ? profile.matched_skills
-                .map(skill => `${skill.name}${skill.proficiency ? ` (${skill.proficiency}/5)` : ''}`)
-                .join(', ')
-            : 'No skills specified');
-            
+        let skills = 'No skills specified';
+        if (Array.isArray(profile.skills) && profile.skills.length > 0) {
+          skills = profile.skills
+            .map(skill => {
+              const name = skill?.name || skill?.skill?.name || '';
+              const proficiency = skill?.proficiency ?? skill?.proficiency_level;
+              return name
+                ? `${name}${proficiency !== undefined ? ` (${proficiency}/5)` : ''}`
+                : null;
+            })
+            .filter(Boolean)
+            .join(', ');
+        } else if (typeof profile.skills === 'string' && profile.skills.trim()) {
+          skills = profile.skills;
+        } else if (profile.matched_skills && Array.isArray(profile.matched_skills)) {
+          skills = profile.matched_skills
+            .map(skill => `${skill.name}${skill.proficiency ? ` (${skill.proficiency}/5)` : ''}`)
+            .join(', ');
+        }
+
         // Prepare match details for advanced matching
         const matchDetails = profile.match_details?.skill_similarity !== undefined ? `
           <div class="text-xs text-gray-600 mt-1">
             <div>Skill Similarity: ${Math.round(profile.match_details.skill_similarity * 100)}%</div>
           </div>
         ` : '';
-          
+
         return {
+          ...profile,
           id: profile.id || profile.user_id,
           usn: profile.usn || '',
           name: profile.name,
           email: profile.email,
           department: profile.department || 'Not specified',
-          year: profile.year ? (typeof profile.year === 'string' ? profile.year : `Year ${profile.year}`) : 'Not specified',
+          year: profile.year ? (typeof profile.year === 'string' ? profile.year : `${profile.year}`) : 'Not specified',
           matchPercentage: matchPercentage,
           skills: skills,
-          availability: availability.text,
-          availabilityIsHtml: availability.isHtml,
-          matchValue: profile.match_percentage || 0, // For sorting
-          matchDetails: matchDetails
+          matchValue: profile.match_percentage || profile.match_score || 0, // For sorting
+          matchDetails: matchDetails,
+          match_score: profile.match_score ?? profile.matchPercentage ?? profile.match_percentage,
+          score_breakdown: profile.score_breakdown ?? profile.scoreBreakdown ?? null,
+          skill_match: profile.skill_match ?? profile.skillMatch ?? profile.score_breakdown?.skill?.percentage ?? null,
+          availability_match: profile.availability_match ?? profile.availabilityMatch ?? profile.score_breakdown?.availability?.percentage ?? null,
         };
       });
 
@@ -592,11 +689,20 @@ async function loadProfiles() {
       
       renderProfiles(allProfiles);
       
-      // Show add button if user is the project owner
-      if (contextData && contextData.created_by === parseInt(localStorage.getItem('user_id'))) {
+      // Show add button if user is the project/group owner
+      const currentUserId = parseInt(localStorage.getItem('user_id'));
+      const isOwner = contextData && (
+        contextData.owner_id === currentUserId || 
+        contextData.created_by === currentUserId ||
+        (contextData.owner && (contextData.owner.id === currentUserId || contextData.owner.user_id === currentUserId))
+      );
+      
+      if (isOwner) {
         addButton.hidden = false;
       }
     } else {
+      // Clear the loading state
+      profilesContainer.innerHTML = '';
       emptyState.hidden = false;
       emptyState.textContent = data.message || 'No potential teammates found with matching skills';
     }
@@ -613,10 +719,6 @@ async function loadProfiles() {
 
 searchInput?.addEventListener('input', (event) => {
   filterProfiles(event.target.value);
-});
-
-filterBtn?.addEventListener('click', () => {
-  alert('Filter options coming soon.');
 });
 
 // Initialize page based on URL parameters
@@ -683,6 +785,144 @@ document.addEventListener('click', async (event) => {
 
   if (action === 'contact') {
     alert(`Contact request sent to ${name}.`);
+    return;
+  }
+
+  if (action === 'request') {
+    // Get user data from button attributes
+    const userUsn = button.getAttribute('data-user-usn');
+    const userName = button.getAttribute('data-user-name') || 'User';
+    
+    if (!userUsn) {
+      showError('Unable to identify user. Please try again.');
+      return;
+    }
+    
+    // Check if we have a context (project or study group)
+    if (!contextType || !contextId) {
+      showError('Unable to send request. Please navigate from a project or study group page.');
+      return;
+    }
+    
+    // Check if current user is the owner
+    const currentUserId = parseInt(localStorage.getItem('user_id'));
+    const isOwner = contextData && (contextData.owner_id === currentUserId || contextData.created_by === currentUserId);
+    
+    // Debug logging
+    console.log('Ownership check:', {
+      currentUserId,
+      contextDataOwnerId: contextData?.owner_id,
+      contextDataCreatedBy: contextData?.created_by,
+      isOwner,
+      contextData,
+      contextType,
+      contextId
+    });
+    
+    if (isOwner) {
+      // Owner is sending an invitation
+      // Show modal for optional message input
+      const actionText = contextType === 'project' ? 'Invite to Project' : 'Invite to Group';
+      createMessageModal(async (message) => {
+        const originalText = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = `<span class="loading-spinner"></span> Sending ${actionText}...`;
+        
+        try {
+          try {
+            if (contextType === 'project') {
+              await projectsAPI.inviteToProject(contextId, userUsn, message);
+            } else if (contextType === 'study-group') {
+              await groupsAPI.inviteToGroup(contextId, userUsn, message);
+            }
+          } catch (error) {
+            // Check for different variations of the "already a member" error message
+            const errorMessage = error.message || '';
+            if (errorMessage.includes('already a member') || errorMessage.includes('User is already a member') || 
+                (error.response && error.response.data && 
+                 (error.response.data.detail || '').includes('already a member'))) {
+              // If user is already a member, update the UI to reflect that
+              button.innerHTML = '<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Already a Member';
+              button.classList.remove('primary-btn');
+              button.classList.add('success-btn');
+              button.disabled = true;
+              showInfo(`${userName} is already a member of this ${contextType === 'project' ? 'project' : 'group'}.`);
+              return;
+            }
+            throw error; // Re-throw other errors to be caught by the outer catch
+          }
+          
+          // Update button to show success state
+          button.innerHTML = '<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Invited';
+          button.classList.remove('primary-btn');
+          button.classList.add('success-btn');
+          button.disabled = true;
+          
+          showSuccess(`Invitation sent to ${userName}! They will be notified.`);
+        } catch (error) {
+          console.error('Error sending invitation:', error);
+          // Check if this is an "already a member" error
+          const errorData = error.response?.data || {};
+          const errorMessage = errorData.detail || error.message || 'Failed to send invitation. Please try again.';
+          
+          if (errorMessage.includes('already a member') || errorMessage.includes('User is already a member')) {
+            button.innerHTML = '<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Already a Member';
+            button.classList.remove('primary-btn');
+            button.classList.add('success-btn');
+            button.disabled = true;
+            showInfo(errorMessage);
+          } else {
+            // For other errors, show the error message
+            showError(errorMessage);
+            button.innerHTML = originalText;
+            button.disabled = false;
+          }
+        }
+      }, {
+        title: `Invite ${userName}`,
+        label: 'Message (optional)',
+        placeholder: `Why would ${userName} be a great fit for your ${contextType === 'project' ? 'project' : 'group'}?`,
+        confirmText: 'Send Invitation'
+      });
+    } else {
+      // Non-owner is requesting to join
+      // Show modal for message input
+      createMessageModal(async (message) => {
+        const originalText = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = '<span class="loading-spinner"></span> Sending...';
+        
+        try {
+          let response;
+          
+          if (contextType === 'project') {
+            // Call the project API to send invitation
+            response = await projectsAPI.inviteTeammate(contextId, userUsn, message);
+          } else {
+            // Call the study group API to send invitation
+            response = await groupsAPI.inviteMember(contextId, userUsn, message);
+          }
+          
+          if (response.success) {
+            const successMessage = contextType === 'project'
+              ? `Invitation sent to ${userName} successfully!`
+              : `Invitation to join the group has been sent to ${userName}!`;
+              
+            showSuccess(successMessage);
+            button.innerHTML = '<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Invitation Sent';
+            button.disabled = true;
+          } else {
+            throw new Error(response.error || `Failed to send ${contextType === 'project' ? 'invitation' : 'group invite'}`);
+          }
+        } catch (error) {
+          console.error('Error sending request:', error);
+          const errorMsg = handleAPIError(error, 'Failed to send request. Please try again.');
+          showError(errorMsg);
+          button.innerHTML = originalText;
+          button.disabled = false;
+        }
+      });
+    }
     return;
   }
 
@@ -765,14 +1005,40 @@ document.addEventListener('click', async (event) => {
         showInfo(`${name} has been invited to join your team.`);
       }
     } catch (error) {
-      console.error('Error adding member:', error);
-      showError(`Failed to add ${name}: ${error.message}`);
+      console.error('Error adding team member:', error);
+      showError(error.message || 'Failed to add team member');
+    } finally {
       button.disabled = false;
-      button.innerHTML = originalText;
     }
   }
 });
 
-// Initialize context and load profiles
-initializePageContext();
-loadProfiles();
+document.addEventListener('DOMContentLoaded', () => {
+  const toggleInfo = document.getElementById('toggleInfo');
+  const infoContent = document.getElementById('infoContent');
+  const infoBox = document.querySelector('.info-box');
+
+  if (toggleInfo && infoBox) {
+    toggleInfo.addEventListener('click', () => {
+      const isExpanded = toggleInfo.getAttribute('aria-expanded') === 'true';
+      toggleInfo.setAttribute('aria-expanded', !isExpanded);
+      infoContent.setAttribute('aria-hidden', isExpanded);
+      infoBox.classList.toggle('collapsed', isExpanded);
+
+      // Save the collapsed state to localStorage
+      localStorage.setItem('infoBoxCollapsed', isExpanded.toString());
+    });
+
+    // Load the collapsed state from localStorage
+    const isCollapsed = localStorage.getItem('infoBoxCollapsed') === 'true';
+    if (isCollapsed) {
+      toggleInfo.setAttribute('aria-expanded', 'false');
+      infoContent.setAttribute('aria-hidden', 'true');
+      infoBox.classList.add('collapsed');
+    }
+  }
+
+  // Initialize context and load profiles
+  initializePageContext();
+  loadProfiles();
+});

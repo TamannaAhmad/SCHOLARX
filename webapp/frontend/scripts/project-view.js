@@ -518,12 +518,15 @@ document.addEventListener('DOMContentLoaded', () => {
         requestJoinBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             
+            // Store original button state
+            const originalBtnText = requestJoinBtn.textContent;
+            const originalBtnDisabled = requestJoinBtn.disabled;
+            
             // Show modal for message input
             createMessageModal(async (message) => {
                 try {
                     hideError();
-                    requestJoinBtn.disabled = true;
-                    requestJoinBtn.textContent = 'Requesting...';
+                    setButtonLoading(requestJoinBtn, true, 'Requesting...');
                     
                     await projectsAPI.joinProject(projectId, message);
                     
@@ -536,32 +539,141 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error('Error joining project:', error);
                     const errorMsg = handleAPIError(error, 'Failed to request joining the project. Please try again.');
                     showErrorMsg(errorMsg);
-                    requestJoinBtn.disabled = false;
-                    requestJoinBtn.textContent = 'Request to Join Project';
+                    // Reset button to original state
+                    requestJoinBtn.textContent = originalBtnText;
+                    requestJoinBtn.disabled = originalBtnDisabled;
                 }
+            }, () => {
+                // On modal close (cancel), reset button state
+                requestJoinBtn.textContent = originalBtnText;
+                requestJoinBtn.disabled = originalBtnDisabled;
             });
         });
     }
     
-    // Handle leave project
-    if (leaveProjectBtn) {
-        leaveProjectBtn.addEventListener('click', async (e) => {
-            e.preventDefault();
-            
-            // Confirm before leaving
-            if (!confirm('Are you sure you want to leave this project?')) {
-                return;
-            }
-            
+    // Function to show leave project modal
+    function showLeaveProjectModal() {
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        `;
+
+        const modalContent = document.createElement('div');
+        modalContent.style.cssText = `
+            background: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        `;
+
+        const title = document.createElement('h3');
+        title.textContent = 'Leave Project';
+        title.style.marginTop = '0';
+        title.style.marginBottom = '1.5rem';
+        title.style.color = '#1f2937';
+        title.style.fontSize = '1.25rem';
+
+        const messageLabel = document.createElement('label');
+        messageLabel.textContent = 'Leave a message (optional)';
+        messageLabel.style.display = 'block';
+        messageLabel.style.marginBottom = '0.5rem';
+        messageLabel.style.fontWeight = '500';
+        messageLabel.style.color = '#374151';
+
+        const textarea = document.createElement('textarea');
+        textarea.placeholder = 'Let the project owner know why you\'re leaving...';
+        textarea.style.cssText = `
+            width: 100%;
+            min-height: 100px;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            font-family: inherit;
+            font-size: 0.95rem;
+            resize: vertical;
+            margin-bottom: 1.5rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        `;
+        
+        // Add focus styles
+        textarea.addEventListener('focus', () => {
+            textarea.style.borderColor = '#3b82f6';
+            textarea.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.2)';
+            textarea.style.outline = 'none';
+        });
+        
+        textarea.addEventListener('blur', () => {
+            textarea.style.borderColor = '#d1d5db';
+            textarea.style.boxShadow = 'none';
+        });
+
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.display = 'flex';
+        buttonContainer.style.gap = '0.75rem';
+        buttonContainer.style.justifyContent = 'flex-end';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.style.cssText = `
+            padding: 0.5rem 1rem;
+            background-color: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-weight: 500;
+        `;
+        cancelBtn.onclick = () => document.body.removeChild(modal);
+
+        const leaveBtn = document.createElement('button');
+        leaveBtn.textContent = 'Leave Project';
+        leaveBtn.style.cssText = `
+            padding: 0.5rem 1rem;
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-weight: 500;
+        `;
+
+        buttonContainer.appendChild(cancelBtn);
+        buttonContainer.appendChild(leaveBtn);
+
+        modalContent.appendChild(title);
+        modalContent.appendChild(messageLabel);
+        modalContent.appendChild(textarea);
+        modalContent.appendChild(buttonContainer);
+        modal.appendChild(modalContent);
+        document.body.appendChild(modal);
+        
+        // Focus the textarea when modal opens
+        setTimeout(() => textarea.focus(), 100);
+
+        // Handle leave project submission
+        leaveBtn.onclick = async () => {
             try {
-                hideError();
-                leaveProjectBtn.disabled = true;
-                leaveProjectBtn.textContent = 'Leaving...';
+                const message = textarea.value.trim();
+                leaveBtn.disabled = true;
+                leaveBtn.textContent = 'Leaving...';
                 
-                await projectsAPI.leaveProject(projectId);
+                await projectsAPI.leaveProject(projectId, message);
                 
                 // Show success and reload
                 showError('You have left the project.', { type: 'info', duration: 3000 });
+                document.body.removeChild(modal);
+                
                 setTimeout(() => {
                     loadProject(); // Reload to update membership status
                 }, 1000);
@@ -569,9 +681,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Error leaving project:', error);
                 const errorMsg = handleAPIError(error, 'Failed to leave the project. Please try again.');
                 showErrorMsg(errorMsg);
-                leaveProjectBtn.disabled = false;
-                leaveProjectBtn.textContent = 'Leave Project';
+                leaveBtn.disabled = false;
+                leaveBtn.textContent = 'Leave Project';
             }
+        };
+    }
+
+    // Handle leave project
+    if (leaveProjectBtn) {
+        leaveProjectBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            showLeaveProjectModal();
         });
     }
 

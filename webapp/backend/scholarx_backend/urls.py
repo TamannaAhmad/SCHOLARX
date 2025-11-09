@@ -15,7 +15,7 @@ urlpatterns = [
 
     # API URLs
     path('api/auth/', include('accounts.urls')),
-    path('api/projects/', include('projects.urls')),
+    path('api/projects/', include('projects.urls')),  # Includes both projects and groups
     
     # Chatbot API
     path('api/chatbot/', include('chatbot.urls')),
