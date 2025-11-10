@@ -15,40 +15,51 @@
     background: var(--card-background);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-large);
-    overflow: hidden;
+    border: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--border-color);
-    min-height: 500px;
+    height: 80vh;
+    max-height: 800px;
+    background-color: var(--white);
+    border-radius: 15px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    position: relative;
 }
 
 /* Chat Messages Area */
 .chat-messages {
     flex: 1;
+    padding: 20px;
     overflow-y: auto;
-    min-height: 400px;
-    padding: var(--spacing-xl);
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md);
-    background: var(--background-color);
+    gap: 15px;
+    scroll-behavior: smooth;
+    position: relative;
+    height: calc(100% - 80px); /* Account for input height */
+    margin-bottom: 0;
+    padding-bottom: 20px;
+    background-color: var(--background-color);
 }
 
+/* Custom scrollbar for chat messages */
 .chat-messages::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
 }
 
 .chat-messages::-webkit-scrollbar-track {
-    background: var(--background-color);
+    background: #f1f1f1;
+    border-radius: 3px;
 }
 
 .chat-messages::-webkit-scrollbar-thumb {
-    background: var(--border-color);
-    border-radius: var(--radius-sm);
+    background: #888;
+    border-radius: 3px;
 }
 
 .chat-messages::-webkit-scrollbar-thumb:hover {
-    background: var(--text-secondary);
+    background: #555;
 }
 
 /* Message Bubbles */
@@ -144,27 +155,31 @@
 
 /* Chat Input Container */
 .chat-input-container {
-    padding: var(--spacing-lg) var(--spacing-xl);
-    background: var(--card-background);
-    border-top: 1px solid var(--border-color);
+    padding: 15px 20px;
+    border-top: 1px solid #eee;
+    background-color: #fff;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    width: 100%;
+    box-sizing: border-box;
+    background: white;
 }
 
 .chat-input {
     width: 100%;
-    padding: var(--spacing-md);
-    border: 2px solid var(--border-color);
-    border-radius: var(--radius-md);
-    font-size: 1rem;
-    font-family: var(--font-primary);
-    background-color: var(--card-background);
-    transition: all var(--transition-fast);
+    padding: 12px 20px;
+    border: 2px solid #e0e0e0;
+    border-radius: 25px;
+    font-size: 14px;
     outline: none;
-    box-sizing: border-box;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .chat-input:focus {
-    border-color: var(--border-focus);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .chat-input:disabled {
@@ -213,8 +228,9 @@
     }
 
     .chat-messages {
-        padding: var(--spacing-lg);
+        padding: var(--spacing-md);
         gap: var(--spacing-sm);
+        height: calc(100% - 70px); /* Adjust for mobile input */
     }
 
     .message {
