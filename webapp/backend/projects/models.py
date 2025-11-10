@@ -289,12 +289,12 @@ class InviteRequest(models.Model):
         ]
         constraints = [
             models.UniqueConstraint(
-                fields=['inviter', 'invitee', 'project'],
+                fields=['inviter', 'invitee', 'project', 'created_at'],
                 condition=models.Q(project__isnull=False),
                 name='unique_project_invitation'
             ),
             models.UniqueConstraint(
-                fields=['inviter', 'invitee', 'group'],
+                fields=['inviter', 'invitee', 'group', 'created_at'],
                 condition=models.Q(group__isnull=False),
                 name='unique_group_invitation'
             ),

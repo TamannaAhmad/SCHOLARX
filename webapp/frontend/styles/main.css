@@ -322,6 +322,10 @@ header{
   color: var(--primary-color);
 }
 
+button .remove-skill {
+  padding: 0rem 0.1rem;
+}
+
 /* Add padding for password field to accommodate the toggle button */
 input[type="password"].form-input {
   padding-right: 2.5rem;

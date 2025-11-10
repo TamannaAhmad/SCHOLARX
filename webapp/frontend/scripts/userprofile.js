@@ -223,20 +223,41 @@ async function fetchCurrentUserProfile() {
         // Get user data (now includes profile fields)
         currentUserData = await profileResponse.json();
         
-        // Fetch user skills
-        const skillsResponse = await fetch(`${API_AUTH_BASE_URL}/user/skills/`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Token ${token}`,
-                'Content-Type': 'application/json',
-            },
-            credentials: 'include'
-        });
+        // Fetch all pages of user skills
+        let allSkills = [];
+        let nextUrl = `${API_AUTH_BASE_URL}/user/skills/`;
         
-        if (skillsResponse.ok) {
-            currentUserData.skills = await skillsResponse.json();
-        } else {
-            console.warn('Failed to fetch skills, continuing without them');
+        try {
+            while (nextUrl) {
+                const skillsResponse = await fetch(nextUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Token ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include'
+                });
+                
+                if (!skillsResponse.ok) {
+                    throw new Error(`Failed to fetch skills: ${skillsResponse.status}`);
+                }
+                
+                const data = await skillsResponse.json();
+                
+                // Add the current page's results to our collection
+                if (data.results) {
+                    allSkills = [...allSkills, ...data.results];
+                } else if (Array.isArray(data)) {
+                    allSkills = [...allSkills, ...data];
+                }
+                
+                // Check if there's another page
+                nextUrl = data.next;
+            }
+            
+            currentUserData.skills = allSkills;
+        } catch (error) {
+            console.warn('Error fetching skills:', error);
             currentUserData.skills = [];
         }
         
@@ -1058,10 +1079,32 @@ async function updateUserSkills() {
             existingSkillsArray = existingSkills.results;
         }
 
+        // Create a map of skill_db_id to skill for existing skills
+        const existingSkillsMap = new Map();
+        existingSkillsArray.forEach(skill => {
+            const dbId = skill.skill_id || (skill.skill && skill.skill.id);
+            if (dbId) {
+                existingSkillsMap.set(dbId.toString(), skill);
+            }
+        });
+
         // Find skills to delete (in currentUserData but not in UI)
-        const skillsToDelete = existingSkillsArray.filter(skill => {
-            const skillId = skill.id?.toString();
-            return skillId && !skillsInUI.has(skillId);
+        const skillsToDelete = [];
+        existingSkillsArray.forEach(skill => {
+            const dbId = (skill.skill_id || (skill.skill && skill.skill.id))?.toString();
+            if (dbId) {
+                // Check if this skill exists in the UI by skill_db_id
+                let existsInUI = false;
+                skillsInUI.forEach(uiSkill => {
+                    if (uiSkill.skill_id === dbId) {
+                        existsInUI = true;
+                    }
+                });
+                
+                if (!existsInUI) {
+                    skillsToDelete.push(skill);
+                }
+            }
         });
 
         // Find skills to update or create

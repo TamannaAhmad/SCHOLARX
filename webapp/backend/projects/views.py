@@ -1048,17 +1048,34 @@ def advanced_find_teammates(request, project_id):
         # Get and decode selected skills from query parameters
         from urllib.parse import unquote
         
-        # Get the raw skills parameter and decode it
-        raw_skills = request.query_params.get('skills', '')
-        decoded_skills = unquote(raw_skills)
+        # Handle both single skills parameter and multiple skills[] parameters
+        selected_skills = []
         
-        # Split and clean the skills
-        selected_skills = [s.strip() for s in decoded_skills.split(',') if s.strip()]
-        print(f"[DEBUG] Raw skills from request: {raw_skills}")
-        print(f"[DEBUG] Decoded skills: {selected_skills}")
+        # First check for multiple skills[] parameters (from URL like ?skills=python&skills=javascript)
+        skills_list = request.query_params.getlist('skills[]') or request.query_params.getlist('skills')
         
-        # Get advanced matches with selected skills
-        matches = get_advanced_matches(project_id, selected_skills=selected_skills)
+        if skills_list:
+            # If we have multiple skills parameters, use them directly
+            selected_skills = [unquote(skill.strip()) for skill in skills_list if skill.strip()]
+        else:
+            # Fall back to the old way of handling comma-separated skills
+            raw_skills = request.query_params.get('skills', '')
+            if raw_skills:
+                decoded_skills = unquote(raw_skills)
+                selected_skills = [s.strip() for s in decoded_skills.split(',') if s.strip()]
+        
+        print(f"[DEBUG] Raw skills from request: {request.query_params.get('skills', '')}")
+        print(f"[DEBUG] Selected skills after processing: {selected_skills}")
+        
+        # Get include_availability parameter (default to True if not specified)
+        include_availability = request.query_params.get('include_availability', 'true').lower() == 'true'
+        
+        # Get advanced matches with selected skills and availability preference
+        matches = get_advanced_matches(
+            project_id, 
+            selected_skills=selected_skills,
+            include_availability=include_availability
+        )
         
         # Get required skills for the response
         required_skills = list(

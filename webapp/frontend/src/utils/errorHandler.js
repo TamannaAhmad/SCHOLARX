@@ -131,9 +131,44 @@ export function showInfo(message, options = {}) {
  * @param {Object} options - Additional options
  */
 export function showSuccess(message, options = {}) {
-    showError(message, { ...options, type: 'info' });
+    const {
+        containerId = 'error-container',
+        duration = 5000,
+        position = 'top-center'
+    } = options;
+
+    // Try to find the error container in the page
+    let successContainer = document.getElementById(containerId) || 
+                         document.getElementById('error-message') ||
+                         document.getElementById('error-container');
+
+    // If container exists, use it
+    if (successContainer) {
+        successContainer.textContent = message;
+        successContainer.className = 'success-message';
+        successContainer.style.display = 'block';
+        successContainer.style.backgroundColor = '#d4edda';
+        successContainer.style.borderColor = '#c3e6cb';
+        successContainer.style.color = '#155724';
+        successContainer.style.padding = '1rem 1.5rem';
+        successContainer.style.borderRadius = '0.5rem';
+        successContainer.style.marginBottom = '1rem';
+        successContainer.style.maxWidth = '800px';
+        successContainer.style.marginLeft = 'auto';
+        successContainer.style.marginRight = 'auto';
+        
+        // Auto-hide after duration
+        if (duration > 0) {
+            setTimeout(() => {
+                if (successContainer) {
+                    successContainer.style.display = 'none';
+                }
+            }, duration);
+        }
+        return;
+    }
     
-    // Create a success-specific notification with green color
+    // Fallback to creating a new notification if no container found
     const notification = document.createElement('div');
     notification.className = 'notification success';
     notification.textContent = message;
@@ -157,7 +192,7 @@ export function showSuccess(message, options = {}) {
     
     setTimeout(() => {
         notification.remove();
-    }, options.duration || 3000);
+    }, duration || 3000);
     
     console.log(`[Success] ${message}`);
 }

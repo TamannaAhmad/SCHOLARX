@@ -211,3 +211,37 @@ export function createMessageModal(onConfirm, options = {}) {
     });
 }
 
+export function createInviteModal(onConfirm, options = {}) {
+    const {
+        title = 'Invite to Join',
+        label = 'Message to User (optional)',
+        placeholder = 'Add an optional message to the user',
+        confirmText = 'Send Invitation'
+    } = options;
+    
+    return createModal({
+        title: title,
+        content: `
+            <div style="margin-bottom: 1rem;">
+                <label for="invite-message" style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">
+                    ${label}
+                </label>
+                <textarea 
+                    id="invite-message" 
+                    placeholder="${placeholder}"
+                    rows="4"
+                    style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 0.375rem; font-family: inherit; font-size: 0.875rem; resize: vertical;"
+                ></textarea>
+            </div>
+        `,
+        confirmText: confirmText,
+        cancelText: 'Cancel',
+        onConfirm: () => {
+            const messageEl = document.getElementById('invite-message');
+            const message = messageEl ? messageEl.value.trim() : '';
+            onConfirm(message);
+        },
+        maxWidth: '600px'
+    });
+}
+

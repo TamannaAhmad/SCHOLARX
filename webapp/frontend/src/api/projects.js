@@ -77,6 +77,9 @@ async function fetchAPI(endpoint, options = {}) {
   return data;
 }
 
+// Export the fetchAPI function
+export { fetchAPI };
+
 // Projects API
 export const projectsAPI = {
   // Fetch available skills

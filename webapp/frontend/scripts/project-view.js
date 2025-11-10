@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Set up Find Teammates button link
     if (findTeammatesBtn && projectId) {
-        findTeammatesBtn.href = `find-teammates.html?type=project&id=${projectId}`;
+        findTeammatesBtn.href = `/find-teammates.html?type=project&id=${projectId}`;
     }
 
     let currentProject = null;
@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (findTeammatesBtn) {
                 findTeammatesBtn.style.display = 'inline-block';
                 if (projectId) {
-                    findTeammatesBtn.href = `find-teammates.html?type=project&id=${projectId}`;
+                    findTeammatesBtn.href = `/find-teammates.html?type=project&id=${projectId}`;
                 }
             }
             if (findMeetingTimesBtn) {

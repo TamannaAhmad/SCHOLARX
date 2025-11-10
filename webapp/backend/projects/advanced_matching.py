@@ -3,15 +3,14 @@ Advanced matching module for finding potential teammates using skill-based match
 with graph analysis and network effects.
 """
 import logging
-from typing import List, Dict, Any, Optional, Tuple, Set, Union
-from datetime import time
+import time
+from typing import List, Dict, Any, Optional, Tuple, Set, Union, DefaultDict
 import numpy as np
 import pandas as pd
 from collections import defaultdict
-from django.db.models import Q
 from sentence_transformers import SentenceTransformer
-from sklearn.cluster import DBSCAN
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.cluster import DBSCAN
 
 from accounts.models import UserProfile, UserSkill, CustomUser
 from .models import Project, ProjectSkill, TeamMember, StudyGroup, StudyGroupMember
@@ -27,7 +26,12 @@ _SKILL_EMBED_CACHE: Dict[str, np.ndarray] = {}
 
 
 def get_sentence_model() -> SentenceTransformer:
-    """Lazily initialise and cache the sentence transformer model."""
+    """
+    Lazily initialize and cache the sentence transformer model.
+    
+    Returns:
+        SentenceTransformer: The initialized sentence transformer model.
+    """
     global _SENTENCE_MODEL
     if _SENTENCE_MODEL is None:
         _SENTENCE_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
@@ -35,20 +39,42 @@ def get_sentence_model() -> SentenceTransformer:
 
 
 def encode_texts(texts: List[str]) -> np.ndarray:
-    """Encode a list of texts into normalised SBERT embeddings."""
+    """
+    Encode a list of texts into normalized SBERT embeddings.
+    
+    Args:
+        texts: List of text strings to encode
+        
+    Returns:
+        np.ndarray: Array of embeddings with shape (n_texts, embedding_dim)
+    """
     if not texts:
         return np.zeros((0, 384), dtype=np.float32)
-    model = get_sentence_model()
-    emb = model.encode(
-        texts,
-        show_progress_bar=False,
-        convert_to_numpy=True,
-        normalize_embeddings=True,
-    )
-    return emb.astype(np.float32)
+    try:
+        model = get_sentence_model()
+        emb = model.encode(
+            texts,
+            show_progress_bar=False,
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+        )
+        return emb.astype(np.float32)
+    except Exception as e:
+        logger.error(f"Error encoding texts: {e}")
+        return np.zeros((len(texts), 384), dtype=np.float32)
 
 
 def compute_similarity_matrix(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """
+    Compute the cosine similarity matrix between two sets of embeddings.
+    
+    Args:
+        a: First set of embeddings (n_samples_a, n_features)
+        b: Second set of embeddings (n_samples_b, n_features)
+        
+    Returns:
+        np.ndarray: Similarity matrix of shape (n_samples_a, n_samples_b)
+    """
     if a.size == 0 or b.size == 0:
         b_cols = b.shape[0] if b.ndim > 1 else 0
         return np.zeros((a.shape[0], b_cols), dtype=np.float32)
@@ -56,7 +82,15 @@ def compute_similarity_matrix(a: np.ndarray, b: np.ndarray) -> np.ndarray:
 
 
 def get_skill_embeddings(skills: List[str]) -> Dict[str, np.ndarray]:
-    """Return cached embeddings for the provided skills (normalised to lowercase)."""
+    """
+    Get cached embeddings for the provided skills, computing them if necessary.
+    
+    Args:
+        skills: List of skill strings to get embeddings for
+        
+    Returns:
+        Dict mapping normalized skill strings to their embeddings
+    """
     embeddings: Dict[str, np.ndarray] = {}
     pending: List[str] = []
 
@@ -82,6 +116,15 @@ def get_skill_embeddings(skills: List[str]) -> Dict[str, np.ndarray]:
 
 
 def normalize_and_split_skills(skills_text: str) -> List[str]:
+    """
+    Normalize and split a string of skills into a list of unique skill strings.
+    
+    Args:
+        skills_text: Input string containing skills separated by | or ;
+        
+    Returns:
+        List of unique, normalized skill strings
+    """
     if not isinstance(skills_text, str) or not skills_text.strip():
         return []
     parts = [p.strip().lower() for p in skills_text.replace("|", ";").split(";")]
@@ -98,7 +141,7 @@ def normalize_and_split_skills(skills_text: str) -> List[str]:
 def compute_skill_scores(
     df: pd.DataFrame,
     input_skills: List[str],
-    similarity_threshold: float = 0.35,
+    similarity_threshold: float = 0.5,
 ) -> Tuple[pd.DataFrame, Dict[str, List[Dict[str, Any]]]]:
     if df.empty or not input_skills:
         df = df.copy()
@@ -179,29 +222,96 @@ def compute_skill_scores(
 
         matched_skills_count = 0
         weighted_similarity_sum = 0.0
+        total_proficiency = 0.0
+        max_possible_proficiency = 0.0
 
+        # First, collect all valid skill matches with their proficiencies
+        valid_matches = []
         for sim, matched_skill in max_per_input:
             if sim < similarity_threshold or not matched_skill:
                 continue
-
-            matched_skills_count += 1
-            prof_value = skill_proficiencies.get(matched_skill, 3)
+                
+            # Get the proficiency, defaulting to 3 (intermediate) if not found
             try:
-                prof_norm = float(prof_value) / 5.0
+                prof_value = int(skill_proficiencies.get(matched_skill, 3))
             except (TypeError, ValueError):
-                prof_norm = 0.6
-            prof_norm = max(0.0, min(1.0, prof_norm))
-
-            proficiency_weighted_sim = sim * (0.5 + 0.5 * prof_norm)
+                prof_value = 3  # Default to intermediate on error
+                
+            # Skip skills marked as 'want to learn' (0)
+            if prof_value == 0:
+                continue
+                
+            valid_matches.append((sim, prof_value))
+        
+        # Process valid matches to calculate scores
+        for sim, prof_value in valid_matches:
+            # Normalize proficiency to 0-1 range
+            prof_norm = prof_value / 5.0
+            
+            matched_skills_count += 1
+            total_proficiency += prof_value  # Keep as integer for bonus calculation
+            max_possible_proficiency += 5.0  # Max proficiency per skill is 5
+            
+            # Weight similarity by proficiency (more weight to higher proficiencies)
+            proficiency_weighted_sim = sim * (0.3 + 0.7 * prof_norm)
             weighted_similarity_sum += proficiency_weighted_sim
 
-        avg_score = weighted_similarity_sum / len(input_skills) if input_skills else 0.0
+        # Calculate average score and coverage
         coverage = matched_skills_count / len(input_skills) if input_skills else 0.0
-
-        weighted_score = (0.65 * avg_score) + (0.35 * coverage)
-
+        
+        # Calculate average score only for matched skills
+        avg_score = (weighted_similarity_sum / matched_skills_count) if matched_skills_count > 0 else 0.0
+        
+        # Calculate proficiency bonus based on actual vs max possible proficiency
+        proficiency_bonus = 0.0
+        if max_possible_proficiency > 0 and matched_skills_count > 0:
+            # Calculate average proficiency per matched skill (will be in 0-1 range)
+            avg_proficiency = total_proficiency / matched_skills_count
+            
+            # Debug log the raw values
+            logger.debug(f"User {usn} - Matched skills: {matched_skills_count}, "
+                       f"Total proficiency: {total_proficiency}, "
+                       f"Avg proficiency: {avg_proficiency:.2f}, "
+                       f"Coverage: {coverage:.2f}")
+            
+            # Map discrete proficiency levels to bonus percentages
+            # Since we know proficiencies are integers 1-5 (0 was already filtered out)
+            # We'll use the average to determine the bonus
+            if avg_proficiency < 0.2:  # ~1/5
+                proficiency_bonus = 0.02  # 2%
+            elif avg_proficiency < 0.4:  # ~2/5
+                proficiency_bonus = 0.05  # 5%
+            elif avg_proficiency < 0.6:  # ~3/5
+                proficiency_bonus = 0.10  # 10%
+            elif avg_proficiency < 0.8:  # ~4/5
+                proficiency_bonus = 0.15  # 15%
+            else:  # 5/5
+                proficiency_bonus = 0.20  # 20%
+            
+            # Scale bonus by coverage with a non-linear curve
+            # This gives more weight to users who match more skills
+            coverage_factor = coverage ** 0.7  # Slight curve to favor higher coverage
+            proficiency_bonus *= coverage_factor
+            
+            logger.debug(f"User {usn} - Base bonus: {proficiency_bonus/coverage_factor:.2f}, "
+                       f"Coverage factor: {coverage_factor:.2f}, "
+                       f"Final bonus: {proficiency_bonus:.2f}")
+        
+        # Cap the base score at 0.8 to leave room for bonus
+        max_base_score = 0.8
+        if coverage < 1.0:
+            max_base_score = 0.1 + (0.7 * coverage)  # Base score up to 0.8 if all skills matched
+        
+        # Calculate base score (weighted average of similarity and coverage)
+        base_score = min(max_base_score, (0.6 * avg_score) + (0.4 * coverage))
+        
+        # Add proficiency bonus to get final score (up to 1.0)
+        weighted_score = min(1.0, base_score + proficiency_bonus)
+        
+        # Add a small bonus for multiple skill matches (up to 5%)
         if matched_skills_count > 1:
-            multi_skill_bonus = min(0.08, matched_skills_count * 0.015)
+            # Scale the bonus by the number of matched skills, but with diminishing returns
+            multi_skill_bonus = 0.05 * (1 - 0.9 ** (matched_skills_count - 1))
             weighted_score = min(1.0, weighted_score + multi_skill_bonus)
 
         avg_scores.append((avg_score, min(1.0, weighted_score)))
@@ -211,11 +321,13 @@ def compute_skill_scores(
     df["Average_Similarity"] = [score[0] for score in avg_scores]
     df["Weighted_Score"] = [score[1] for score in avg_scores]
 
-    if len(df) > 1:
+    if len(df) > 1 and df["Weighted_Score"].max() > 0:
         max_score = df["Weighted_Score"].max()
-        if max_score > 0:
-            df["Weighted_Score"] = df["Weighted_Score"] / max_score
-            df["Average_Similarity"] = df["Average_Similarity"] / max_score
+        if max_score > 0.8:  # Only normalize if we have a strong match
+            df["Weighted_Score"] = df["Weighted_Score"].clip(upper=1.0)
+        else:
+            # Scale scores to better differentiate between lower matches
+            df["Weighted_Score"] = (df["Weighted_Score"] / max_score) * 0.8
 
     df = df.sort_values("Weighted_Score", ascending=False).reset_index(drop=True)
     return df, matched_details_by_usn
@@ -550,6 +662,7 @@ def get_user_availability_entries(user_usn: str) -> List[Dict[str, Any]]:
 def get_advanced_matches(
     project_id: int, 
     selected_skills: Optional[List[str]] = None,
+    include_availability: bool = True,
     limit: int = 20
 ) -> List[Dict[str, Any]]:
     """
@@ -583,8 +696,6 @@ def get_advanced_matches(
         
         if not target_skills:
             return []
-            
-        print(f"[DEBUG] Using target skills for matching: {target_skills}")
 
         current_members = TeamMember.objects.filter(project=project).values_list('user_id', flat=True)
 
@@ -655,9 +766,8 @@ def get_advanced_matches(
         
         # Use only the selected skills for matching if they were provided
         matching_skills = target_skills if selected_skills else all_required_skills
-        print(f"[DEBUG] Calculating scores using skills: {matching_skills}")
         
-        scored_df, matched_details = compute_skill_scores(df, matching_skills, similarity_threshold=0.35)
+        scored_df, matched_details = compute_skill_scores(df, matching_skills, similarity_threshold=0.5)
 
         skill_embeddings_dict = get_skill_embeddings(list(candidate_skill_names | set(s.lower() for s in matching_skills)))
         enhanced_df = enhance_scores_with_graph(df, scored_df, matching_skills, skill_embeddings_dict, network_weight=0.1)
@@ -671,19 +781,39 @@ def get_advanced_matches(
             if not profile:
                 continue
 
-            # Calculate base skill component
-            base_skill_component = float(row.get('Network_Enhanced_Score', row.get('Weighted_Score', 0.0)))
-            base_skill_component = min(max(base_skill_component, 0.0), 1.0)
+            # Get base skill component from the computed weighted score
+            base_skill_component = float(row.get('Weighted_Score', 0.0))
             
-            # Get availability score
+            # Get network enhanced score if available, otherwise use base skill component
+            network_enhanced = float(row.get('Network_Enhanced_Score', base_skill_component))
+            
+            # Combine base skill with network enhancement (70% skill, 30% network)
+            combined_skill_score = (0.7 * base_skill_component) + (0.3 * network_enhanced)
+            combined_skill_score = min(max(combined_skill_score, 0.0), 1.0)
+            
+            # Get availability score (weighted at 20% of total score)
             availability_score = get_user_availability_overlap(project_creator_usn, usn) if project_creator_usn else 0.5
             
-            # Process matched skills and calculate proficiency bonus
+            # Process matched skills
             matched_items = matched_details.get(usn, [])
             skill_entries = user_skill_details.get(usn, [])
             skill_lookup = {entry['name'].strip().lower(): entry for entry in skill_entries if entry.get('name')}
             matched_skills = []
-            proficiency_bonus = 0.0
+            
+            # Calculate proficiency bonus based on matched skills
+            total_proficiency = 0.0
+            max_possible_proficiency = len(matched_items) * 5.0  # 5 is max proficiency
+            
+            for item in matched_items:
+                skill_name = item.get('matched_skill', '').lower()
+                if skill_name in skill_lookup:
+                    proficiency = skill_lookup[skill_name].get('proficiency', 3)  # Default to 3 if not specified
+                    total_proficiency += min(max(proficiency, 1), 5)  # Ensure between 1-5
+            
+            # Calculate proficiency bonus (up to 20% of total score)
+            if max_possible_proficiency > 0:
+                proficiency_ratio = total_proficiency / max_possible_proficiency
+                proficiency_bonus = 0.2 * proficiency_ratio  # Up to 20% bonus
             
             for item in matched_items:
                 matched_name = item['matched_skill']
@@ -705,15 +835,29 @@ def get_advanced_matches(
             
             matched_skills = matched_skills[:5]
             
-            # Normalize proficiency bonus (0-0.1 range)
-            if matched_items:
-                proficiency_bonus = min(0.1, proficiency_bonus / len(matched_items))
+            # Calculate proficiency ratio and scale to 0-0.2 range (20% max)
+            if max_possible_proficiency > 0:
+                proficiency_ratio = total_proficiency / max_possible_proficiency
+                # Scale the ratio to 0-0.2 range (20% max bonus)
+                proficiency_bonus = 0.2 * proficiency_ratio
+            else:
+                proficiency_bonus = 0.0
             
             # Adjust skill component with proficiency bonus
-            adjusted_skill_component = min(1.0, base_skill_component + proficiency_bonus)
+            adjusted_skill_component = min(1.0, combined_skill_score + proficiency_bonus)
 
-            # Calculate final score with adjusted skill component
-            final_score = (0.7 * adjusted_skill_component) + (0.3 * availability_score)
+            # Calculate final score (60% skill match, 20% availability, 20% proficiency)
+            final_score = 0.0
+            if include_availability and project_creator_usn:
+                final_score = (0.6 * combined_skill_score) + (0.2 * availability_score) + (0.2 * proficiency_bonus)
+            else:
+                final_score = (0.8 * combined_skill_score) + (0.2 * proficiency_bonus)
+                
+            # Ensure final score is within 0-1 range
+            final_score = max(0.0, min(1.0, final_score))
+
+            skill_match = round(combined_skill_score * 100, 1)
+            availability_match = round(availability_score * 100, 1) if include_availability else 0
 
             results.append({
                 'user_id': profile.user.usn,
@@ -724,25 +868,40 @@ def get_advanced_matches(
                 'skills': user_skill_details.get(usn, []),
                 'match_score': round(final_score * 100, 1),
                 'match_percentage': round(final_score * 100, 1),
-                'skill_match': round(adjusted_skill_component * 100, 1),
-                'availability_match': round(availability_score * 100, 1),
+                'skill_match': skill_match,
+                'availability_match': availability_match,
                 'score_breakdown': {
                     'overall': {
-                        'raw': round(final_score, 4),
-                        'percentage': round(final_score * 100, 1),
+                        'percentage': f"{final_score * 100:.1f}%",
+                        'raw': final_score
                     },
                     'skill': {
-                        'raw': round(adjusted_skill_component, 4),
-                        'percentage': round(adjusted_skill_component * 100, 1),
+                        'percentage': f"{combined_skill_score * 100:.1f}%",
+                        'raw': combined_skill_score,
+                        'details': [
+                            {
+                                'skill': item['input_skill'],
+                                'matched_skill': item['matched_skill'],
+                                'similarity': f"{item.get('similarity', 0) * 100:.1f}%",
+                                'proficiency': skill_lookup.get(item['matched_skill'].lower(), {}).get('proficiency', 3)
+                            }
+                            for item in matched_items
+                        ]
                     },
                     'availability': {
-                        'raw': round(availability_score, 4),
-                        'percentage': round(availability_score * 100, 1),
+                        'percentage': f"{availability_score * 100:.1f}%",
+                        'raw': availability_score
                     },
-                    'skill_components': {
-                        'base_skill_component': round(base_skill_component, 4),
-                        'proficiency_bonus': round(proficiency_bonus, 4),
-                    },
+                    'proficiency_bonus': {
+                        'percentage': f"{proficiency_bonus * 100:.1f}%",
+                        'raw': proficiency_bonus,
+                        'details': {
+                            'total_proficiency': total_proficiency,
+                            'max_possible': max_possible_proficiency,
+                            'ratio': f"{(total_proficiency / max_possible_proficiency) * 100:.1f}%" if max_possible_proficiency > 0 else '0%',
+                            'total_skill_component': round(adjusted_skill_component, 4)
+                        }
+                    }
                 },
                 'matched_skills': matched_skills,
                 'availability': get_user_availability_entries(usn),
@@ -838,7 +997,7 @@ def get_advanced_group_matches(group_id: int, limit: int = 20) -> List[Dict[str,
             return []
 
         df = pd.DataFrame(candidate_records)
-        scored_df, matched_details = compute_skill_scores(df, group_topics, similarity_threshold=0.35)
+        scored_df, matched_details = compute_skill_scores(df, group_topics, similarity_threshold=0.5)
 
         skill_embeddings_dict = get_skill_embeddings(list(candidate_skill_names | set(topic.lower() for topic in group_topics)))
         enhanced_df = enhance_scores_with_graph(df, scored_df, group_topics, skill_embeddings_dict, network_weight=0.1)

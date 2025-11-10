@@ -129,7 +129,6 @@ function renderSkillFilters(skills) {
       if (isNowSelected) {
         if (!selectedSkills.includes(skillName)) {
           selectedSkills.push(skillName);
-          console.log(`[DEBUG] Added skill: ${skillName}`);
         }
       } else {
         const index = selectedSkills.indexOf(skillName);
@@ -273,15 +272,6 @@ function renderProfiles(profiles) {
       }
     }
     
-    // Debug log to verify match score
-    console.log('Profile data:', { 
-      name: profile.name, 
-      matchScore,
-      hasMatchScore: matchScore > 0,
-      rawMatchScore: rawScore,
-      profileData: profile
-    });
-    
     // Store match score on the profile object for template access
     profile._matchScore = matchScore;
     const breakdown = profile.score_breakdown ?? {};
@@ -294,23 +284,26 @@ function renderProfiles(profiles) {
       breakdown.availability,
       profile.availability_match ?? profile.availabilityMatch
     );
+    
+    // Get proficiency bonus from breakdown or fallback to profile
+    const proficiencyBonus = breakdown.proficiency_bonus?.raw !== undefined 
+      ? rawToPercent(breakdown.proficiency_bonus.raw) 
+      : extractPercentage(breakdown.proficiency_bonus, profile.proficiency_bonus);
 
     const baseSkillComponent = rawToPercent(
       breakdown.skill_components?.base_skill_component
-    );
-    const proficiencyBonus = rawToPercent(
-      breakdown.skill_components?.proficiency_bonus
     );
 
     const breakdownItems = [
       { label: 'Overall Match', value: overallPercentage },
       { label: 'Skill Match', value: skillPercentage },
-      { label: 'Availability Match', value: availabilityPercentage }
+      { label: 'Availability Match', value: availabilityPercentage },
+      { 
+        label: 'Proficiency Bonus', 
+        value: proficiencyBonus,
+        tooltip: 'Bonus based on the proficiency level of matched skills (0-20% of total score)'
+      }
     ];
-
-    if (baseSkillComponent !== null || proficiencyBonus !== null) {
-      breakdownItems.push({ label: 'Proficiency Bonus', value: proficiencyBonus });
-    }
 
     const scoreBreakdownHtml = `
       <div class="detail-row score-breakdown-row">
@@ -572,7 +565,7 @@ async function loadProfiles() {
     
     // Make API call to get potential teammates using advanced matching
     const endpoint = contextType === 'project' 
-      ? `/api/projects/projects/${contextId}/find-teammates/`
+      ? `/api/projects/${contextId}/find-teammates/`
       : `/api/projects/groups/${contextId}/find-members/`;
     const url = new URL(endpoint, window.location.origin);
     
