@@ -925,18 +925,26 @@ document.addEventListener('click', async (event) => {
           
           if (contextType === 'project') {
             // Call the project API to send invitation
-            response = await projectsAPI.inviteTeammate(contextId, userUsn, message);
+            response = await projectsAPI.inviteToProject(contextId, userUsn, message);
           } else {
             // Call the study group API to send invitation
-            response = await groupsAPI.inviteMember(contextId, userUsn, message);
+            response = await groupsAPI.inviteToGroup(contextId, userUsn, message);
           }
           
-          if (response.success) {
+          // The API returns a 201 status with a message and invitation object on success
+          if (response.message && response.invitation) {
             const successMessage = contextType === 'project'
               ? `Invitation sent to ${userName} successfully!`
               : `Invitation to join the group has been sent to ${userName}!`;
               
-            showSuccess(successMessage);
+            // Show success message in the same style as messages.js
+            showSuccess(successMessage, {
+              position: 'top-right',
+              type: 'success',
+              duration: 5000
+            });
+            
+            // Update button state
             button.innerHTML = '<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Invitation Sent';
             button.disabled = true;
           } else {
@@ -944,8 +952,50 @@ document.addEventListener('click', async (event) => {
           }
         } catch (error) {
           console.error('Error sending request:', error);
-          const errorMsg = handleAPIError(error, 'Failed to send request. Please try again.');
-          showError(errorMsg);
+          
+          // Extract detailed error message
+          let errorMsg = 'Failed to send request. Please try again.';
+          
+          if (error.response) {
+            // The request was made and the server responded with a status code
+            // that falls out of the range of 2xx
+            const { status, data } = error.response;
+            console.error('Response error:', status, data);
+            
+            if (status === 400 && data.detail) {
+              // Handle 400 Bad Request with detail message
+              errorMsg = data.detail;
+            } else if (status === 403) {
+              errorMsg = data.detail || 'You do not have permission to perform this action.';
+            } else if (status === 404) {
+              errorMsg = data.detail || 'The requested resource was not found.';
+            } else if (data.detail) {
+              errorMsg = data.detail;
+            } else if (typeof data === 'string') {
+              errorMsg = data;
+            } else if (data.errors) {
+              // Handle validation errors
+              errorMsg = Object.entries(data.errors)
+                .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+                .join('; ');
+            }
+          } else if (error.request) {
+            // The request was made but no response was received
+            console.error('No response received:', error.request);
+            errorMsg = 'No response from server. Please check your connection and try again.';
+          } else if (error.message) {
+            // Something happened in setting up the request
+            console.error('Request setup error:', error.message);
+            errorMsg = `Request error: ${error.message}`;
+          }
+          
+          // Show the error message to the user
+          showError(errorMsg, { 
+            duration: 5000, // Show for 5 seconds
+            dismissible: true // Allow user to dismiss
+          });
+          
+          // Restore button state
           button.innerHTML = originalText;
           button.disabled = false;
         }

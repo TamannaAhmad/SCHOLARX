@@ -131,69 +131,60 @@ export function showInfo(message, options = {}) {
  * @param {Object} options - Additional options
  */
 export function showSuccess(message, options = {}) {
-    const {
-        containerId = 'error-container',
-        duration = 5000,
-        position = 'top-center'
-    } = options;
+    const { duration = 5000 } = options;
 
-    // Try to find the error container in the page
-    let successContainer = document.getElementById(containerId) || 
-                         document.getElementById('error-message') ||
-                         document.getElementById('error-container');
-
-    // If container exists, use it
-    if (successContainer) {
-        successContainer.textContent = message;
-        successContainer.className = 'success-message';
-        successContainer.style.display = 'block';
-        successContainer.style.backgroundColor = '#d4edda';
-        successContainer.style.borderColor = '#c3e6cb';
-        successContainer.style.color = '#155724';
-        successContainer.style.padding = '1rem 1.5rem';
-        successContainer.style.borderRadius = '0.5rem';
-        successContainer.style.marginBottom = '1rem';
-        successContainer.style.maxWidth = '800px';
-        successContainer.style.marginLeft = 'auto';
-        successContainer.style.marginRight = 'auto';
-        
-        // Auto-hide after duration
-        if (duration > 0) {
-            setTimeout(() => {
-                if (successContainer) {
-                    successContainer.style.display = 'none';
-                }
-            }, duration);
-        }
-        return;
+    // Create notification container if it doesn't exist
+    let notificationContainer = document.getElementById('notification-container');
+    if (!notificationContainer) {
+        notificationContainer = document.createElement('div');
+        notificationContainer.id = 'notification-container';
+        notificationContainer.style.position = 'fixed';
+        notificationContainer.style.top = '20px';
+        notificationContainer.style.right = '20px';
+        notificationContainer.style.zIndex = '1000';
+        document.body.appendChild(notificationContainer);
     }
-    
-    // Fallback to creating a new notification if no container found
+
+    // Create notification element
     const notification = document.createElement('div');
-    notification.className = 'notification success';
+    notification.className = 'success-notification';
+    notification.style.backgroundColor = '#10B981';
+    notification.style.color = 'white';
+    notification.style.padding = '12px 24px';
+    notification.style.borderRadius = '4px';
+    notification.style.marginBottom = '10px';
+    notification.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+    notification.style.animation = 'slideIn 0.3s ease-out';
     notification.textContent = message;
-    
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #d4edda;
-        border: 1px solid #c3e6cb;
-        color: #155724;
-        padding: 1rem 1.5rem;
-        border-radius: 0.5rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        z-index: 10000;
-        max-width: 400px;
-        font-size: 0.9rem;
-    `;
-    
-    document.body.appendChild(notification);
-    
+
+    // Add to container
+    notificationContainer.appendChild(notification);
+
+    // Auto-remove after duration
     setTimeout(() => {
-        notification.remove();
-    }, duration || 3000);
-    
+        notification.style.animation = 'fadeOut 0.3s ease-out';
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }, duration);
+
+    // Add CSS for animations if not already added
+    if (!document.getElementById('notification-animations')) {
+        const style = document.createElement('style');
+        style.id = 'notification-animations';
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes fadeOut {
+                from { opacity: 1; }
+                to { opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
     console.log(`[Success] ${message}`);
 }
 

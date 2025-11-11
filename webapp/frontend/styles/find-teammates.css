@@ -43,8 +43,9 @@
 .toggle-switch {
     position: relative;
     display: inline-block;
-    width: 42px;
-    height: 24px;
+    width: 3.5rem;
+    height: 2rem;
+    flex-shrink: 0;
 }
 
 .toggle-switch input {
@@ -62,19 +63,20 @@
     bottom: 0;
     background-color: #ccc;
     transition: .3s;
-    border-radius: 24px;
+    border-radius: 2rem;
 }
 
 .toggle-slider:before {
     position: absolute;
     content: "";
-    height: 18px;
-    width: 18px;
-    left: 3px;
-    bottom: 3px;
+    height: 1.5rem;
+    width: 1.5rem;
+    left: 0.25rem;
+    bottom: 0.25rem;
     background-color: white;
     transition: .3s;
     border-radius: 50%;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 input:checked + .toggle-slider {
@@ -82,11 +84,31 @@ input:checked + .toggle-slider {
 }
 
 input:focus + .toggle-slider {
-    box-shadow: 0 0 1px #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+    outline: none;
 }
 
 input:checked + .toggle-slider:before {
-    transform: translateX(18px);
+    transform: translateX(1.5rem);
+}
+
+/* Make the toggle more touch-friendly on mobile */
+@media (max-width: 640px) {
+    .toggle-switch {
+        width: 3rem;
+        height: 1.75rem;
+    }
+    
+    .toggle-slider:before {
+        height: 1.25rem;
+        width: 1.25rem;
+        left: 0.25rem;
+        bottom: 0.25rem;
+    }
+    
+    input:checked + .toggle-slider:before {
+        transform: translateX(1.25rem);
+    }
 }
 
 .toggle-label {

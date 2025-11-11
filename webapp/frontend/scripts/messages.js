@@ -500,7 +500,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <a href="${entityLink}" style="color: #2563EB; text-decoration: none;">${escapeHtml(entityName)}</a>
                                     </div>
                                     <div class="message-meta">
-                                        ${formatDate(invite.created_at)} • ${entityType}
+                                        ${formatDate(invite.updated_at)} • ${entityType}
                                     </div>
                                 </div>
                                 <span class="message-status ${statusClass}">${statusText}</span>
@@ -635,7 +635,114 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-        // Show leave confirmation modal
+    // Show success message in top right corner
+    function showSuccessMessage(message) {
+        // Create notification container if it doesn't exist
+        let notificationContainer = document.getElementById('notification-container');
+        if (!notificationContainer) {
+            notificationContainer = document.createElement('div');
+            notificationContainer.id = 'notification-container';
+            notificationContainer.style.position = 'fixed';
+            notificationContainer.style.top = '20px';
+            notificationContainer.style.right = '20px';
+            notificationContainer.style.zIndex = '1000';
+            document.body.appendChild(notificationContainer);
+        }
+
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = 'success-notification';
+        notification.style.backgroundColor = '#10B981';
+        notification.style.color = 'white';
+        notification.style.padding = '12px 24px';
+        notification.style.borderRadius = '4px';
+        notification.style.marginBottom = '10px';
+        notification.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+        notification.style.animation = 'slideIn 0.3s ease-out';
+        notification.textContent = message;
+
+        // Add to container
+        notificationContainer.appendChild(notification);
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            notification.style.animation = 'fadeOut 0.3s ease-out';
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        }, 5000);
+    }
+
+    // Add CSS for animations
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Global functions for invitation actions
+    window.acceptInvitation = async function(inviteId) {
+        if (!inviteId) return;
+        
+        try {
+            const response = await messagesAPI.respondToInvitation(inviteId, true);
+            // Show success message
+            const message = response.message || 'Invitation accepted successfully!';
+            showSuccessMessage(message);
+            
+            // Reload the list to show updated status
+            loadIncomingInvitations();
+        } catch (error) {
+            console.error('Error accepting invitation:', error);
+            alert(handleAPIError(error, 'Failed to accept invitation. Please try again.'));
+        }
+    };
+
+    window.rejectInvitation = async function(inviteId) {
+        if (!confirm('Are you sure you want to decline this invitation?')) {
+            return;
+        }
+        
+        try {
+            hideError();
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = 'Declining...';
+            
+            await messagesAPI.respondToInvitation(inviteId, false);
+            
+            // Show success notification
+            if (errorContainer) {
+                errorContainer.textContent = 'Invitation declined.';
+                errorContainer.style.display = 'block';
+                errorContainer.style.backgroundColor = '#fee2e2';
+                errorContainer.style.border = '1px solid #ef4444';
+                errorContainer.style.borderRadius = '0.5rem';
+                errorContainer.style.padding = '0.75rem 1rem';
+                errorContainer.style.color = '#991b1b';
+                setTimeout(() => hideError(), 3000);
+            }
+            
+            // Reload invitations
+            loadIncomingInvitations();
+        } catch (error) {
+            console.error('Error declining invitation:', error);
+            const errorMsg = handleAPIError(error, 'Failed to decline invitation. Please try again.');
+            showErrorMsg(errorMsg);
+            const button = event.target;
+            button.disabled = false;
+            button.textContent = 'Decline';
+        }
+    };
+
+    // Show leave confirmation modal
     window.showLeaveConfirmation = function(groupId, isProject = false) {
         const modal = document.createElement('div');
         modal.style.cssText = `
@@ -784,44 +891,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return cookieValue;
     }
-
-// Global functions for invitation actions
-    window.acceptInvitation = async function(inviteId) {
-        try {
-            hideError();
-            const button = event.target;
-            button.disabled = true;
-            button.textContent = 'Accepting...';
-            
-            await messagesAPI.respondToInvitation(inviteId, true);
-            
-            // Show success notification
-            if (errorContainer) {
-                errorContainer.textContent = 'Invitation accepted successfully!';
-                errorContainer.style.display = 'block';
-                errorContainer.style.backgroundColor = '#d1fae5';
-                errorContainer.style.border = '1px solid #10b981';
-                errorContainer.style.borderRadius = '0.5rem';
-                errorContainer.style.padding = '0.75rem 1rem';
-                errorContainer.style.color = '#065f46';
-                setTimeout(() => hideError(), 3000);
-            }
-            
-            // Reload both incoming and sent invitations
-            if (currentTab === 'incoming') {
-                loadIncomingInvitations();
-            } else {
-                loadSentInvitations();
-            }
-        } catch (error) {
-            console.error('Error accepting invitation:', error);
-            const errorMsg = handleAPIError(error, 'Failed to accept invitation. Please try again.');
-            showErrorMsg(errorMsg);
-            const button = event.target;
-            button.disabled = false;
-            button.textContent = 'Accept';
-        }
-    };
 
     window.rejectInvitation = async function(inviteId) {
         if (!confirm('Are you sure you want to decline this invitation?')) {

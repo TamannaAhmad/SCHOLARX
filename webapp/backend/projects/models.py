@@ -253,19 +253,21 @@ class InviteRequest(models.Model):
         elif self.group:
             self.request_type = 'study_group'
             
-        # Ensure inviter is the owner of the project/group
-        if self.project and self.project.created_by != self.inviter:
-            raise ValidationError('Only the project owner can send invitations.')
-        if self.group and self.group.created_by != self.inviter:
-            raise ValidationError('Only the group owner can send invitations.')
-            
-        # Ensure invitee is not already a member
-        if self.project:
-            if TeamMember.objects.filter(project=self.project, user__user=self.invitee).exists():
-                raise ValidationError('This user is already a member of the project.')
-        elif self.group:
-            if StudyGroupMember.objects.filter(group=self.group, user=self.invitee).exists():
-                raise ValidationError('This user is already a member of the study group.')
+        # Only check ownership and membership for new or pending invitations
+        if not self.pk or self.status == 'pending':
+            # Ensure inviter is the owner of the project/group
+            if self.project and self.project.created_by != self.inviter:
+                raise ValidationError('Only the project owner can send invitations.')
+            if self.group and self.group.created_by != self.inviter:
+                raise ValidationError('Only the group owner can send invitations.')
+                
+            # Ensure invitee is not already a member
+            if self.project:
+                if TeamMember.objects.filter(project=self.project, user__user=self.invitee).exists():
+                    raise ValidationError('This user is already a member of the project.')
+            elif self.group:
+                if StudyGroupMember.objects.filter(group=self.group, user=self.invitee).exists():
+                    raise ValidationError('This user is already a member of the study group.')
 
     def save(self, *args, **kwargs):
         self.clean()

@@ -90,7 +90,7 @@ def invite_to_project(request, project_id):
             status=status.HTTP_400_BAD_REQUEST
         )
     
-    # Check if there's already a pending invitation
+    # Check if there's already a pending invitation and update it instead of creating a new one
     existing_invite = InviteRequest.objects.filter(
         project=project,
         invitee=user_to_invite,
@@ -98,10 +98,27 @@ def invite_to_project(request, project_id):
     ).first()
     
     if existing_invite:
-        return Response(
-            {'detail': 'An invitation has already been sent to this user.'}, 
-            status=status.HTTP_400_BAD_REQUEST
+        # Update the existing invite with new message and timestamp
+        existing_invite.message = message
+        existing_invite.save(update_fields=['message', 'updated_at'])
+        
+        # Send notification to the user about the updated invitation
+        _safe_send_mail(
+            subject=f'Updated: Invitation to join project {project.title}',
+            message=f"""
+            {request.user.get_full_name()} has updated their invitation for you to join the project '{project.title}'.
+            
+            Message: {message}
+            
+            View and respond to the invitation: {settings.FRONTEND_URL}/project-view.html?id={project.project_id}
+            """,
+            recipient_email=user_to_invite.email
         )
+        
+        return Response({
+            'message': 'Invitation updated successfully',
+            'invitation': InviteRequestSerializer(existing_invite).data
+        }, status=status.HTTP_200_OK)
     
     try:
         # Create invitation
@@ -174,17 +191,33 @@ def respond_to_invitation(request, invite_id):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # Add user to project team
+            # Get or create user profile
             user_profile, _ = UserProfile.objects.get_or_create(user=invite.invitee)
-            TeamMember.objects.get_or_create(project=invite.project, user=user_profile)
             
-            # Update project team size
-            invite.project.current_team_size = TeamMember.objects.filter(
-                project=invite.project
-            ).count()
-            invite.project.save()
+            try:
+                # First check if they're already a member
+                if not TeamMember.objects.filter(
+                    project=invite.project,
+                    user=user_profile
+                ).exists():
+                    # Only create if they're not already a member
+                    TeamMember.objects.create(
+                        project=invite.project,
+                        user=user_profile,
+                        joined_at=timezone.now()
+                    )
+                    
+                    # Update project team size
+                    invite.project.current_team_size = TeamMember.objects.filter(
+                        project=invite.project
+                    ).count()
+                    invite.project.save(update_fields=['current_team_size'])
+            except IntegrityError:
+                # If we hit a race condition, just continue
+                pass
             
-            # Mark invitation as accepted
+            # Mark invitation as accepted regardless of existing membership
+            # to prevent showing the same invitation again
             invite.status = 'accepted'
             invite.responded_at = timezone.now()
             invite.save()
@@ -193,8 +226,10 @@ def respond_to_invitation(request, invite_id):
             _notify_invitation_response(invite, accepted=True)
             
             return Response({
+                'success': True,
                 'message': 'Successfully joined the project!',
-                'project_id': str(invite.project.project_id)
+                'project_id': str(invite.project.project_id),
+                'project_title': invite.project.title
             })
             
         # Handle study group invitation acceptance
@@ -207,11 +242,16 @@ def respond_to_invitation(request, invite_id):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # Add user to study group
-            StudyGroupMember.objects.get_or_create(
-                group=invite.group,
-                user=invite.invitee
-            )
+            # Check if user is already a member by looking at current group members
+            current_members = invite.group.members.all()
+            is_already_member = invite.invitee in current_members
+            
+            if not is_already_member:
+                # Add user to study group if not already a member
+                StudyGroupMember.objects.create(
+                    group=invite.group,
+                    user=invite.invitee
+                )
             
             # Mark invitation as accepted
             invite.status = 'accepted'
@@ -222,8 +262,10 @@ def respond_to_invitation(request, invite_id):
             _notify_invitation_response(invite, accepted=True)
             
             return Response({
+                'success': True,
                 'message': 'Successfully joined the study group!',
-                'group_id': str(invite.group.group_id)
+                'group_id': str(invite.group.group_id),
+                'group_name': invite.group.name
             })
     
     else:  # Decline action
@@ -323,7 +365,7 @@ def invite_to_group(request, group_id):
             status=status.HTTP_400_BAD_REQUEST
         )
     
-    # Check if there's already a pending invitation
+    # Check if there's already a pending invitation and update it instead of creating a new one
     existing_invite = InviteRequest.objects.filter(
         group=group,
         invitee=user_to_invite,
@@ -331,10 +373,27 @@ def invite_to_group(request, group_id):
     ).first()
     
     if existing_invite:
-        return Response(
-            {'detail': 'An invitation has already been sent to this user.'}, 
-            status=status.HTTP_400_BAD_REQUEST
+        # Update the existing invite with new message and timestamp
+        existing_invite.message = message
+        existing_invite.save(update_fields=['message', 'updated_at'])
+        
+        # Send notification to the user about the updated invitation
+        _safe_send_mail(
+            subject=f'Updated: Invitation to join study group {group.name}',
+            message=f"""
+            {request.user.get_full_name()} has updated their invitation for you to join the study group '{group.name}'.
+            
+            Message: {message}
+            
+            View and respond to the invitation: {settings.FRONTEND_URL}/study-group-view.html?id={group.group_id}
+            """,
+            recipient_email=user_to_invite.email
         )
+        
+        return Response({
+            'message': 'Invitation updated successfully',
+            'invitation': InviteRequestSerializer(existing_invite).data
+        }, status=status.HTTP_200_OK)
     
     try:
         # Create invitation
