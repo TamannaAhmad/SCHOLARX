@@ -39,14 +39,14 @@
     <main class="main-content teammates-page">
         <div id="error-container" class="error-message" style="display: none; margin-bottom: 1rem; max-width: 800px; margin-left: auto; margin-right: auto;"></div>
         <div class="info-box">
-            <div class="info-header">
-                <h3>How Matching Works</h3>
-                <button id="toggleInfo" class="info-toggle" aria-expanded="true" aria-controls="infoContent">
+            <button id="toggleInfo" class="info-toggle" aria-expanded="true" aria-controls="infoContent">
+                <div class="info-header">
+                    <h3>How Matching Works</h3>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="18 15 12 9 6 15"></polyline>
                     </svg>
-                </button>
-            </div>
+                </div>
+            </button>
             <div id="infoContent" class="info-content" aria-hidden="false">
                 <p>Your matches are calculated based on the following criteria:</p>
                 <ul>
@@ -62,12 +62,26 @@
             <div class="input-wrapper search-input-wrapper" style="width: 100%; margin-bottom: 1rem;">
                 <input type="search" id="searchInput" class="form-input search-input" placeholder="Search" aria-label="Search teammates">
             </div>
+            
+            <div class="filters-container">
+                <div class="availability-toggle-container">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="availabilityToggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="toggle-label">Include availability <br> in match score</span>
+                    <div class="tooltip">
+                        <div class="tooltip-icon">?</div>
+                        <span class="tooltiptext">When enabled, the match score will consider both skills and availability overlap. When disabled, only skills will be considered.</span>
+                    </div>
+                </div>
+                <div id="skillFilters" class="skill-filters">
+                    <!-- Skill filter buttons will be dynamically inserted here -->
+                </div>
+            </div>
         </section>
 
         <section class="profiles-section">
-            <div id="skillFilters" class="mb-6">
-                <!-- Skill filter buttons will be dynamically inserted here -->
-            </div>
             <div id="profilesContainer" class="profiles-container" role="list"></div>
             <p id="emptyState" class="empty-state" hidden>No teammates match your search yet. Adjust the filters to explore more profiles.</p>
         </section>

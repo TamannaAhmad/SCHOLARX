@@ -4,7 +4,7 @@
 .chatbot-main {
     width: min(100%, 900px);
     margin: 0 auto;
-    padding: var(--spacing-2xl) var(--spacing-xl);
+    padding: var(--spacing-xl) var(--spacing-xl);
     min-height: calc(100vh - 140px);
     display: flex;
     flex-direction: column;
@@ -223,7 +223,7 @@
 /* Responsive Design */
 @media (max-width: 768px) {
     .chatbot-main {
-        padding: var(--spacing-md);
+        padding: var(--spacing-lg);
         min-height: calc(100vh - 120px);
     }
 

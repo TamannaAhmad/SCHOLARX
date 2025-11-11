@@ -31,6 +31,7 @@ const searchInput = document.getElementById('searchInput');
 const profileCardTemplate = document.getElementById('profileCardTemplate');
 const pageTitle = document.getElementById('pageTitle');
 const addButton = document.getElementById('addButton');
+const availabilityToggle = document.getElementById('availabilityToggle');
 
 let allProfiles = [];
 let contextType = null; // 'project' or 'study-group'
@@ -251,39 +252,33 @@ function renderProfiles(profiles) {
     const card = document.createElement('article');
     card.className = 'profile-card';
     
-    // Get match score from profile data with proper type conversion
-    let matchScore = 0;
-    let rawScore = profile.match_score ?? 
-                 profile.matchScore ?? 
-                 profile.match_percentage ?? 
-                 profile.matchPercentage;
-    
-    if (rawScore !== undefined && rawScore !== null) {
-      // Handle percentage strings (e.g., '79.8%')
-      if (typeof rawScore === 'string') {
-        // Remove any non-numeric characters except decimal point
-        const numericString = rawScore.replace(/[^\d.]/g, '');
-        const numScore = parseFloat(numericString);
-        matchScore = !isNaN(numScore) ? Math.round(numScore) : 0;
-      } else {
-        // Handle numbers
-        const numScore = Number(rawScore);
-        matchScore = !isNaN(numScore) && isFinite(numScore) ? Math.round(numScore) : 0;
-      }
-    }
+    // Use the pre-calculated match score that was set in loadProfiles
+    const matchScore = typeof profile.match_score === 'number' 
+      ? Math.round(profile.match_score) 
+      : 0;
     
     // Store match score on the profile object for template access
     profile._matchScore = matchScore;
     const breakdown = profile.score_breakdown ?? {};
-    const overallPercentage = extractPercentage(breakdown.overall, rawScore);
-    const skillPercentage = extractPercentage(
-      breakdown.skill,
-      profile.skill_match ?? profile.skillMatch
-    );
-    const availabilityPercentage = extractPercentage(
-      breakdown.availability,
-      profile.availability_match ?? profile.availabilityMatch
-    );
+    
+    // Get the current toggle state
+    const toggle = document.getElementById('availabilityToggle');
+    const includeAvailability = toggle?.checked;
+    
+    // Calculate percentages based on the toggle state
+    const skillMatch = profile.skill_match ?? profile.skillMatch ?? 0;
+    const availabilityMatch = profile.availability_match ?? profile.availabilityMatch ?? 0;
+    
+    const skillPercentage = extractPercentage(breakdown.skill, skillMatch);
+    const availabilityPercentage = extractPercentage(breakdown.availability, availabilityMatch);
+    
+    // Calculate overall percentage based on toggle state
+    let overallPercentage;
+    if (includeAvailability && availabilityMatch > 0) {
+      overallPercentage = Math.round((skillMatch * 0.7) + (availabilityMatch * 0.3));
+    } else {
+      overallPercentage = Math.round(skillMatch);
+    }
     
     // Get proficiency bonus from breakdown or fallback to profile
     const proficiencyBonus = breakdown.proficiency_bonus?.raw !== undefined 
@@ -297,7 +292,7 @@ function renderProfiles(profiles) {
     const breakdownItems = [
       { label: 'Overall Match', value: overallPercentage },
       { label: 'Skill Match', value: skillPercentage },
-      { label: 'Availability Match', value: availabilityPercentage },
+      includeAvailability ? { label: 'Availability Match', value: availabilityPercentage } : null,
       { 
         label: 'Proficiency Bonus', 
         value: proficiencyBonus,
@@ -310,7 +305,7 @@ function renderProfiles(profiles) {
         <span class="detail-label">Score Breakdown</span>
         <div class="detail-value">
           <ul class="score-breakdown-list">
-            ${breakdownItems.map(item => `
+            ${breakdownItems.filter(Boolean).map(item => `
               <li class="score-breakdown-item">
                 <span class="score-breakdown-label">${item.label}</span>
                 <span class="score-breakdown-value">${formatPercentageOrPlaceholder(item.value)}</span>
@@ -415,7 +410,7 @@ function filterProfiles(term) {
   renderProfiles(filtered);
 }
 
-function calculateMatchPercentage(userSkillIds, requiredSkillIds) {
+function calculateMatchPercentage(userSkillIds, requiredSkillIds, availabilityMatch) {
   if (!requiredSkillIds || requiredSkillIds.length === 0) {
     return null; // No match percentage if no requirements
   }
@@ -424,14 +419,23 @@ function calculateMatchPercentage(userSkillIds, requiredSkillIds) {
     return 0; // No skills = 0% match
   }
 
-  // Calculate how many required skills the user has
+  // Calculate skill match percentage
   const matchingSkills = userSkillIds.filter(skillId => 
     requiredSkillIds.includes(skillId)
   );
+  const skillPercentage = (matchingSkills.length / requiredSkillIds.length) * 100;
 
-  // Match percentage = (matching skills / required skills) * 100
-  const percentage = Math.round((matchingSkills.length / requiredSkillIds.length) * 100);
-  return percentage;
+  // Get the current state of the toggle
+  const toggle = document.getElementById('availabilityToggle');
+  
+  // Only include availability if toggle is checked and we have a match value
+  if (toggle?.checked && availabilityMatch !== undefined && availabilityMatch !== null) {
+    // Calculate weighted average: 70% skills, 30% availability
+    return Math.round((skillPercentage * 0.7) + (availabilityMatch * 0.3));
+  }
+  
+  // Just return skill percentage if toggle is off or no availability data
+  return Math.round(skillPercentage);
 }
 
 function normalizeProfile(profile, skills = [], userSkillIds = []) {
@@ -444,10 +448,14 @@ function normalizeProfile(profile, skills = [], userSkillIds = []) {
     .join(' ');
 
     // Calculate match percentage only if we have required skills
-    // When no parameters are provided, match percentage will always be "—"
+  // When no parameters are provided, match percentage will always be "—"
   let matchPercentage = '—';
   if (requiredSkillIds.length > 0) {
-    const match = calculateMatchPercentage(userSkillIds, requiredSkillIds);
+    // Always pass the availability match, let the function handle the toggle state
+    const availabilityMatch = profile.availability_match !== undefined ? 
+      parseFloat(profile.availability_match) : undefined;
+      
+    const match = calculateMatchPercentage(userSkillIds, requiredSkillIds, availabilityMatch);
     matchPercentage = match !== null ? `${match}%` : '—';
   }
   
@@ -579,7 +587,7 @@ async function loadProfiles() {
         url.searchParams.append('skills', skill);
       });
     }
-    
+      
     const startTime = performance.now();
     const response = await fetch(url, {
       headers: {
@@ -624,58 +632,73 @@ async function loadProfiles() {
         console.log('No skills to render or skills array is empty');
       }
       
-      // Process and display profiles
-      allProfiles = profilesData.map(profile => {
-        // Handle both basic and advanced response formats
-        const matchPercentage = profile.match_percentage || profile.match_percentage === 0
-          ? `${profile.match_percentage}%`
-          : (profile.match_percentage !== undefined ? `${Math.round(profile.match_percentage * 10) / 10}%` : 'N/A');
-          
+      // Process and update scores based on toggle state
+    const toggle = document.getElementById('availabilityToggle');
+    const includeAvailability = toggle?.checked;
+    
+    allProfiles = profilesData.map(profile => {
+        // Get base match values
+        const skillMatch = profile.skill_match ?? profile.skillMatch ?? profile.score_breakdown?.skill?.percentage ?? 0;
+        const availabilityMatch = profile.availability_match ?? profile.availabilityMatch ?? profile.score_breakdown?.availability?.percentage ?? 0;
+        
+        // Recalculate match percentage based on toggle state
+        let matchPercentage;
+        if (includeAvailability && availabilityMatch !== undefined && availabilityMatch !== null) {
+            // Weighted average: 70% skills, 30% availability
+            matchPercentage = Math.round((skillMatch * 0.7) + (availabilityMatch * 0.3));
+        } else {
+            // Just use skill match if toggle is off or no availability data
+            matchPercentage = Math.round(skillMatch);
+        }
+        
+        // Format skills
         let skills = 'No skills specified';
         if (Array.isArray(profile.skills) && profile.skills.length > 0) {
-          skills = profile.skills
-            .map(skill => {
-              const name = skill?.name || skill?.skill?.name || '';
-              const proficiency = skill?.proficiency ?? skill?.proficiency_level;
-              return name
-                ? `${name}${proficiency !== undefined ? ` (${proficiency}/5)` : ''}`
-                : null;
-            })
-            .filter(Boolean)
-            .join(', ');
+            skills = profile.skills
+                .map(skill => {
+                    const name = skill?.name || skill?.skill?.name || '';
+                    const proficiency = skill?.proficiency ?? skill?.proficiency_level;
+                    return name
+                        ? `${name}${proficiency !== undefined ? ` (${proficiency}/5)` : ''}`
+                        : null;
+                })
+                .filter(Boolean)
+                .join(', ');
         } else if (typeof profile.skills === 'string' && profile.skills.trim()) {
-          skills = profile.skills;
+            skills = profile.skills;
         } else if (profile.matched_skills && Array.isArray(profile.matched_skills)) {
-          skills = profile.matched_skills
-            .map(skill => `${skill.name}${skill.proficiency ? ` (${skill.proficiency}/5)` : ''}`)
-            .join(', ');
+            skills = profile.matched_skills
+                .map(skill => `${skill.name}${skill.proficiency ? ` (${skill.proficiency}/5)` : ''}`)
+                .join(', ');
         }
 
         // Prepare match details for advanced matching
         const matchDetails = profile.match_details?.skill_similarity !== undefined ? `
-          <div class="text-xs text-gray-600 mt-1">
-            <div>Skill Similarity: ${Math.round(profile.match_details.skill_similarity * 100)}%</div>
-          </div>
+            <div class="text-xs text-gray-600 mt-1">
+                <div>Skill Similarity: ${Math.round(profile.match_details.skill_similarity * 100)}%</div>
+                ${includeAvailability && availabilityMatch !== undefined ? 
+                    `<div>Availability Match: ${Math.round(availabilityMatch)}%</div>` : ''}
+            </div>
         ` : '';
 
         return {
-          ...profile,
-          id: profile.id || profile.user_id,
-          usn: profile.usn || '',
-          name: profile.name,
-          email: profile.email,
-          department: profile.department || 'Not specified',
-          year: profile.year ? (typeof profile.year === 'string' ? profile.year : `${profile.year}`) : 'Not specified',
-          matchPercentage: matchPercentage,
-          skills: skills,
-          matchValue: profile.match_percentage || profile.match_score || 0, // For sorting
-          matchDetails: matchDetails,
-          match_score: profile.match_score ?? profile.matchPercentage ?? profile.match_percentage,
-          score_breakdown: profile.score_breakdown ?? profile.scoreBreakdown ?? null,
-          skill_match: profile.skill_match ?? profile.skillMatch ?? profile.score_breakdown?.skill?.percentage ?? null,
-          availability_match: profile.availability_match ?? profile.availabilityMatch ?? profile.score_breakdown?.availability?.percentage ?? null,
+            ...profile,
+            id: profile.id || profile.user_id,
+            usn: profile.usn || '',
+            name: profile.name,
+            email: profile.email,
+            department: profile.department || 'Not specified',
+            year: profile.year ? (typeof profile.year === 'string' ? profile.year : `${profile.year}`) : 'Not specified',
+            matchPercentage: `${matchPercentage}%`,
+            skills: skills,
+            matchValue: matchPercentage, // Use recalculated value for sorting
+            matchDetails: matchDetails,
+            match_score: matchPercentage,
+            score_breakdown: profile.score_breakdown ?? profile.scoreBreakdown ?? null,
+            skill_match: skillMatch,
+            availability_match: availabilityMatch,
         };
-      });
+    });
 
       // Sort by match percentage (descending)
       allProfiles.sort((a, b) => (b.matchValue || 0) - (a.matchValue || 0));
@@ -710,8 +733,20 @@ async function loadProfiles() {
   }
 }
 
+// Event listeners
 searchInput?.addEventListener('input', (event) => {
   filterProfiles(event.target.value);
+});
+
+// Add event listener for availability toggle
+availabilityToggle?.addEventListener('change', () => {
+  // Clear the profiles cache to force a reload with the new toggle state
+  allProfiles = [];
+  // Re-render profiles when toggle state changes
+  loadProfiles();
+  
+  // Log the current state for debugging
+  console.log('Availability toggle changed. New state:', availabilityToggle.checked);
 });
 
 // Initialize page based on URL parameters

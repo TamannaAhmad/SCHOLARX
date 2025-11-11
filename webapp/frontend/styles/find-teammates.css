@@ -1,3 +1,153 @@
+/* Filters Container */
+.filters-container {
+    display: flex;
+    gap: 1rem;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Toggle Switch */
+.availability-toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+}
+
+/* Skill Filters */
+.skill-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+@media (min-width: 768px) {
+    .filters-container {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .skill-filters {
+        border-top: none;
+        padding-left: 1rem;
+        padding-top: 0;
+        margin-left: 1rem;
+    }
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 42px;
+    height: 24px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .3s;
+    border-radius: 24px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .3s;
+    border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+    background-color: #3b82f6;
+}
+
+input:focus + .toggle-slider {
+    box-shadow: 0 0 1px #3b82f6;
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(18px);
+}
+
+.toggle-label {
+    font-size: 0.9rem;
+    color: #4b5563;
+    font-weight: 500;
+}
+
+/* Tooltip Styles */
+.tooltip {
+  position: relative;
+  display: inline-block;
+  cursor: help;
+}
+
+.tooltip .tooltiptext {
+  visibility: hidden;
+  width: 200px;
+  background-color: #333;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  font-size: 0.8rem;
+  font-weight: normal;
+  line-height: 1.4;
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Score breakdown tooltips */
+.score-breakdown-label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.score-breakdown-label .tooltip-icon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-left: 4px;
+  background-color: #6b7280;
+  color: white;
+  border-radius: 50%;
+  font-size: 10px;
+  line-height: 14px;
+  text-align: center;
+  cursor: help;
+}
+
 /* Message Styles */
 .error-message,
 .success-message {
@@ -143,7 +293,7 @@
     margin: 0;
     font-size: 1.1rem;
     color: #1e293b;
-    font-weight: 600;
+    font-weight: normal;
 }
 
 .info-toggle {
@@ -154,6 +304,7 @@
     padding: 0.25rem;
     border-radius: 4px;
     transition: transform 0.2s ease, color 0.2s ease;
+    width: 100%;
 }
 
 .info-toggle:hover {
@@ -320,12 +471,9 @@
 /* Skill Filters Section */
 .skill-filters-container {
   max-width: 800px;
-  margin: 0 auto 2rem;
+  margin: 0 auto;
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   padding: 1.5rem;
-  border: 1px solid #e2e8f0;
 }
 
 .skill-filters-header {
