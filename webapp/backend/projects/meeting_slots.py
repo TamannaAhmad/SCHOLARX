@@ -58,8 +58,8 @@ def find_common_slots(team_availability, team_member_ids):
     good_slots = []
     backup_slots = []
     
-    min_good = max(1, int(total_members * 0.8))  # 80% of team
-    min_backup = max(1, int(total_members * 0.5))  # 50% of team
+    min_good = max(1, float(total_members * 0.8))  # 80% of team
+    min_backup = max(1, float(total_members * 0.5))  # 50% of team
     day_names = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
     
     # Check each day and time slot

@@ -59,8 +59,8 @@ class ChatbotService:
                     except Exception as e2:
                         logger.error(f"Failed to initialize Gemini model: {str(e2)}")
             
-            # Path to the trained model directory
-            model_dir = Path("c:/Users/gryff/Documents/projects/SCHOLARX/chatbot/trained_model")
+            # Path to the trained model directory (relative to this file)
+            model_dir = Path(__file__).parent.parent.parent.parent / "chatbot/trained_model"
             logger.info(f"Looking for model in: {model_dir.absolute()}")
             logger.info(f"Directory exists: {model_dir.exists()}")
             if model_dir.exists():
@@ -113,6 +113,7 @@ IMPORTANT FORMATTING RULES:
 5. Use proper spacing between sections
 6. Include relevant examples where helpful
 7. End with a brief summary or conclusion
+*IMPORTANT*: Do not include markdown symbols like *, **, #, etc.
 
 QUESTION: {query}
 
@@ -355,65 +356,38 @@ FORMATTED RESPONSE (follow exactly):
             text: Input text with markdown formatting
             
         Returns:
-            Plain text with markdown symbols converted to plain text formatting
+            Plain text with all markdown symbols removed and clean formatting
         """
         if not text:
             return ""
             
         try:
-            # Replace markdown headers with newlines and capitalization
-            text = re.sub(r'^#+\s*(.*?)\s*#*$', r'\n\1\n', text, flags=re.MULTILINE)
-            
-            # Replace bold and italic with plain text
-            text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)  # **bold**
-            text = re.sub(r'__(.*?)__', r'\1', text)        # __bold__
-            text = re.sub(r'\*(.*?)\*', r'\1', text)       # *italic*
-            text = re.sub(r'_(.*?)_', r'\1', text)          # _italic_
-            
-            # Handle code blocks and inline code
-            text = re.sub(r'```[\s\S]*?```', lambda m: m.group(0).replace('`', '').strip(), text)  # ```code```
-            text = re.sub(r'`([^`]+)`', r'[\1]', text)  # `code` -> [code]
-            
-            # Handle links: [text](url) -> text (url) or just text if no url
+            # Remove markdown links [text](url) -> text
             text = re.sub(r'\[(.*?)\]\(.*?\)', r'\1', text)
-            
-            # Handle images: ![alt](src) -> [Image: alt]
-            text = re.sub(r'!\[(.*?)\]\(.*?\)', r'[Image: \1]', text)
-            
-            # Replace lists with bullet points
-            text = re.sub(r'^[\s]*[-*+]\s+', '• ', text, flags=re.MULTILINE)  # - item
-            text = re.sub(r'^[\s]*\d+\.\s+', '• ', text, flags=re.MULTILINE)  # 1. item
-            
-            # Handle blockquotes
-            text = re.sub(r'^>\s*', '  ', text, flags=re.MULTILINE)
-            
-            # Handle horizontal rules
-            text = re.sub(r'^[-*_]{3,}\s*$', '―' * 20, text, flags=re.MULTILINE)
-            
-            # Handle tables (simple conversion, not perfect but better than nothing)
-            lines = text.split('\n')
-            in_table = False
-            for i, line in enumerate(lines):
-                if '|' in line and '---' not in line:  # Simple table row detection
-                    if not in_table and i > 0 and '---' in lines[i-1]:  # Check for header separator
-                        in_table = True
-                        lines[i-1] = ''  # Remove the header separator
-                    if in_table:
-                        # Replace pipes with tabs for better readability
-                        lines[i] = lines[i].replace('|', '\t').replace('\t\t', '\t').strip('\t')
-                elif in_table:
-                    in_table = False
-            text = '\n'.join(lines)
-            
-            # Clean up any remaining markdown symbols
-            text = re.sub(r'\[\^[^\]]+\]', '', text)  # Remove footnotes [^1]
-            text = re.sub(r'\^\[([^\]]+)\]', '\1', text)  # Handle ^[text]
-            
-            # Remove excessive whitespace and newlines
-            text = re.sub(r'[ \t]+', ' ', text)  # Multiple spaces/tabs to single space
-            text = re.sub(r'\n{3,}', '\n\n', text)  # More than 2 newlines to 2
-            text = re.sub(r'^[ \t]+', '', text, flags=re.MULTILINE)  # Leading whitespace
-            
+            # Remove markdown headers
+            text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)
+            # Remove bold/italic/strikethrough
+            text = re.sub(r'\*\*|__|~~|`', '', text)  # Remove **, __, ~~, `
+            text = text.replace('*', '').replace('_', '')  # Remove single * and _
+            # Remove code blocks
+            text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
+            # Remove inline code
+            text = re.sub(r'`[^`]+`', '', text)
+            # Remove blockquotes
+            text = re.sub(r'^>\s*', '', text, flags=re.MULTILINE)
+            # Remove horizontal rules
+            text = re.sub(r'^[-*_]{3,}\s*$', '', text, flags=re.MULTILINE)
+            # Remove any remaining markdown link references
+            text = re.sub(r'\[.*?\]\s*\[.*?\]', '', text)
+            # Remove any remaining HTML tags
+            text = re.sub(r'<[^>]+>', '', text)
+            # Clean up multiple newlines and spaces
+            text = re.sub(r'\n{3,}', '\n\n', text)
+            text = re.sub(r' {2,}', ' ', text)
+            # Remove any remaining markdown symbols
+            text = re.sub(r'[#*_~`>\[\]()]', '', text)
+            # Clean up any remaining whitespace issues
+            text = ' '.join(text.split())
             return text.strip()
             
         except Exception as e:
