@@ -265,26 +265,20 @@ function renderProfiles(profiles) {
     const toggle = document.getElementById('availabilityToggle');
     const includeAvailability = toggle?.checked;
     
-    // Calculate percentages based on the toggle state
-    const skillMatch = profile.skill_match ?? profile.skillMatch ?? 0;
-    const availabilityMatch = profile.availability_match ?? profile.availabilityMatch ?? 0;
-    
-    const skillPercentage = extractPercentage(breakdown.skill, skillMatch);
-    const availabilityPercentage = extractPercentage(breakdown.availability, availabilityMatch);
-    
-    // Calculate overall percentage based on toggle state
-    let overallPercentage;
-    if (includeAvailability && availabilityMatch > 0) {
-      overallPercentage = Math.round((skillMatch * 0.7) + (availabilityMatch * 0.3));
-    } else {
-      overallPercentage = Math.round(skillMatch);
-    }
-    
-    // Get proficiency bonus from breakdown or fallback to profile
-    const proficiencyBonus = breakdown.proficiency_bonus?.raw !== undefined 
-      ? rawToPercent(breakdown.proficiency_bonus.raw) 
-      : extractPercentage(breakdown.proficiency_bonus, profile.proficiency_bonus);
+    // Get scores from the profile data and score_breakdown
+    const skillMatch = parseFloat(profile.adjusted_skill_match ?? profile.skill_match ?? 0);
+    const availabilityMatch = includeAvailability ? parseFloat(profile.availability_match ?? 0) : 0;
+    const proficiencyBonus = parseFloat(profile.score_breakdown?.proficiency_bonus?.percentage || 0);
+    const overallPercentage = parseFloat(profile.match_percentage ?? profile.match_score ?? 0);
 
+    // Use the backend-calculated values directly
+    const skillPercentage = skillMatch;
+    const availabilityPercentage = availabilityMatch;
+    
+    // Ensure the match score is set for sorting and display
+    profile.match_score = overallPercentage;
+    profile._matchScore = overallPercentage;
+    
     const baseSkillComponent = rawToPercent(
       breakdown.skill_components?.base_skill_component
     );
@@ -295,7 +289,7 @@ function renderProfiles(profiles) {
       includeAvailability ? { label: 'Availability Match', value: availabilityPercentage } : null,
       { 
         label: 'Proficiency Bonus', 
-        value: proficiencyBonus,
+        value: profile.proficiency_bonus || 0,
         tooltip: 'Bonus based on the proficiency level of matched skills (0-20% of total score)'
       }
     ];
@@ -571,41 +565,55 @@ async function loadProfiles() {
     // Load context data first if we have a context
     await loadContextData();
     
-    // Make API call to get potential teammates using advanced matching
-    const endpoint = contextType === 'project' 
-      ? `/api/projects/${contextId}/find-teammates/`
-      : `/api/projects/groups/${contextId}/find-members/`;
-    const url = new URL(endpoint, window.location.origin);
-    
-    // Only include skills in the URL if any are selected
-    // This will make the backend use only the selected skills for matching
-    if (selectedSkills.length > 0) {
-      // Clear any existing skills parameter to avoid duplicates
-      url.searchParams.delete('skills');
-      // Add each selected skill as a separate parameter
-      selectedSkills.forEach(skill => {
-        url.searchParams.append('skills', skill);
-      });
-    }
-      
+    let data;
     const startTime = performance.now();
-    const response = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-    const endTime = performance.now();
     
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (contextType === 'project') {
+      // Use the existing project matching endpoint
+      const endpoint = `/api/projects/${contextId}/find-teammates/`;
+      const url = new URL(endpoint, window.location.origin);
+      
+      // Add selected skills as query parameters if any are selected
+      if (selectedSkills.length > 0) {
+        url.searchParams.delete('skills');
+        selectedSkills.forEach(skill => {
+          url.searchParams.append('skills', skill);
+        });
+      }
+      
+      // Add include_availability parameter based on toggle state
+      const toggle = document.getElementById('availabilityToggle');
+      if (toggle) {
+        url.searchParams.set('include_availability', toggle.checked.toString());
+      }
+      
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      data = await response.json();
+    } else {
+      // Use the new study group matching endpoint
+      data = await groupsAPI.findGroupMembers(contextId, selectedSkills, document.getElementById('availabilityToggle')?.checked ?? true);
+      
+      // Transform the response to match the expected format
+      if (data && Array.isArray(data)) {
+        data = {
+          profiles: data,
+          group_title: contextData?.name || 'Study Group',
+          required_skills: contextData?.topics?.split(',').map(t => t.trim()) || []
+        };
+      }
     }
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch potential teammates');
-    }
-
-    const data = await response.json();
+    
+    const endTime = performance.now();
     
     // Extract the profiles array from the response
     const profilesData = data.profiles?.profiles || data.profiles || [];
@@ -637,67 +645,85 @@ async function loadProfiles() {
     const includeAvailability = toggle?.checked;
     
     allProfiles = profilesData.map(profile => {
-        // Get base match values
-        const skillMatch = profile.skill_match ?? profile.skillMatch ?? profile.score_breakdown?.skill?.percentage ?? 0;
-        const availabilityMatch = profile.availability_match ?? profile.availabilityMatch ?? profile.score_breakdown?.availability?.percentage ?? 0;
-        
-        // Recalculate match percentage based on toggle state
-        let matchPercentage;
-        if (includeAvailability && availabilityMatch !== undefined && availabilityMatch !== null) {
-            // Weighted average: 70% skills, 30% availability
-            matchPercentage = Math.round((skillMatch * 0.7) + (availabilityMatch * 0.3));
-        } else {
-            // Just use skill match if toggle is off or no availability data
-            matchPercentage = Math.round(skillMatch);
-        }
-        
-        // Format skills
-        let skills = 'No skills specified';
-        if (Array.isArray(profile.skills) && profile.skills.length > 0) {
-            skills = profile.skills
-                .map(skill => {
-                    const name = skill?.name || skill?.skill?.name || '';
-                    const proficiency = skill?.proficiency ?? skill?.proficiency_level;
-                    return name
-                        ? `${name}${proficiency !== undefined ? ` (${proficiency}/5)` : ''}`
-                        : null;
-                })
-                .filter(Boolean)
-                .join(', ');
-        } else if (typeof profile.skills === 'string' && profile.skills.trim()) {
-            skills = profile.skills;
-        } else if (profile.matched_skills && Array.isArray(profile.matched_skills)) {
-            skills = profile.matched_skills
-                .map(skill => `${skill.name}${skill.proficiency ? ` (${skill.proficiency}/5)` : ''}`)
-                .join(', ');
-        }
+      // Get values from the API response
+      const rawSkillMatch = parseFloat(profile.skill_match ?? 0);
+      const adjustedSkillMatch = parseFloat(profile.adjusted_skill_match ?? profile.skill_match ?? 0);
+      const availabilityMatch = includeAvailability ? parseFloat(profile.availability_match ?? 0) : 0;
+      const proficiencyBonus = parseFloat(profile.score_breakdown?.proficiency_bonus?.raw || 0) * 100; // Convert from decimal to percentage
+      
+      // Get the skill component from the backend (before availability is applied)
+      const skillComponent = parseFloat(profile.adjusted_skill_match ?? 0) / 100; // Convert from percentage to decimal
+      const availabilityScore = includeAvailability ? (parseFloat(profile.availability_match ?? 0) / 100) : 0;
+      
+      // Use the backend's calculated score
+      // The backend already handles the availability toggle and score calculation
+      let finalMatchScore = parseFloat(profile.match_percentage) || 0;
+      
+      // Format skills with proficiency
+      let skills = 'No skills specified';
+      if (Array.isArray(profile.matched_skills) && profile.matched_skills.length > 0) {
+          skills = profile.matched_skills
+              .map(skill => {
+                  const name = skill?.name || skill?.skill?.name || '';
+                  const proficiency = skill?.proficiency_level ?? skill?.proficiency;
+                  return name
+                      ? `${name}${proficiency !== undefined ? ` (${proficiency}/5)` : ''}`
+                      : null;
+              })
+              .filter(Boolean)
+              .join(', ');
+      } else if (Array.isArray(profile.skills) && profile.skills.length > 0) {
+          skills = profile.skills
+              .map(skill => {
+                  const name = skill?.name || skill?.skill?.name || '';
+                  const proficiency = skill?.proficiency_level ?? skill?.proficiency;
+                  return name
+                      ? `${name}${proficiency !== undefined ? ` (${proficiency}/5)` : ''}`
+                      : null;
+              })
+              .filter(Boolean)
+              .join(', ');
+      } else if (typeof profile.skills === 'string' && profile.skills.trim()) {
+          skills = profile.skills;
+      }
 
-        // Prepare match details for advanced matching
-        const matchDetails = profile.match_details?.skill_similarity !== undefined ? `
-            <div class="text-xs text-gray-600 mt-1">
-                <div>Skill Similarity: ${Math.round(profile.match_details.skill_similarity * 100)}%</div>
-                ${includeAvailability && availabilityMatch !== undefined ? 
-                    `<div>Availability Match: ${Math.round(availabilityMatch)}%</div>` : ''}
-            </div>
-        ` : '';
+      // Generate score breakdown using the backend's calculated values
+      const scoreBreakdown = profile.score_breakdown || {
+          skill: { 
+              percentage: adjustedSkillMatch,
+              raw: adjustedSkillMatch / 100
+          },
+          availability: {
+              percentage: includeAvailability ? availabilityMatch : 0,
+              raw: includeAvailability ? availabilityMatch / 100 : 0
+          },
+          proficiency_bonus: { 
+              percentage: proficiencyBonus,
+              raw: proficiencyBonus / 100
+          }
+      };
 
-        return {
-            ...profile,
-            id: profile.id || profile.user_id,
-            usn: profile.usn || '',
-            name: profile.name,
-            email: profile.email,
-            department: profile.department || 'Not specified',
-            year: profile.year ? (typeof profile.year === 'string' ? profile.year : `${profile.year}`) : 'Not specified',
-            matchPercentage: `${matchPercentage}%`,
-            skills: skills,
-            matchValue: matchPercentage, // Use recalculated value for sorting
-            matchDetails: matchDetails,
-            match_score: matchPercentage,
-            score_breakdown: profile.score_breakdown ?? profile.scoreBreakdown ?? null,
-            skill_match: skillMatch,
-            availability_match: availabilityMatch,
-        };
+      // Use the match_percentage from the API response if available, otherwise calculate it
+      const finalScore = profile.match_percentage !== undefined ? 
+          parseFloat(profile.match_percentage) : finalMatchScore;
+          
+      return {
+          ...profile,
+          id: profile.id || profile.user_id,
+          usn: profile.usn || '',
+          name: profile.name || `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Anonymous',
+          email: profile.email || '',
+          department: profile.department || 'Not specified',
+          year: profile.year ? (typeof profile.year === 'string' ? profile.year : `${profile.year}`) : 'Not specified',
+          matchPercentage: finalScore,
+          matchValue: finalScore, // Ensure this is a number for sorting
+          skills: skills,
+          score_breakdown: scoreBreakdown,
+          skill_match: profile.skill_match !== undefined ? parseFloat(profile.skill_match) : rawSkillMatch,
+          availability_match: profile.availability_match !== undefined ? 
+              parseFloat(profile.availability_match) : 
+              (includeAvailability ? availabilityMatch : 0)
+      };
     });
 
       // Sort by match percentage (descending)

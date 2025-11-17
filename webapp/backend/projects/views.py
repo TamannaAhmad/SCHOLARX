@@ -25,7 +25,7 @@ from typing import List, Dict, Any, Optional
 import logging
 
 # Import models
-from .models import Project, StudyGroup, TeamMember, StudyGroupMember, JoinRequest, LeaveRequest, ProjectSkill
+from .models import Project, StudyGroup, TeamMember, StudyGroupMember, JoinRequest, LeaveRequest, ProjectSkill, StudyGroupSkill
 from accounts.models import UserAvailability, Skill, UserProfile, UserSkill
 
 # Import serializers
@@ -1110,8 +1110,8 @@ def advanced_find_teammates(request, project_id):
 @permission_classes([IsAuthenticated])
 def find_group_members(request, group_id):
     """
-    Find potential members for a study group based on skills and interests.
-    This is similar to find_teammates but for study groups.
+    Find potential members for a study group using advanced matching algorithm.
+    This uses the study_group_matching module for advanced skill and availability matching.
     """
     try:
         # Get the study group
@@ -1126,114 +1126,56 @@ def find_group_members(request, group_id):
                 status=status.HTTP_403_FORBIDDEN
             )
         
-        # Get required topics for the group from the comma-separated topics field
-        if not study_group.topics:
+        # Get required skills for the group
+        group_skills = list(StudyGroupSkill.objects
+                          .filter(study_group=study_group)
+                          .select_related('skill')
+                          .values('skill__id', 'skill__name'))
+        
+        if not group_skills:
             return Response({
                 'group_id': group_id,
-                'group_title': study_group.title,
+                'group_name': study_group.name,
                 'required_skills': [],
                 'profiles': [],
-                'message': 'No topics defined for this group'
+                'message': 'No skills defined for this group',
+                'matching_algorithm': 'advanced'
             })
-            
-        # Convert comma-separated topics to a list and clean up whitespace
-        topics = [topic.strip() for topic in study_group.topics.split(',') if topic.strip()]
+
+        # include availability if toggled on
+        include_availability = request.query_params.get('include_availability', 'true').lower() == 'true'
         
-        # Create a list of skill-like objects with name and id
-        required_skills = [{'name': topic, 'id': i+1} for i, topic in enumerate(topics)]
-        required_skill_ids = list(range(1, len(topics) + 1))  # Generate sequential IDs
+        # Get selected skills from query parameters
+        selected_skills = request.query_params.getlist('skills') or None
         
-        # Get current group members to exclude them from results
-        current_member_ids = list(
-            StudyGroupMember.objects
-            .filter(group=study_group)
-            .values_list('user__usn', flat=True)
-        )
+        # Use the advanced matching algorithm
+        from .study_group_matching import get_advanced_group_matches
         
-        # Get users with matching skills (from topics) who are not already members
-        from django.db.models import Q
+        # Get matches with detailed scoring
+        matches = get_advanced_group_matches(
+            group_id, 
+            limit=50, 
+            include_availability=include_availability,
+            selected_skills=selected_skills
+        )  # Adjust limit as needed
         
-        # Create a query to find users with any of the required topics in their skills
-        topic_queries = Q()
-        for topic in topics:
-            topic_queries |= Q(skill__name__icontains=topic)
+        # Format the required skills for the response
+        required_skills = [
+            {'id': gs['skill__id'], 'name': gs['skill__name']} 
+            for gs in group_skills
+        ]
         
-        user_skills = (
-            UserSkill.objects
-            .filter(topic_queries)
-            .exclude(user__usn__in=current_member_ids)
-            .exclude(user=study_group.created_by)  # Exclude group creator
-            .select_related('user__userprofile', 'skill')
-            .values('user_id')
-            .annotate(
-                match_count=Count('id', distinct=True),
-                avg_proficiency=Coalesce(models.Avg('proficiency_level'), 0.0)
-            )
-        )
-        
-        if not user_skills.exists():
-            return Response({
-                'group_id': group_id,
-                'group_title': study_group.name,
-                'required_skills': required_skills,
-                'profiles': [],
-                'message': 'No potential members found with matching skills'
-            })
-        
-        # Calculate match percentage and prepare response
-        total_required_skills = len(required_skill_ids)
-        user_profiles = []
-        
-        for us in user_skills:
-            user = UserProfile.objects.get(user_id=us['user_id'])
-            match_percentage = round((us['match_count'] / total_required_skills) * 100, 1)
-            
-            # Get user's skills that match the group's required skills
-            matched_skills = (
-                UserSkill.objects
-                .filter(
-                    user_id=us['user_id'],
-                    skill_id__in=required_skill_ids
-                )
-                .select_related('skill')
-                .values('skill__name', 'proficiency_level')
-            )
-            
-            # Get user's availability
-            availability = (
-                UserAvailability.objects
-                .filter(user=user.user, is_available=True)
-                .values('day_of_week', 'time_slot_start', 'time_slot_end')
-            )
-            
-            user_profiles.append({
-                'id': user.user_id,
-                'name': user.user.get_full_name(),
-                'email': user.user.email,
-                'department': user.user.department.name if user.user.department else None,
-                'year': user.user.study_year,
-                'match_percentage': match_percentage,
-                'avg_proficiency': us['avg_proficiency'],
-                'matched_skills': [
-                    {
-                        'name': skill['skill__name'],
-                        'proficiency': skill['proficiency_level']
-                    }
-                    for skill in matched_skills
-                ],
-                'availability': list(availability)
-            })
-        
-        # Sort by match percentage (descending)
-        user_profiles.sort(key=lambda x: x['match_percentage'], reverse=True)
-        
-        return Response({
+        # Prepare the response with detailed matching information
+        response_data = {
             'group_id': group_id,
-            'group_title': study_group.title,
+            'group_name': study_group.name,
             'required_skills': required_skills,
-            'profiles': user_profiles,
-            'matching_algorithm': 'basic'  # Basic matching for groups
-        })
+            'profiles': matches,
+            'matching_algorithm': 'advanced', 
+            'include_availability': include_availability
+        }
+        
+        return Response(response_data)
         
     except StudyGroup.DoesNotExist:
         return Response(
@@ -1241,7 +1183,7 @@ def find_group_members(request, group_id):
             status=status.HTTP_404_NOT_FOUND
         )
     except Exception as e:
-        logger.error(f"Error finding group members: {str(e)}", exc_info=True)
+        logger.error(f"Error in advanced group matching: {str(e)}", exc_info=True)
         return Response(
             {'error': 'An error occurred while searching for group members'}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR

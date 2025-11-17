@@ -1,20 +1,58 @@
 """
-Advanced matching module for finding potential teammates using skill-based matching
+Advanced matching module for finding potential project teammates using skill-based matching
 with graph analysis and network effects.
 """
+from __future__ import annotations
+
 import logging
 import time
-from typing import List, Dict, Any, Optional, Tuple, Set, Union, DefaultDict
+from typing import List, Dict, Any, Optional, Set, Tuple, TypedDict, DefaultDict
+from collections import defaultdict
+
 import numpy as np
 import pandas as pd
-from collections import defaultdict
+from django.db.models import Prefetch, QuerySet
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.cluster import DBSCAN
 
 from accounts.models import UserProfile, UserSkill, CustomUser
-from .models import Project, ProjectSkill, TeamMember, StudyGroup, StudyGroupMember
-from django.db.models import Prefetch
+from .models import Project, ProjectSkill, TeamMember
+
+# Constants for scoring weights and thresholds
+SKILL_MATCH_WEIGHT = 0.7
+NETWORK_ENHANCE_WEIGHT = 0.3
+AVAILABILITY_WEIGHT = 0.2
+PROFICIENCY_BONUS_WEIGHT = 0.2
+SKILL_SIMILARITY_THRESHOLD = 0.5
+NETWORK_SIMILARITY_THRESHOLD = 0.3
+MAX_MATCHED_SKILLS = 5
+MIN_SIMILARITY_FOR_PROFICIENCY = 0.5
+PROFICIENCY_MAX_BONUS = 0.4  # Max bonus from proficiency (40% of skill component)
+
+# Type aliases
+SkillDict = Dict[str, Any]
+UserProfileDict = Dict[str, Any]
+SkillProficiency = Dict[str, float]
+MatchedSkill = Dict[str, Any]
+ScoreBreakdown = Dict[str, Dict[str, Any]]
+
+class MatchResult(TypedDict):
+    """Type definition for match results."""
+    user_id: str
+    name: str
+    email: str
+    department: Optional[str]
+    year: Optional[int]
+    skills: List[SkillDict]
+    match_score: float
+    match_percentage: float
+    skill_match: float
+    availability_match: float
+    score_breakdown: ScoreBreakdown
+    matched_skills: List[MatchedSkill]
+    availability: List[Dict[str, Any]]
+    profile_url: str
 
 logger = logging.getLogger(__name__)
 
@@ -491,6 +529,7 @@ def enhance_scores_with_graph(
     enhanced_df = enhanced_df.sort_values("Network_Enhanced_Score", ascending=False).reset_index(drop=True)
     return enhanced_df
 
+
 def get_user_availability_overlap(user1_usn: str, user2_usn: str) -> float:
     """Return overlap score (0-1) using the schedule matching algorithm."""
     from accounts.models import UserAvailability
@@ -659,18 +698,172 @@ def get_user_availability_entries(user_usn: str) -> List[Dict[str, Any]]:
     )
 
 
+def _get_project_skills(project_id: int) -> List[str]:
+    """Get required skills for a project."""
+    required_skills = (
+        ProjectSkill.objects
+        .filter(project_id=project_id)
+        .select_related('skill')
+        .values_list('skill__name', flat=True)
+    )
+    return [s for s in required_skills if s]
+
+def _get_potential_teammates(project_id: int, target_skills: List[str]) -> QuerySet[UserProfile]:
+    """Get potential teammates who have at least one of the target skills."""
+    current_members = TeamMember.objects.filter(project_id=project_id).values_list('user_id', flat=True)
+    
+    user_skills_prefetch = Prefetch(
+        'user__user_skills',
+        queryset=UserSkill.objects.select_related('skill')
+    )
+    
+    return (
+        UserProfile.objects
+        .exclude(user_id__in=current_members)
+        .filter(user__user_skills__skill__name__in=target_skills)
+        .distinct()
+        .prefetch_related(user_skills_prefetch)
+    )
+
+def _process_candidate_skills(
+    profile: UserProfile,
+    profile_by_usn: Dict[str, UserProfile],
+    candidate_skill_names: Set[str],
+) -> Optional[Dict[str, Any]]:
+    """Process skills for a single candidate and return their record."""
+    custom_user = profile.user
+    if not isinstance(custom_user, CustomUser):
+        return None
+
+    skills_normalized = []
+    skill_entries = []
+    skill_proficiencies = {}
+
+    for user_skill in custom_user.user_skills.all():
+        if not user_skill.skill or not user_skill.skill.name.strip():
+            continue
+            
+        original_name = user_skill.skill.name.strip()
+        normalized = original_name.lower()
+        
+        skills_normalized.append(normalized)
+        candidate_skill_names.add(normalized)
+        
+        # Create a proper skill entry dictionary
+        skill_entry = {
+            'skill_id': user_skill.skill_id,
+            'name': original_name,
+            'proficiency': user_skill.proficiency_level,
+        }
+        skill_entries.append(skill_entry)
+        skill_proficiencies[normalized] = user_skill.proficiency_level
+
+    record = {
+        'USN': custom_user.usn,
+        'Department': custom_user.department.name if custom_user.department else '',
+        'Skill': '; '.join(skills_normalized),
+        'Skill_Proficiencies': skill_entries  # Store the full skill entries here
+    }
+    
+    # Store the profile for later reference
+    profile_by_usn[custom_user.usn] = profile
+    
+    # Also store the skill entries in the profile for easy access
+    setattr(profile, '_skill_entries', skill_entries)
+    
+    return record
+
+def _calculate_scores(
+    row: pd.Series,
+    matched_details: Dict[str, List[Dict[str, Any]]],
+    skill_entries: List[Dict[str, Any]],
+    include_availability: bool,
+    project_creator_usn: Optional[str],
+) -> Dict[str, Any]:
+    """Calculate all scores for a candidate."""
+    usn = str(row.get('USN', ''))
+    
+    # Base skill component
+    base_skill_component = float(row.get('Weighted_Score', 0.0))
+    network_enhanced = float(row.get('Network_Enhanced_Score', base_skill_component))
+    
+    # Combine base skill with network enhancement
+    combined_skill_score = (SKILL_MATCH_WEIGHT * base_skill_component) + \
+                          (NETWORK_ENHANCE_WEIGHT * network_enhanced)
+    combined_skill_score = min(max(combined_skill_score, 0.0), 1.0)
+    
+    # Process matched skills and calculate proficiency bonus
+    matched_items = matched_details.get(usn, [])
+    skill_lookup = {entry['name'].strip().lower(): entry for entry in skill_entries if entry.get('name')}
+    matched_skills = []
+    proficiency_bonus = 0.0
+    
+    if matched_items:
+        for item in matched_items:
+            skill_name = item.get('matched_skill', '').lower()
+            if skill_name in skill_lookup:
+                proficiency = skill_lookup[skill_name].get('proficiency', 3)
+                similarity = item.get('similarity', 0.0)
+                
+                if similarity > MIN_SIMILARITY_FOR_PROFICIENCY:
+                    proficiency_bonus += (proficiency / 5.0) * PROFICIENCY_MAX_BONUS * (similarity ** 2)
+                
+                matched_skills.append({
+                    'name': skill_name,
+                    'proficiency': proficiency,
+                    'similarity': round(similarity, 3),
+                })
+        
+        if matched_items:  # Avoid division by zero
+            proficiency_bonus = proficiency_bonus / len(matched_items)
+    
+    # Limit matched skills
+    matched_skills = sorted(
+        matched_skills,
+        key=lambda x: x.get('similarity', 0),
+        reverse=True
+    )[:MAX_MATCHED_SKILLS]
+    
+    # Calculate final score
+    adjusted_skill_component = combined_skill_score + proficiency_bonus
+    
+    # Get availability score if needed
+    availability_score = 0.0
+    if include_availability and project_creator_usn:
+        availability_score = get_user_availability_overlap(project_creator_usn, usn) 
+        final_score = (
+            (0.6 * adjusted_skill_component) + 
+            (0.2 * availability_score) + 
+            (0.2 * proficiency_bonus)
+        )
+    else:
+        final_score = (0.7 * adjusted_skill_component) + (0.3 * proficiency_bonus)
+    
+    # Ensure score is within valid range
+    final_score = max(0.0, min(1.0, final_score))
+    
+    return {
+        'final_score': final_score,
+        'combined_skill_score': combined_skill_score,
+        'adjusted_skill_component': adjusted_skill_component,
+        'proficiency_bonus': proficiency_bonus,
+        'availability_score': availability_score if (include_availability and project_creator_usn) else 0,
+        'matched_skills': matched_skills,
+    }
+
 def get_advanced_matches(
     project_id: int, 
     selected_skills: Optional[List[str]] = None,
     include_availability: bool = True,
     limit: int = 20
-) -> List[Dict[str, Any]]:
+) -> List[MatchResult]:
     """
     Find potential teammates for a project using advanced matching algorithms.
     
     Args:
         project_id: ID of the project to find teammates for
         selected_skills: List of skill names to prioritize in matching
+        include_availability: Whether to include availability in scoring
         limit: Maximum number of matches to return
         
     Returns:
@@ -679,235 +872,139 @@ def get_advanced_matches(
     try:
         # Get project and required skills
         project = Project.objects.get(project_id=project_id)
-        required_skills = list(
-            ProjectSkill.objects
-            .filter(project=project)
-            .select_related('skill')
-            .values('skill__name', 'skill__id')
-        )
+        all_required_skills = _get_project_skills(project_id)
         
-        # Get all required skill names from the project
-        all_required_skills = [s['skill__name'] for s in required_skills if s.get('skill__name')]
-        
-        # If selected_skills is provided, use only those for matching
-        # Otherwise, use all required skills from the project
+        # Determine target skills for matching
         target_skills = [s.strip() for s in selected_skills] if selected_skills else all_required_skills
         target_skills = [s for s in target_skills if isinstance(s, str) and s.strip()]
         
         if not target_skills:
             return []
 
-        current_members = TeamMember.objects.filter(project=project).values_list('user_id', flat=True)
+        # Get potential teammates and process their skills
+        potential_teammates = _get_potential_teammates(project_id, target_skills)
+        
+        candidate_records = []
+        user_skill_details = {}
+        profile_by_usn = {}
+        candidate_skill_names = set()
 
-        user_skills_prefetch = Prefetch(
-            'user__user_skills',
-            queryset=UserSkill.objects.select_related('skill')
-        )
-
-        # Start with all potential teammates who have at least one of the target skills
-        potential_teammates = (
-            UserProfile.objects
-            .exclude(user_id__in=current_members)
-            .filter(user__user_skills__skill__name__in=target_skills)
-            .distinct()
-            .prefetch_related(user_skills_prefetch)
-        )
-
-        # No need for additional filtering here since we already filtered by target_skills
-
-        candidate_records: List[Dict[str, Any]] = []
-        user_skill_details: Dict[str, List[Dict[str, Any]]] = {}
-        profile_by_usn: Dict[str, UserProfile] = {}
-        candidate_skill_names: Set[str] = set()
-
-        for profile in potential_teammates[:1000]:
-            custom_user = profile.user
-            if not isinstance(custom_user, CustomUser):
-                continue
-
-            skills_normalized: List[str] = []
-            skill_entries: List[Dict[str, Any]] = []
-
-            for user_skill in custom_user.user_skills.all():
-                if not user_skill.skill:
-                    continue
-                original_name = user_skill.skill.name.strip()
-                if not original_name:
-                    continue
-                normalized = original_name.lower()
-                skills_normalized.append(normalized)
-                candidate_skill_names.add(normalized)
-                skill_entries.append({
-                    'skill_id': user_skill.skill_id,
-                    'name': original_name,
-                    'proficiency': user_skill.proficiency_level,
-                })
-
-            # Create a mapping of skill names to their proficiency levels
-            skill_proficiencies = {
-                entry['name'].strip().lower(): entry.get('proficiency', 3)
-                for entry in skill_entries
-                if entry.get('name')
-            }
-            
-            candidate_records.append({
-                'USN': custom_user.usn,
-                'Department': custom_user.department.name if custom_user.department else '',
-                'Skill': '; '.join(skills_normalized),
-                'Skill_Proficiencies': skill_proficiencies  # Add skill proficiencies
-            })
-            user_skill_details[custom_user.usn] = skill_entries
-            profile_by_usn[custom_user.usn] = profile
+        for profile in potential_teammates[:1000]:  # Limit to first 1000 for performance
+            record = _process_candidate_skills(profile, profile_by_usn, candidate_skill_names)
+            if record:
+                candidate_records.append(record)
+                # Get skill entries from the profile we stored earlier
+                skill_entries = getattr(profile, '_skill_entries', [])
+                user_skill_details[record['USN']] = [
+                    {
+                        'skill_id': s['skill_id'],
+                        'name': s['name'],
+                        'proficiency': s['proficiency']
+                    }
+                    for s in skill_entries
+                ]
 
         if not candidate_records:
             return []
 
+        # Calculate skill scores and network enhancements
         df = pd.DataFrame(candidate_records)
-        
-        # Use only the selected skills for matching if they were provided
         matching_skills = target_skills if selected_skills else all_required_skills
         
-        scored_df, matched_details = compute_skill_scores(df, matching_skills, similarity_threshold=0.5)
+        scored_df, matched_details = compute_skill_scores(
+            df, 
+            matching_skills, 
+            similarity_threshold=SKILL_SIMILARITY_THRESHOLD
+        )
+        
+        skill_embeddings_dict = get_skill_embeddings(
+            list(candidate_skill_names | {s.lower() for s in matching_skills})
+        )
+        
+        enhanced_df = enhance_scores_with_graph(
+            df, 
+            scored_df, 
+            matching_skills, 
+            skill_embeddings_dict, 
+            network_weight=NETWORK_ENHANCE_WEIGHT
+        )
 
-        skill_embeddings_dict = get_skill_embeddings(list(candidate_skill_names | set(s.lower() for s in matching_skills)))
-        enhanced_df = enhance_scores_with_graph(df, scored_df, matching_skills, skill_embeddings_dict, network_weight=0.1)
-
+        # Process results
         project_creator_usn = project.created_by.usn if project.created_by else None
-        results: List[Dict[str, Any]] = []
+        results = []
 
         for _, row in enhanced_df.iterrows():
             usn = str(row.get('USN', ''))
             profile = profile_by_usn.get(usn)
             if not profile:
                 continue
-
-            # Get base skill component from the computed weighted score
-            base_skill_component = float(row.get('Weighted_Score', 0.0))
-            
-            # Get network enhanced score if available, otherwise use base skill component
-            network_enhanced = float(row.get('Network_Enhanced_Score', base_skill_component))
-            
-            # Combine base skill with network enhancement (70% skill, 30% network)
-            combined_skill_score = (0.7 * base_skill_component) + (0.3 * network_enhanced)
-            combined_skill_score = min(max(combined_skill_score, 0.0), 1.0)
-            
-            # Get availability score (weighted at 20% of total score)
-            availability_score = get_user_availability_overlap(project_creator_usn, usn) if project_creator_usn else 0.5
-            
-            # Process matched skills
-            matched_items = matched_details.get(usn, [])
+                
             skill_entries = user_skill_details.get(usn, [])
-            skill_lookup = {entry['name'].strip().lower(): entry for entry in skill_entries if entry.get('name')}
-            matched_skills = []
             
-            # Calculate proficiency bonus based on matched skills
-            total_proficiency = 0.0
-            max_possible_proficiency = len(matched_items) * 5.0  # 5 is max proficiency
+            # Calculate all scores
+            scores = _calculate_scores(
+                row, 
+                matched_details, 
+                skill_entries,
+                include_availability,
+                project_creator_usn
+            )
             
-            for item in matched_items:
-                skill_name = item.get('matched_skill', '').lower()
-                if skill_name in skill_lookup:
-                    proficiency = skill_lookup[skill_name].get('proficiency', 3)  # Default to 3 if not specified
-                    total_proficiency += min(max(proficiency, 1), 5)  # Ensure between 1-5
-            
-            # Calculate proficiency bonus (up to 20% of total score)
-            if max_possible_proficiency > 0:
-                proficiency_ratio = total_proficiency / max_possible_proficiency
-                proficiency_bonus = 0.2 * proficiency_ratio  # Up to 20% bonus
-            
-            for item in matched_items:
-                matched_name = item['matched_skill']
-                source_entry = skill_lookup.get(matched_name)
-                proficiency = source_entry.get('proficiency', 3) if source_entry else 3  # Default to 3 if not found
-                similarity = item.get('similarity', 0.0)
-                
-                # Calculate proficiency bonus (0-0.2 range based on proficiency 1-5)
-                # Higher proficiency gives more bonus, but only if the match is good (similarity > 0.5)
-                if similarity > 0.5:
-                    proficiency_factor = (proficiency - 1) * 0.05  # 0.0 for 1, 0.2 for 5
-                    proficiency_bonus += proficiency_factor * similarity
-                
-                matched_skills.append({
-                    'name': source_entry['name'] if source_entry else matched_name,
-                    'proficiency': proficiency,
-                    'similarity': round(similarity, 3),
-                })
-            
-            matched_skills = matched_skills[:5]
-            
-            # Calculate proficiency ratio and scale to 0-0.2 range (20% max)
-            if max_possible_proficiency > 0:
-                proficiency_ratio = total_proficiency / max_possible_proficiency
-                # Scale the ratio to 0-0.2 range (20% max bonus)
-                proficiency_bonus = 0.2 * proficiency_ratio
-            else:
-                proficiency_bonus = 0.0
-            
-            # Adjust skill component with proficiency bonus
-            adjusted_skill_component = min(1.0, combined_skill_score + proficiency_bonus)
-
-            # Calculate final score (60% skill match, 20% availability, 20% proficiency)
-            final_score = 0.0
-            if include_availability and project_creator_usn:
-                final_score = (0.6 * combined_skill_score) + (0.2 * availability_score) + (0.2 * proficiency_bonus)
-            else:
-                final_score = (0.8 * combined_skill_score) + (0.2 * proficiency_bonus)
-                
-            # Ensure final score is within 0-1 range
-            final_score = max(0.0, min(1.0, final_score))
-
-            skill_match = round(combined_skill_score * 100, 1)
-            availability_match = round(availability_score * 100, 1) if include_availability else 0
-
-            results.append({
-                'user_id': profile.user.usn,
+            # Prepare result dictionary
+            result: MatchResult = {
+                'user_id': usn,
                 'name': profile.user.get_full_name() or profile.user.email,
                 'email': profile.user.email,
                 'department': profile.user.department.name if profile.user.department else None,
                 'year': profile.user.study_year,
-                'skills': user_skill_details.get(usn, []),
-                'match_score': round(final_score * 100, 1),
-                'match_percentage': round(final_score * 100, 1),
-                'skill_match': skill_match,
-                'availability_match': availability_match,
+                'skills': skill_entries,
+                'match_score': round(scores['final_score'] * 100, 1),
+                'match_percentage': round(scores['final_score'] * 100, 1),
+                'skill_match': round(scores['combined_skill_score'] * 100, 1),
+                'availability_match': round(scores['availability_score'] * 100, 1) if include_availability else 0,
                 'score_breakdown': {
                     'overall': {
-                        'percentage': f"{final_score * 100:.1f}%",
-                        'raw': final_score
+                        'percentage': f"{scores['final_score'] * 100:.1f}%",
+                        'raw': scores['final_score']
                     },
                     'skill': {
-                        'percentage': f"{combined_skill_score * 100:.1f}%",
-                        'raw': combined_skill_score,
+                        'percentage': f"{scores['combined_skill_score'] * 100:.1f}%",
+                        'raw': scores['combined_skill_score'],
                         'details': [
                             {
                                 'skill': item['input_skill'],
                                 'matched_skill': item['matched_skill'],
                                 'similarity': f"{item.get('similarity', 0) * 100:.1f}%",
-                                'proficiency': skill_lookup.get(item['matched_skill'].lower(), {}).get('proficiency', 3)
+                                'proficiency': next(
+                                    (s['proficiency'] for s in skill_entries 
+                                     if s['name'].lower() == item['matched_skill'].lower()),
+                                    3  # Default proficiency
+                                )
                             }
-                            for item in matched_items
+                            for item in matched_details.get(usn, [])
                         ]
                     },
                     'availability': {
-                        'percentage': f"{availability_score * 100:.1f}%",
-                        'raw': availability_score
+                        'percentage': f"{scores['availability_score'] * 100:.1f}%" if include_availability else "0%",
+                        'raw': scores['availability_score'] if include_availability else 0.0
                     },
                     'proficiency_bonus': {
-                        'percentage': f"{proficiency_bonus * 100:.1f}%",
-                        'raw': proficiency_bonus,
+                        'percentage': f"{scores['proficiency_bonus'] * 100:.1f}%",
+                        'raw': scores['proficiency_bonus'],
                         'details': {
-                            'total_proficiency': total_proficiency,
-                            'max_possible': max_possible_proficiency,
-                            'ratio': f"{(total_proficiency / max_possible_proficiency) * 100:.1f}%" if max_possible_proficiency > 0 else '0%',
-                            'total_skill_component': round(adjusted_skill_component, 4)
+                            'bonus_percentage': f"{scores['proficiency_bonus'] * 100:.1f}%",
+                            'total_skill_component': round(scores['adjusted_skill_component'], 4)
                         }
                     }
                 },
-                'matched_skills': matched_skills,
-                'availability': get_user_availability_entries(usn),
+                'matched_skills': scores['matched_skills'],
+                'availability': get_user_availability_entries(usn) if include_availability else [],
                 'profile_url': f"/profile/{usn}",
-            })
+            }
+            
+            results.append(result)
 
+        # Sort by match score in descending order and apply limit
         results.sort(key=lambda x: x['match_score'], reverse=True)
         return results[:limit]
         
@@ -915,146 +1012,4 @@ def get_advanced_matches(
         logger.error(f"Error in advanced matching: {str(e)}", exc_info=True)
         return []
 
-def get_advanced_group_matches(group_id: int, limit: int = 20) -> List[Dict[str, Any]]:
-    """
-    Find potential members for a study group using advanced matching.
-    Similar to get_advanced_matches but for study groups.
-    """
-    try:
-        group = StudyGroup.objects.get(group_id=group_id)
-        
-        # Get group topics as skills
-        group_topics = []
-        if group.topics:
-            group_topics = [t.strip() for t in group.topics.split(',') if t.strip()]
-        
-        # Get current members to exclude
-        current_members = StudyGroupMember.objects.filter(group=group).values_list('user_id', flat=True)
-        
-        # Find users with matching skills/interests
-        # Prefetch users with their skills for group matching
-        user_skills_prefetch = Prefetch(
-            'user__userskill_set',
-            queryset=UserSkill.objects.select_related('skill')
-        )
-        
-        potential_members = UserProfile.objects.exclude(
-            user_id__in=current_members
-        ).prefetch_related(user_skills_prefetch)
-        
-        # If group has topics, filter by them
-        if group_topics:
-            potential_members = potential_members.filter(
-                Q(user__user_skills__skill__name__in=group_topics) |
-                Q(bio__icontains=group.subject_area)
-            ).distinct()
-
-        candidate_records: List[Dict[str, Any]] = []
-        profile_by_usn: Dict[str, UserProfile] = {}
-        user_skill_details: Dict[str, List[Dict[str, Any]]] = {}
-        candidate_skill_names: Set[str] = set()
-
-        for profile in potential_members[:1000]:
-            custom_user = profile.user
-            if not isinstance(custom_user, CustomUser):
-                continue
-
-            skills_normalized: List[str] = []
-            skill_entries: List[Dict[str, Any]] = []
-
-            for user_skill in custom_user.user_skills.all():
-                if not user_skill.skill:
-                    continue
-                original_name = user_skill.skill.name.strip()
-                if not original_name:
-                    continue
-                normalized = original_name.lower()
-                skills_normalized.append(normalized)
-                candidate_skill_names.add(normalized)
-                skill_entries.append({
-                    'skill_id': user_skill.skill_id,
-                    'name': original_name,
-                    'proficiency': user_skill.proficiency_level,
-                })
-
-            # Create a mapping of skill names to their proficiency levels
-            skill_proficiencies = {
-                entry['name'].strip().lower(): entry.get('proficiency', 3)
-                for entry in skill_entries
-                if entry.get('name')
-            }
-            
-            candidate_records.append({
-                'USN': custom_user.usn,
-                'Department': custom_user.department.name if custom_user.department else '',
-                'Skill': '; '.join(skills_normalized),
-                'Skill_Proficiencies': skill_proficiencies  # Add skill proficiencies
-            })
-            user_skill_details[custom_user.usn] = skill_entries
-            profile_by_usn[custom_user.usn] = profile
-
-        if not candidate_records or not group_topics:
-            return []
-
-        df = pd.DataFrame(candidate_records)
-        scored_df, matched_details = compute_skill_scores(df, group_topics, similarity_threshold=0.5)
-
-        skill_embeddings_dict = get_skill_embeddings(list(candidate_skill_names | set(topic.lower() for topic in group_topics)))
-        enhanced_df = enhance_scores_with_graph(df, scored_df, group_topics, skill_embeddings_dict, network_weight=0.1)
-
-        current_member_usns = [str(usn) for usn in current_members]
-        results: List[Dict[str, Any]] = []
-
-        for _, row in enhanced_df.iterrows():
-            usn = str(row.get('USN', ''))
-            profile = profile_by_usn.get(usn)
-            if not profile:
-                continue
-
-            skill_component = float(row.get('Network_Enhanced_Score', row.get('Weighted_Score', 0.0)))
-            skill_component = min(max(skill_component, 0.0), 1.0)
-
-            overlaps = [
-                get_user_availability_overlap(member_usn, usn)
-                for member_usn in current_member_usns
-                if member_usn and member_usn != usn
-            ]
-            availability_score = sum(overlaps) / len(overlaps) if overlaps else 0.5
-
-            final_score = (0.6 * skill_component) + (0.4 * availability_score)
-            matched_items = matched_details.get(usn, [])
-            skill_entries = user_skill_details.get(usn, [])
-            skill_lookup = {entry['name'].strip().lower(): entry for entry in skill_entries if entry.get('name')}
-            matched_skills = []
-            for item in matched_items:
-                matched_name = item['matched_skill']
-                source_entry = skill_lookup.get(matched_name)
-                matched_skills.append({
-                    'name': source_entry['name'] if source_entry else matched_name,
-                    'proficiency': source_entry.get('proficiency') if source_entry else None,
-                    'similarity': round(item.get('similarity', 0.0), 3),
-                })
-            matched_skills = matched_skills[:5]
-
-            results.append({
-                'user_id': profile.user.usn,
-                'name': profile.user.get_full_name() or profile.user.email,
-                'email': profile.user.email,
-                'department': profile.user.department.name if profile.user.department else None,
-                'year': profile.user.study_year,
-                'skills': user_skill_details.get(usn, []),
-                'match_score': round(final_score * 100, 1),
-                'match_percentage': round(final_score * 100, 1),
-                'skill_match': round(skill_component * 100, 1),
-                'availability_match': round(availability_score * 100, 1),
-                'matched_skills': matched_skills,
-                'availability': get_user_availability_entries(usn),
-                'profile_url': f"/profile/{usn}",
-            })
-
-        results.sort(key=lambda x: x['match_score'], reverse=True)
-        return results[:limit]
-        
-    except Exception as e:
-        logger.error(f"Error in advanced group matching: {str(e)}", exc_info=True)
-        return []
+# Study group matching has been moved to study_group_matching.py

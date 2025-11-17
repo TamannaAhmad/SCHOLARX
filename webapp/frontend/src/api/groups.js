@@ -226,9 +226,33 @@ export const groupsAPI = {
   async inviteToGroup(groupId, userUsn, message = '') {
     return fetchAPI(`/groups/${groupId}/invite/`, {
       method: 'POST',
-      body: JSON.stringify({ user_usn: userUsn, message: message }),
+      body: JSON.stringify({ user_usn: userUsn, message }),
     });
   },
+  
+  /**
+   * Find potential members for a study group
+   * @param {string} groupId - The ID of the study group
+   * @param {Array<string>} [skills=[]] - Optional array of skill names to filter by
+   * @returns {Promise<Array>} - Array of potential members with match scores
+   */
+  findGroupMembers(groupId, skills = [], includeAvailability = true) {
+    const url = new URL(`${API_BASE_URL}/groups/${groupId}/find-members/`);
+    
+    // Add skills as query parameters if provided
+    if (skills && skills.length > 0) {
+      skills.forEach(skill => {
+        url.searchParams.append('skills', skill);
+      });
+    }
+
+    // Add include_availability parameter
+    url.searchParams.set('include_availability', includeAvailability.toString());
+    
+    return fetchAPI(url.toString().replace(API_BASE_URL, ''), {
+      method: 'GET',
+    });
+  }
 };
 
 export default groupsAPI;
