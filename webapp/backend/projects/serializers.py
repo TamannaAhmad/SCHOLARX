@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Project, ProjectSkill, StudyGroup, StudyGroupMember, TeamMember, JoinRequest, InviteRequest, LeaveRequest
+from .models import Project, ProjectSkill, StudyGroup, StudyGroupMember, StudyGroupSkill, TeamMember, JoinRequest, InviteRequest, LeaveRequest
 from accounts.models import Skill, UserProfile
 from django.contrib.auth import get_user_model
 
@@ -251,13 +251,23 @@ class StudyGroupMemberSerializer(serializers.ModelSerializer):
             return {}
 
 
+class StudyGroupSkillSerializer(serializers.ModelSerializer):
+    skill = SkillSerializer()
+
+    class Meta:
+        from .models import StudyGroupSkill 
+        model = StudyGroupSkill
+        fields = ['skill']
+
+
 class StudyGroupSerializer(serializers.ModelSerializer):
-    topics = serializers.ListField(
-        child=serializers.CharField(),
-        required=False,
-        write_only=True
+    required_skills = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Skill.objects.all(),
+        write_only=True,
+        required=False
     )
-    topics_display = serializers.SerializerMethodField(read_only=True)
+    skills = StudyGroupSkillSerializer(source='studygroupskill_set', many=True, read_only=True)
     members = StudyGroupMemberSerializer(source='studygroupmember_set', many=True, read_only=True)
     is_owner = serializers.SerializerMethodField(read_only=True)
     owner_id = serializers.SerializerMethodField(read_only=True)
@@ -267,19 +277,10 @@ class StudyGroupSerializer(serializers.ModelSerializer):
         model = StudyGroup
         fields = [
             'group_id', 'name', 'description', 'course_code', 'subject_area',
-            'max_size', 'created_at', 'members', 'topics', 'topics_display', 'is_owner', 'owner_id', 'owner_name'
+            'max_size', 'created_by', 'created_at', 'members', 'required_skills', 'skills',
+            'skills', 'is_owner', 'owner_id', 'owner_name'
         ]
-        read_only_fields = ['group_id', 'created_at']
-
-    def to_internal_value(self, data):
-        # Convert topics to a list if it's a string
-        if 'topics' in data and isinstance(data['topics'], str):
-            data['topics'] = [topic.strip() for topic in data['topics'].split(',') if topic.strip()]
-        return super().to_internal_value(data)
-
-    def get_topics_display(self, obj):
-        # Convert topics from comma-separated string to list
-        return obj.topics.split(',') if obj.topics else []
+        read_only_fields = ['created_by', 'created_at', 'is_owner', 'owner_id', 'owner_name']
 
     def get_is_owner(self, obj):
         try:
@@ -302,33 +303,37 @@ class StudyGroupSerializer(serializers.ModelSerializer):
             return None
 
     def create(self, validated_data):
-        # Handle topics if provided
-        topics = validated_data.pop('topics', None)
+        skills_data = validated_data.pop('required_skills', [])
         validated_data['created_by'] = self.context['request'].user
+        study_group = StudyGroup.objects.create(**validated_data)
         
-        # Create the study group
-        study_group = super().create(validated_data)
-        
-        # Save topics if provided
-        if topics:
-            study_group.topics = ','.join(topics)
-            study_group.save()
-        
+        # Add skills
+        for skill in skills_data:  
+            StudyGroupSkill.objects.create(study_group=study_group, skill=skill)
+    
         return study_group
 
     def update(self, instance, validated_data):
-        # Handle topics if provided
-        topics = validated_data.pop('topics', None)
+        skills_data = validated_data.pop('required_skills', None)
+    
+        # Update study group fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+    
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
         
-        # Update the study group
-        study_group = super().update(instance, validated_data)
+        # Update skills if provided
+        if skills_data is not None:
+            # Delete existing skills
+            instance.studygroupskill_set.all().delete()
+            # Add new skills
+            for skill in skills_data:
+                StudyGroupSkill.objects.create(study_group=instance, skill=skill)
         
-        # Update topics if provided
-        if topics is not None:
-            study_group.topics = ','.join(topics)
-            study_group.save()
-        
-        return study_group
+        return instance
 
     def validate_name(self, value):
         value = value.strip()

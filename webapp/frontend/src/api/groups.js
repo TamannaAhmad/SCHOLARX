@@ -119,9 +119,9 @@ async function fetchAPI(endpoint, options = {}) {
 
 export const groupsAPI = {
   async createGroup(groupData) {
-    // Convert topics to comma-separated string if it's an array
-    if (Array.isArray(groupData.topics)) {
-      groupData.topics = groupData.topics.join(',');
+    // Ensure required_skills is an array of skill IDs
+    if (!Array.isArray(groupData.required_skills)) {
+      groupData.required_skills = [];
     }
     return fetchAPI('/groups/create/', {
       method: 'POST',
@@ -134,6 +134,15 @@ export const groupsAPI = {
   async getAllGroups() {
     return fetchAPI('/groups/all/');
   },
+  getSkills: async function() {
+    try {
+        const response = await fetchAPI('/skills/');
+        return response;
+    } catch (error) {
+        console.error('Error fetching skills:', error);
+        throw error;
+    }
+  },
   async getGroup(groupId) {
     console.log(`Fetching group details for group ID: ${groupId}`);
     
@@ -142,9 +151,12 @@ export const groupsAPI = {
       
       console.log('Fetched group details:', group);
       
-      // Convert topics from comma-separated string to array if exists
-      if (group.topics) {
-        group.topics_display = group.topics.split(',').filter(topic => topic.trim() !== '');
+      // Process skills array
+      if (group.skills) {
+        group.skills_display = group.skills.map(skill => ({
+          id: skill.skill.id,
+          name: skill.skill.name
+        }));
       }
       
       // Ensure members are processed
@@ -171,11 +183,9 @@ export const groupsAPI = {
     }
   },
   async updateGroup(groupId, groupData) {
-    // Ensure topics is always a list
-    if (typeof groupData.topics === 'string') {
-      groupData.topics = groupData.topics.split(',').map(topic => topic.trim()).filter(topic => topic !== '');
-    } else if (!Array.isArray(groupData.topics)) {
-      groupData.topics = [];
+    // Ensure required_skills is an array of skill IDs
+    if (!Array.isArray(groupData.required_skills)) {
+      groupData.required_skills = [];
     }
 
     return fetchAPI(`/groups/${groupId}/update/`, {

@@ -106,7 +106,6 @@ class StudyGroup(models.Model):
     description = models.TextField(null=True, blank=True)
     course_code = models.CharField(max_length=20, null=True, blank=True)
     subject_area = models.CharField(max_length=100)
-    topics = models.TextField(null=True, blank=True, help_text="Comma-separated list of topics")
     max_size = models.IntegerField(default=10)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='created_study_groups')
     created_at = models.DateTimeField(default=timezone.now)
@@ -124,6 +123,15 @@ class StudyGroup(models.Model):
     class Meta:
         db_table = 'study_groups'
         verbose_name_plural = 'Study Groups'
+
+class StudyGroupSkill(models.Model):
+    id = models.AutoField(primary_key=True)
+    study_group = models.ForeignKey(StudyGroup, on_delete=models.CASCADE, db_column='group_id')
+    skill = models.ForeignKey('accounts.Skill', on_delete=models.CASCADE, db_column='skill_id')
+
+    class Meta:
+        db_table = 'study_group_skills'
+        unique_together = ('study_group', 'skill')
 
 
 class StudyGroupMember(models.Model):

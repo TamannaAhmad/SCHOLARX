@@ -7,6 +7,108 @@
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/userprofile.css">
     <link rel="stylesheet" href="styles/project-creation.css">
+    <style>
+        /* Skills display styling */
+        .skills-autocomplete-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .skills-input {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+
+        .skills-input:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+        }
+
+        .selected-skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .skill-tag {
+            display: inline-flex;
+            align-items: center;
+            background-color: #e0e7ff;
+            color: #4f46e5;
+            padding: 0.25rem 0.5rem 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .skill-tag .remove-skill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.25rem;
+            height: 1.25rem;
+            margin-left: 0.25rem;
+            background: none;
+            border: none;
+            color: #4f46e5;
+            font-size: 1.25rem;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0;
+            border-radius: 9999px;
+        }
+
+        .skill-tag .remove-skill:hover {
+            background-color: rgba(79, 70, 229, 0.1);
+        }
+
+        .skills-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            z-index: 10;
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.375rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            margin-top: 0.25rem;
+            display: none;
+        }
+
+        .skill-suggestion {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+
+        .skill-suggestion:hover {
+            background-color: #f3f4f6;
+        }
+
+        .input-note {
+            display: block;
+            margin-top: 0.25rem;
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+        .success-message {
+            background-color: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #15803d;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+        }
+    </style>
     <link rel="icon" href="favicon.ico">
 </head>
 <body>
@@ -79,9 +181,21 @@
                 </div>
 
                 <div class="input-group">
-                    <label for="group-topics" class="input-label">Topics</label>
-                    <div class="input-wrapper">
-                        <input type="text" id="group-topics" class="form-input" readonly>
+                    <label class="input-label">Required Skills</label>
+                    <div class="input-wrapper skills-autocomplete-wrapper">
+                        <div id="skills-search-wrapper" style="display:none">
+                            <input 
+                                type="text" 
+                                id="skills-input" 
+                                name="skills-input" 
+                                class="form-input skills-input"
+                                placeholder="Type to search and add skills"
+                                disabled
+                            >
+                            <div id="skills-suggestions" class="skills-suggestions"></div>
+                            <small id="skills-note" class="input-note">Start typing to add/remove skills</small>
+                        </div>
+                        <div id="selected-skills" class="selected-skills"></div>
                     </div>
                 </div>
 
@@ -103,7 +217,8 @@
         </div>
     </div>
 
-    <script type="module" src="scripts/study-group-view.js?v=20251011-1"></script>
+    <!-- Include the skills selector component -->
+    <script type="module" src="scripts/study-group-view.js?v=20251011-2"></script>
     <style>
         /* Error container styling for study group view */
         #error-container.error-message {
@@ -140,6 +255,45 @@
         
         #error-container.error-message .primary-btn:hover {
             transform: translateY(-2px);
+        }
+        
+        /* Skills display styling */
+        .skills-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
+        }
+        
+        .skill-tag {
+            background: #e0e7ff;
+            color: #4f46e5;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        /* Style for the skills selector */
+        #group-skills {
+            width: 100%;
+            min-height: 42px;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            background-color: #fff;
+        }
+        
+        #group-skills option {
+            padding: 0.5rem;
+        }
+        
+        .hint {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
         }
     </style>
 </body>

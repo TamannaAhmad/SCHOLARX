@@ -105,18 +105,20 @@
                 </div>
 
                 <div class="input-group">
-                    <label for="topics-input" class="input-label">Topics</label>
-                    <div class="input-wrapper topics-input-wrapper">
+                    <label for="skills-input" class="input-label">Skills</label>
+                    <div class="input-wrapper skills-autocomplete-wrapper">
                         <input 
                             type="text" 
-                            id="topics-input" 
-                            name="topics-input" 
-                            class="form-input topics-input"
-                            placeholder="Type and press Enter to add topics"
+                            id="skills-input" 
+                            name="skills-input" 
+                            class="form-input skills-input"
+                            placeholder="Type and press Enter to add skills"
                         >
-                        <div id="selected-topics" class="selected-topics"></div>
+                        <div id="skills-suggestions" class="skills-suggestions"></div>
+                        <div id="selected-skills" class="selected-skills"></div>
                     </div>
-                    <small class="input-note">Press Enter to add a topic</small>
+                    <div class="error-message" id="skills-error"></div>
+                    <small class="input-note">Start typing to see skill suggestions</small>
                 </div>
 
                 <div class="input-group">
@@ -127,8 +129,8 @@
                             id="max-group-size" 
                             name="max-group-size" 
                             class="form-input"
-                            min="1" 
-                            max="5" 
+                            min="2" 
+                            max="10" 
                             required 
                             value="3"
                         >

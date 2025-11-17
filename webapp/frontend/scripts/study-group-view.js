@@ -14,7 +14,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const subjectAreaInput = document.getElementById('subject-area');
     const descInput = document.getElementById('group-description');
     const maxGroupSizeInput = document.getElementById('max-group-size');
-    const topicsInput = document.getElementById('group-topics');
+    const skillsContainer = document.getElementById('selected-skills');
+    const skillsSearchWrapper = document.getElementById('skills-search-wrapper');
+    const skillsInput = document.getElementById('skills-input');
+    const skillsSuggestions = document.getElementById('skills-suggestions');
     const membersList = document.getElementById('group-members');
     const editBtn = document.getElementById('editBtn');
     const saveBtn = document.getElementById('save-btn');
@@ -22,6 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const findMeetingTimesBtn = document.getElementById('find-meeting-times-btn');
     const requestJoinBtn = document.getElementById('request-join-btn');
     const leaveGroupBtn = document.getElementById('leave-group-btn');
+    
+    let allSkills = [];
+    let selectedSkills = []; // array of {id, name}
     
     // Set up Find Members button link
     if (findMembersBtn && groupId) {
@@ -58,6 +64,30 @@ document.addEventListener('DOMContentLoaded', () => {
             showError(message);
         }
         console.error(message);
+    }
+
+    function showSuccessMsg(message) {
+        if (errorContainer) {
+            errorContainer.innerHTML = `<p style="margin: 0;">${message}</p>`;
+            errorContainer.className = 'success-message';
+            errorContainer.style.cssText = `
+                display: block !important;
+                max-width: 100%;
+                margin: 1rem 0;
+                background-color: #f0fdf4;
+                border: 1px solid #bbf7d0;
+                border-radius: 0.5rem;
+                padding: 0.75rem 1rem;
+                color: #15803d;
+                visibility: visible;
+                opacity: 1;
+            `;
+            setTimeout(() => {
+                errorContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 50);
+        } else {
+            console.log('Success:', message);
+        }
     }
 
     function hideError() {
@@ -166,11 +196,128 @@ document.addEventListener('DOMContentLoaded', () => {
         subjectAreaInput.readOnly = !on;
         descInput.readOnly = !on;
         maxGroupSizeInput.readOnly = !on;
-        topicsInput.readOnly = !on;
-        saveBtn.style.display = on ? 'inline-block' : 'none';
-        editBtn.textContent = on ? 'CANCEL' : 'EDIT GROUP';
+        
+        // Toggle skills input
+        if (skillsSearchWrapper) {
+            skillsSearchWrapper.style.display = on ? 'block' : 'none';
+            if (on) {
+                if (skillsInput) {
+                    skillsInput.disabled = false;
+                    skillsInput.focus();
+                }
+                // Initialize skills if not already done
+                if (allSkills.length === 0) {
+                    loadSkills();
+                }
+            } else {
+                if (skillsInput) {
+                    skillsInput.disabled = true;
+                    skillsInput.value = '';
+                }
+                if (skillsSuggestions) {
+                    skillsSuggestions.innerHTML = '';
+                    skillsSuggestions.style.display = 'none';
+                }
+            }
+        }
+        
+        // Re-render skills to update remove buttons
+        renderSkills(selectedSkills);
+        
+        // Toggle edit/save buttons
+        if (editBtn) editBtn.style.display = on ? 'none' : 'inline-block';
+        if (saveBtn) saveBtn.style.display = on ? 'inline-block' : 'none';
     }
 
+    async function loadSkills() {
+        try {
+            const skills = await groupsAPI.getSkills();
+            allSkills = skills;
+            renderSkills(selectedSkills);
+        } catch (error) {
+            console.error('Error loading skills:', error);
+            showErrorMsg('Failed to load skills. Please refresh the page to try again.');
+        }
+    }
+    
+    function showSkillSuggestions(searchTerm) {
+        if (!skillsSuggestions) return;
+        
+        skillsSuggestions.innerHTML = '';
+        
+        if (!searchTerm || searchTerm.trim() === '') {
+            skillsSuggestions.style.display = 'none';
+            return;
+        }
+        
+        const filtered = allSkills.filter(skill => 
+            skill.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+            !selectedSkills.some(s => s.id === skill.id)
+        );
+        
+        if (filtered.length === 0) {
+            skillsSuggestions.style.display = 'none';
+            return;
+        }
+        
+        filtered.forEach(skill => {
+            const suggestion = document.createElement('div');
+            suggestion.className = 'skill-suggestion';
+            suggestion.textContent = skill.name;
+            suggestion.onclick = () => addSkill(skill);
+            skillsSuggestions.appendChild(suggestion);
+        });
+        
+        skillsSuggestions.style.display = 'block';
+    }
+    
+    function addSkill(skill) {
+        if (!selectedSkills.some(s => s.id === skill.id)) {
+            selectedSkills.push(skill);
+            renderSkills(selectedSkills);
+        }
+        
+        if (skillsInput) {
+            skillsInput.value = '';
+            skillsInput.focus();
+        }
+        
+        if (skillsSuggestions) {
+            skillsSuggestions.style.display = 'none';
+        }
+    }
+    
+    function removeSkill(skillId) {
+        selectedSkills = selectedSkills.filter(skill => skill.id !== skillId);
+        renderSkills(selectedSkills);
+    }
+    
+    function renderSkills(skills) {
+        if (!skillsContainer) return;
+        skillsContainer.innerHTML = '';
+        (skills || []).forEach((s, index) => {
+            const name = s.skill?.name || s.name || '';
+            const id = s.skill?.id || s.id;
+            const tag = document.createElement('div');
+            tag.className = 'skill-tag';
+            tag.innerHTML = `
+            <span>${name}</span>
+            ${isEditing ? `<button type="button" class="remove-skill" data-index="${index}" data-id="${id}">&times;</button>` : ''}
+        `;
+            skillsContainer.appendChild(tag);
+        });
+
+        if (isEditing) {
+            skillsContainer.querySelectorAll('.remove-skill').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const idx = parseInt(this.getAttribute('data-index'));
+                    selectedSkills.splice(idx, 1);
+                    renderSkills(selectedSkills);
+                });
+            });
+        }
+    }
+    
     async function loadGroup() {
         try {
             hideError();
@@ -182,8 +329,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 form.style.pointerEvents = 'none';
             }
             
-            const data = await groupsAPI.getGroup(groupId);
-            currentGroup = data;
+            const group = await groupsAPI.getGroup(groupId);
+            currentGroup = group;
+            
+            // Set form values
+            titleHeading.textContent = group.name;
+            nameInput.value = group.name || '';
+            courseCodeInput.value = group.course_code || '';
+            subjectAreaInput.value = group.subject_area || '';
+            descInput.value = group.description || '';
+            maxGroupSizeInput.value = group.max_group_size || 5;
+            
+            // Handle skills
+            selectedSkills = (group.skills || []).map(s => ({ 
+                id: s.skill?.id || s.id, 
+                name: s.skill?.name || s.name 
+            })).filter(s => s.id && s.name);
+            
+            renderSkills(selectedSkills);
+            
+            // Load members
+            if (group.members) {
+                renderMembers(group.members);
+            }
             
             // Hide loading state
             if (form) {
@@ -196,15 +364,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const user = await authAPI.getProfile();
                 currentUserId = user?.id ?? user?.pk ?? user?.usn ?? null;
                 currentUserUsn = user?.usn ?? null;
-                console.debug('Group current user id:', currentUserId, 'USN:', currentUserUsn, 'Owner id:', data.owner_id);
+                console.debug('Group current user id:', currentUserId, 'USN:', currentUserUsn, 'Owner id:', group.owner_id);
             } catch (e) {
                 console.warn('Failed to fetch user profile for ownership check:', e);
             }
 
             // Check if current user is a member
             isMember = false;
-            if (data.members && Array.isArray(data.members)) {
-                isMember = data.members.some(member => {
+            if (group.members && Array.isArray(group.members)) {
+                isMember = group.members.some(member => {
                     const memberUsn = member.user_details?.usn || member.user || member.user_id;
                     return memberUsn && (
                         String(memberUsn) === String(currentUserUsn) ||
@@ -216,7 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentGroup.is_member = isMember;
 
             // Permissions: only the owner can edit
-            const isOwner = Boolean(data?.is_owner) || (currentUserId != null && data?.owner_id != null && String(currentUserId) === String(data.owner_id));
+            const isOwner = Boolean(group?.is_owner) || (currentUserId != null && group?.owner_id != null && String(currentUserId) === String(group.owner_id));
             currentGroup.is_owner = isOwner;
             
             // Show/hide edit button based on ownership
@@ -231,21 +399,29 @@ document.addEventListener('DOMContentLoaded', () => {
             // Show/hide action buttons based on ownership and membership
             updateActionButtons(isOwner, isMember);
 
-            titleHeading.textContent = data.name || 'STUDY GROUP';
-            nameInput.value = data.name || '';
-            courseCodeInput.value = data.course_code || '';
-            subjectAreaInput.value = data.subject_area || '';
-            descInput.value = data.description || '';
-            maxGroupSizeInput.value = data.max_size ?? '';
-            
-            // Handle topics display
-            if (data.topics_display) {
-                topicsInput.value = data.topics_display.join(', ');
-            } else {
-                topicsInput.value = '';
+            function renderGroup() {
+                if (!currentGroup) return;
+
+                titleHeading.textContent = currentGroup.name;
+                nameInput.value = currentGroup.name || '';
+                courseCodeInput.value = currentGroup.course_code || '';
+                subjectAreaInput.value = currentGroup.subject_area || '';
+                descInput.value = currentGroup.description || '';
+                maxGroupSizeInput.value = currentGroup.max_size || '';
+                
+                // Handle skills display
+                const skillsContainer = document.getElementById('skills-display');
+                if (skillsContainer) {
+                    if (currentGroup.skills_display && currentGroup.skills_display.length > 0) {
+                        skillsContainer.innerHTML = currentGroup.skills_display
+                            .map(skill => `<span class="skill-tag">${skill.name}</span>`)
+                            .join('');
+                    } else {
+                        skillsContainer.innerHTML = '<span class="text-muted">No skills specified</span>';
+                    }
+                }
             }
-            
-            renderMembers(data.members);
+            renderGroup();
         } catch (e) {
             console.error('Study group load error:', e);
             
@@ -338,37 +514,74 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function saveChanges() {
         try {
-            hideError();
-            if (!currentGroup?.is_owner) {
-                throw new Error('You do not have permission to edit this study group. Only the group owner can make changes.');
-            }
-            const maxSize = parseInt(maxGroupSizeInput.value);
-            if (isNaN(maxSize) || maxSize < 1 || maxSize > 10) {
-                throw new Error('Max group size must be between 1 and 10');
-            }
-            
-            // Check if new max size is less than current number of members
-            const currentMemberCount = currentGroup?.members?.length || 0;
-            if (maxSize < currentMemberCount) {
-                throw new Error(`Cannot set max group size to ${maxSize} because there are already ${currentMemberCount} members in the group.`);
-            }
+            setButtonLoading(saveBtn, true);
 
-            const payload = {
+            const updatedData = {
                 name: nameInput.value.trim(),
+                description: descInput.value.trim(),
                 course_code: courseCodeInput.value.trim(),
                 subject_area: subjectAreaInput.value.trim(),
-                description: descInput.value.trim(),
-                max_size: maxSize,
-                topics: (topicsInput.value || '').split(',').map(t => t.trim()).filter(Boolean)
+                max_size: parseInt(maxGroupSizeInput.value) || 5,
+                required_skills: selectedSkills.map(skill => skill.id)
             };
 
-            await groupsAPI.updateGroup(groupId, payload);
-            await loadGroup();
+            // Validate required fields
+            if (!updatedData.name) {
+                throw new Error('Group name is required');
+            }
+            
+            const updatedGroup = await groupsAPI.updateGroup(groupId, updatedData);
+            
+            // Preserve the ownership and membership information when updating currentGroup
+            currentGroup = {
+                ...updatedGroup,
+                is_owner: currentGroup?.is_owner || false,  // Preserve ownership status
+                is_member: currentGroup?.is_member || false, // Preserve membership status
+                owner_id: currentGroup?.owner_id || null     // Preserve owner ID
+            };
+            
+            // Update the UI with the saved data
+            titleHeading.textContent = updatedGroup.name;
+            
+            // Show success message
+            showSuccessMsg('Group updated successfully!');
+            setTimeout(hideError, 3000);
+            
+            // Switch back to view mode
             setEditMode(false);
-        } catch (e) {
-            const errorMsg = handleAPIError(e, 'Failed to save changes.');
-            showErrorMsg(errorMsg);
+        } catch (error) {
+            console.error('Error updating group:', error);
+            showErrorMsg(handleAPIError(error, 'Failed to update group. Please try again.'));
+        } finally {
+            setButtonLoading(saveBtn, false);
         }
+    }
+
+    if (skillsInput) {
+        skillsInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const value = skillsInput.value.trim();
+                if (value) {
+                    const existingSkill = allSkills.find(s => s.name.toLowerCase() === value.toLowerCase());
+                    if (existingSkill) {
+                        addSkill(existingSkill);
+                    } else {
+                        // Optionally create a new skill if your API supports it
+                        const newSkill = { id: `temp-${Date.now()}`, name: value };
+                        allSkills.push(newSkill);
+                        addSkill(newSkill);
+                    }
+                    skillsInput.value = '';
+                    skillsSuggestions.style.display = 'none';
+                }
+            }
+        });
+
+        // Show suggestions when typing
+        skillsInput.addEventListener('input', (e) => {
+            showSkillSuggestions(e.target.value);
+        });
     }
 
     editBtn.addEventListener('click', (e) => {
@@ -567,4 +780,71 @@ document.addEventListener('DOMContentLoaded', () => {
     
     setEditMode(false);
     loadGroup();
+
+    // Event listeners for skills input
+    if (skillsInput) {
+        skillsInput.addEventListener('input', (e) => {
+            showSkillSuggestions(e.target.value);
+        });
+
+        skillsInput.addEventListener('focus', () => {
+            if (skillsInput.value) {
+                showSkillSuggestions(skillsInput.value);
+            }
+        });
+
+        skillsInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const value = skillsInput.value.trim();
+                if (value) {
+                    const existingSkill = allSkills.find(s => 
+                        s.name.toLowerCase() === value.toLowerCase()
+                    );
+                    if (existingSkill) {
+                        addSkill(existingSkill);
+                    }
+                }
+            } else if (e.key === 'Escape') {
+                skillsInput.blur();
+                if (skillsSuggestions) {
+                    skillsSuggestions.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    // Click outside to close suggestions
+    document.addEventListener('click', (e) => {
+        if (skillsSuggestions && !skillsSearchWrapper.contains(e.target)) {
+            skillsSuggestions.style.display = 'none';
+        }
+    });
+
+    // Edit button click handler
+    if (editBtn) {
+        editBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (!currentGroup?.is_owner) {
+                showErrorMsg('You do not have permission to edit this group.');
+                return;
+            }
+            setEditMode(true);
+        });
+    }
+
+    // Save button click handler
+    if (saveBtn) {
+        saveBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            saveChanges();
+        });
+    }
+
+    // Initialize the page
+    if (groupId) {
+        loadGroup();
+    } else {
+        showErrorMsg('No group ID provided. Please go back and try again.');
+    }
 });

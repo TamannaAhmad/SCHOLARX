@@ -1,13 +1,17 @@
 import groupsAPI from '../src/api/groups.js';
+import projectsAPI from '../src/api/projects.js';
 import { showError as showErr, hideError, showFieldError, hideFieldError, setButtonLoading, handleAPIError } from '../src/utils/errorHandler.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('group-creation-form');
     const errorContainer = document.getElementById('error-container');
-    const topicsInput = document.getElementById('topics-input');
-    const selectedTopicsContainer = document.getElementById('selected-topics');
+    const skillsInput = document.getElementById('skills-input');
+    const skillsSuggestions = document.getElementById('skills-suggestions');
+    const selectedSkillsContainer = document.getElementById('selected-skills');
     const createGroupBtn = document.querySelector('#create-group-btn');
 
+    let allSkills = [];
+    let selectedSkills = [];
     let selectedTopics = [];
 
     function showError(message) {
@@ -45,18 +49,87 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Topic input handling
-    topicsInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            const topic = topicsInput.value.trim();
-            if (topic && !selectedTopics.includes(topic)) {
-                selectedTopics.push(topic);
-                topicsInput.value = '';
-                renderTopics();
+
+
+    // Skills functionality
+    async function fetchSkills() {
+        try {
+            allSkills = await projectsAPI.fetchSkills();
+            if (!allSkills || allSkills.length === 0) {
+                console.warn('No skills found');
             }
+        } catch (error) {
+            console.error('Error fetching skills:', error);
+        }
+    }
+
+    function renderSelectedSkills() {
+        selectedSkillsContainer.innerHTML = '';
+        selectedSkills.forEach((skill, index) => {
+            const skillTag = document.createElement('div');
+            skillTag.className = 'skill-tag';
+            skillTag.innerHTML = `
+                <span>${skill.name}</span>
+                <button type="button" class="remove-skill" data-index="${index}">&times;</button>
+            `;
+            selectedSkillsContainer.appendChild(skillTag);
+        });
+
+        // Add event listeners to remove buttons
+        selectedSkillsContainer.querySelectorAll('.remove-skill').forEach(button => {
+            button.addEventListener('click', function() {
+                const index = parseInt(this.getAttribute('data-index'));
+                selectedSkills.splice(index, 1);
+                renderSelectedSkills();
+            });
+        });
+    }
+
+    function showSkillSuggestions(searchTerm) {
+        skillsSuggestions.innerHTML = '';
+        const filteredSkills = allSkills.filter(skill => 
+            skill.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+            !selectedSkills.some(selected => selected.id === skill.id)
+        );
+
+        filteredSkills.forEach(skill => {
+            const suggestionItem = document.createElement('div');
+            suggestionItem.className = 'skill-suggestion';
+            suggestionItem.textContent = skill.name;
+            suggestionItem.addEventListener('click', () => {
+                selectedSkills.push(skill);
+                renderSelectedSkills();
+                skillsInput.value = '';
+                skillsSuggestions.innerHTML = '';
+                hideFieldError(skillsInput);
+            });
+            skillsSuggestions.appendChild(suggestionItem);
+        });
+
+        skillsSuggestions.style.display = filteredSkills.length > 0 ? 'block' : 'none';
+    }
+
+    // Skills input handling
+    skillsInput.addEventListener('input', function() {
+        const searchTerm = this.value.trim();
+        if (searchTerm) {
+            showSkillSuggestions(searchTerm);
+        } else {
+            skillsSuggestions.innerHTML = '';
+            skillsSuggestions.style.display = 'none';
         }
     });
+
+    // Close suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!skillsInput.contains(e.target) && !skillsSuggestions.contains(e.target)) {
+            skillsSuggestions.innerHTML = '';
+            skillsSuggestions.style.display = 'none';
+        }
+    });
+
+    // Initialize skills
+    fetchSkills();
 
     // Validate form before submission
     function validateForm() {
@@ -104,6 +177,12 @@ document.addEventListener('DOMContentLoaded', () => {
             isValid = false;
         }
 
+        // Validate skills
+        if (selectedSkills.length === 0) {
+            showFieldError(skillsInput, 'Please select at least one required skill.');
+            isValid = false;
+        }
+
         return isValid;
     }
 
@@ -122,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
             subject_area: document.getElementById('subject').value.trim(),
             description: document.getElementById('group-description').value.trim(),
             max_size: parseInt(document.getElementById('max-group-size').value),
-            topics: selectedTopics
+            required_skills: selectedSkills.map(skill => skill.id)
         };
 
         console.log('Submitting group data:', groupData);
