@@ -265,7 +265,12 @@ class StudyGroupSerializer(serializers.ModelSerializer):
         many=True,
         queryset=Skill.objects.all(),
         write_only=True,
-        required=False
+        required=False,
+        error_messages={
+            'does_not_exist': 'One or more skills do not exist.',
+            'incorrect_type': 'Skills must be provided as an array of skill IDs (numbers).',
+            'invalid': 'Invalid skill ID format. Please provide valid skill IDs.'
+        }
     )
     skills = StudyGroupSkillSerializer(source='studygroupskill_set', many=True, read_only=True)
     members = StudyGroupMemberSerializer(source='studygroupmember_set', many=True, read_only=True)
