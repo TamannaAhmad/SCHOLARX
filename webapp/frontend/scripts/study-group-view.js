@@ -1,6 +1,6 @@
 import groupsAPI from '../src/api/groups.js';
 import { authAPI } from '../src/api/auth.js';
-import { showError, handleAPIError, setButtonLoading } from '../src/utils/errorHandler.js';
+import { showError, showSuccess, handleAPIError, setButtonLoading } from '../src/utils/errorHandler.js';
 import { createMessageModal } from '../src/utils/modal.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -41,53 +41,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let isMember = false;
 
     function showErrorMsg(message) {
-        if (errorContainer) {
-            // Render styled error and ensure visibility
-            errorContainer.innerHTML = `<p style="margin: 0;">${message}</p>`;
-            errorContainer.className = 'error-message';
-            errorContainer.style.cssText = `
-                display: block !important;
-                max-width: 100%;
-                margin: 1rem 0;
-                background-color: #fef2f2;
-                border: 1px solid #fecaca;
-                border-radius: 0.5rem;
-                padding: 0.75rem 1rem;
-                color: #dc2626;
-                visibility: visible;
-                opacity: 1;
-            `;
-            setTimeout(() => {
-                errorContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }, 50);
-        } else {
-            showError(message);
-        }
-        console.error(message);
+        showError(message, { duration: 5000 });
     }
 
     function showSuccessMsg(message) {
-        if (errorContainer) {
-            errorContainer.innerHTML = `<p style="margin: 0;">${message}</p>`;
-            errorContainer.className = 'success-message';
-            errorContainer.style.cssText = `
-                display: block !important;
-                max-width: 100%;
-                margin: 1rem 0;
-                background-color: #f0fdf4;
-                border: 1px solid #bbf7d0;
-                border-radius: 0.5rem;
-                padding: 0.75rem 1rem;
-                color: #15803d;
-                visibility: visible;
-                opacity: 1;
-            `;
-            setTimeout(() => {
-                errorContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }, 50);
-        } else {
-            console.log('Success:', message);
-        }
+        showSuccess(message, { duration: 3000 });
     }
 
     function hideError() {
@@ -98,11 +56,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderMembers(members) {
-        console.log('Rendering members:', members);
         membersList.innerHTML = '';
         
         if (!members || members.length === 0) {
-            console.warn('No members to render');
             const noMembersMsg = document.createElement('li');
             noMembersMsg.textContent = 'No members in this group';
             membersList.appendChild(noMembersMsg);
@@ -129,8 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
             li.appendChild(link);
             membersList.appendChild(li);
         });
-
-        console.log(`Rendered ${members.length} members`);
     }
     
     function updateActionButtons(isOwner, isMember) {
@@ -364,7 +318,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const user = await authAPI.getProfile();
                 currentUserId = user?.id ?? user?.pk ?? user?.usn ?? null;
                 currentUserUsn = user?.usn ?? null;
-                console.debug('Group current user id:', currentUserId, 'USN:', currentUserUsn, 'Owner id:', group.owner_id);
             } catch (e) {
                 console.warn('Failed to fetch user profile for ownership check:', e);
             }

@@ -1693,19 +1693,87 @@ function setSkillEditMode(enabled) {
                 levelSelect.appendChild(option);
             }
             
-            // Update data attribute when level changes
-            levelSelect.addEventListener('change', (e) => {
+            // Update data attribute and sync with backend when level changes
+            levelSelect.addEventListener('change', async (e) => {
                 const newLevel = parseInt(e.target.value, 10);
+                const skillId = chip.getAttribute('data-skill-id');
                 chip.setAttribute('data-skill-level', newLevel);
+                
+                // If this is an existing skill, update it in the backend
+                if (skillId) {
+                    try {
+                        const token = localStorage.getItem('authToken');
+                        if (!token) throw new Error('Not authenticated');
+                        
+                        const response = await fetch(`${API_AUTH_BASE_URL}/user/skills/${skillId}/`, {
+                            method: 'PATCH',
+                            headers: {
+                                'Authorization': `Token ${token}`,
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            },
+                            body: JSON.stringify({
+                                proficiency_level: newLevel
+                            }),
+                            credentials: 'include'
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`Failed to update skill level: ${response.statusText}`);
+                        }
+                        
+                        showNotification('Skill level updated successfully');
+                        
+                    } catch (error) {
+                        console.error('Error updating skill level:', error);
+                        showNotification('Failed to update skill level', 'error');
+                        // Revert the UI to the previous state
+                        const previousLevel = chip.getAttribute('data-skill-level');
+                        levelSelect.value = previousLevel;
+                    }
+                }
             });
             
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'delete-skill';
             deleteBtn.textContent = '×';
             deleteBtn.title = 'Delete skill';
-            deleteBtn.onclick = (e) => {
+            deleteBtn.onclick = async (e) => {
                 e.stopPropagation();
-                chip.remove();
+                // Store the skill ID before removing for error handling
+                const skillId = chip.getAttribute('data-skill-id');
+                
+                try {
+                    // First, try to delete from the backend
+                    const token = localStorage.getItem('authToken');
+                    if (!token) throw new Error('Not authenticated');
+                    
+                    // If this is an existing skill (has a skill ID), delete it from the backend
+                    if (skillId) {
+                        const response = await fetch(`${API_AUTH_BASE_URL}/user/skills/${skillId}/`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Authorization': `Token ${token}`,
+                                'X-CSRFToken': getCookie('csrftoken')
+                            },
+                            credentials: 'include'
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`Failed to delete skill: ${response.statusText}`);
+                        }
+                    }
+                    
+                    // If successful, remove from UI
+                    chip.remove();
+                    showNotification('Skill deleted successfully');
+                    
+                } catch (error) {
+                    console.error('Error deleting skill:', error);
+                    showNotification('Failed to delete skill', 'error');
+                    // Reload the profile to restore the correct state
+                    await fetchCurrentUserProfile();
+                }
             };
             
             controls.appendChild(levelSelect);

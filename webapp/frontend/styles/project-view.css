@@ -1,0 +1,100 @@
+/* Project View Specific Styles */
+
+/* Skills Section */
+.skills-autocomplete-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.selected-skills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.skill-tag {
+    display: inline-flex;
+    align-items: center;
+    background-color: #e0e7ff;
+    color: #4f46e5;
+    padding: 0.25rem 0.5rem 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.skill-tag .remove-skill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-left: 0.25rem;
+    background: none;
+    border: none;
+    color: #4f46e5;
+    font-size: 1.25rem;
+    line-height: 1;
+    padding: 0;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.skill-tag .remove-skill:hover {
+    background-color: rgba(79, 70, 229, 0.1);
+    border-radius: 50%;
+}
+
+.skill-tag .remove-skill:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.3);
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+}
+
+.skills-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    margin-top: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.skill-suggestion {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.skill-suggestion:hover {
+    background-color: #f8fafc;
+}
+
+/* Make sure the skills input is properly styled */
+.skills-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.skills-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 1px var(--primary-color);
+    outline: none;
+}
+
+/* Ensure the skills search wrapper takes full width */
+#skills-search-wrapper {
+    width: 100%;
+}

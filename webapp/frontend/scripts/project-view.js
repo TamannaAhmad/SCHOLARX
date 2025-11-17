@@ -1,6 +1,6 @@
 import projectsAPI from '../src/api/projects.js';
 import { authAPI } from '../src/api/auth.js';
-import { showError, handleAPIError, setButtonLoading } from '../src/utils/errorHandler.js';
+import { showError, showSuccess, handleAPIError, setButtonLoading } from '../src/utils/errorHandler.js';
 import { createMessageModal } from '../src/utils/modal.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -89,13 +89,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showErrorMsg(message) {
-        if (errorContainer) {
-            errorContainer.textContent = message;
-            errorContainer.style.display = 'block';
-        } else {
-            showError(message);
-        }
-        console.error(message);
+        showError(message, {duration: 5000});
+    }
+
+    function showSuccessMsg(message) {
+        showSuccess(message, {duration: 3000});
     }
 
     function hideError() {
@@ -106,22 +104,39 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderSkills(skills) {
+        console.log('Rendering skills. isEditing:', isEditing, 'Skills:', skills);
         skillsContainer.innerHTML = '';
-        (skills || []).forEach((s, index) => {
+        
+        if (!skills || !Array.isArray(skills)) {
+            console.warn('No skills array provided or skills is not an array');
+            return;
+        }
+        
+        skills.forEach((s, index) => {
             const name = s.skill?.name || s.name || '';
             const id = s.skill?.id || s.id;
             const tag = document.createElement('div');
             tag.className = 'skill-tag';
+            
+            // Create the remove button HTML conditionally
+            const removeButtonHtml = isEditing 
+                ? `<button type="button" class="remove-skill" data-index="${index}" data-id="${id}" style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; margin-left: 4px;">&times;</button>`
+                : '';
+                
             tag.innerHTML = `
                 <span>${name}</span>
-                ${isEditing ? `<button type="button" class="remove-skill" data-index="${index}" data-id="${id}">&times;</button>` : ''}
+                ${removeButtonHtml}
             `;
+            
             skillsContainer.appendChild(tag);
         });
 
         if (isEditing) {
-            skillsContainer.querySelectorAll('.remove-skill').forEach(btn => {
-                btn.addEventListener('click', function() {
+            const removeButtons = skillsContainer.querySelectorAll('.remove-skill');
+            
+            removeButtons.forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
                     const idx = parseInt(this.getAttribute('data-index'));
                     selectedSkills.splice(idx, 1);
                     renderSkills(selectedSkills);
@@ -225,22 +240,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setEditMode(on) {
         isEditing = on;
+        
         titleInput.readOnly = !on;
         typeSelect.disabled = !on;
         descInput.readOnly = !on;
         maxTeamSizeInput.readOnly = !on;
         deadlineInput.readOnly = !on;
-        if (skillsInput) skillsInput.disabled = !on;
-        if (skillsSearchWrapper) skillsSearchWrapper.style.display = on ? 'block' : 'none';
+        
+        if (skillsInput) {
+            skillsInput.disabled = !on;
+        }
+        
+        if (skillsSearchWrapper) {
+            skillsSearchWrapper.style.display = on ? 'block' : 'none';
+        }
+        
         if (!on) {
             skillsSuggestions.innerHTML = '';
             skillsSuggestions.style.display = 'none';
         }
+        
         saveBtn.style.display = on ? 'inline-block' : 'none';
         editBtn.textContent = on ? 'CANCEL' : 'EDIT PROJECT';
         
         // Ensure status dropdown works exactly like project type dropdown
         statusInput.disabled = !on;
+        
+        // Re-render skills to update the remove buttons
+        renderSkills(selectedSkills);
     }
 
     // Hide edit controls by default until ownership is confirmed
@@ -279,7 +306,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const user = await authAPI.getProfile();
                 currentUserId = user?.id ?? user?.pk ?? user?.usn ?? null;
                 currentUserUsn = user?.usn ?? null;
-                console.debug('Current user id:', currentUserId, 'USN:', currentUserUsn, 'Owner id:', data.owner_id);
             } catch (e) {
                 console.warn('Failed to fetch user profile for ownership check:', e);
             }
@@ -299,35 +325,15 @@ document.addEventListener('DOMContentLoaded', () => {
             currentProject.is_member = isMember;
 
             // Permissions: only the owner can edit
-            console.debug('Project ownership flag:', data.is_owner);
             const isOwner = Boolean(data?.is_owner) || (currentUserId != null && data?.owner_id != null && String(currentUserId) === String(data.owner_id));
             currentProject.is_owner = isOwner; // ensure consistency for later checks
-            
-            // Debug logging
-            console.log('Project ownership check:', {
-                is_owner: isOwner,
-                data_is_owner: data?.is_owner,
-                currentUserId,
-                owner_id: data?.owner_id,
-                userMatch: currentUserId != null && data?.owner_id != null && String(currentUserId) === String(data.owner_id)
-            });
             
             // Update edit button visibility
             if (editBtn) {
                 editBtn.style.display = isOwner ? 'inline-block' : 'none';
             }
             
-            // Update action buttons with debug info
-            console.log('Updating action buttons with:', { isOwner, isMember });
             updateActionButtons(isOwner, isMember);
-            
-            // Debug log button states
-            console.log('Button states after update:', {
-                findTeammatesBtn: findTeammatesBtn ? findTeammatesBtn.style.display : 'not found',
-                findMeetingTimesBtn: findMeetingTimesBtn ? findMeetingTimesBtn.style.display : 'not found',
-                requestJoinBtn: requestJoinBtn ? requestJoinBtn.style.display : 'not found',
-                leaveProjectBtn: leaveProjectBtn ? leaveProjectBtn.style.display : 'not found'
-            });
             
             // Set form field values
             const typeOptions = Array.from(typeSelect?.options || []).map(o => o.value);
@@ -462,43 +468,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 const human = Array.from(statusInput?.options || []).map(o => o.textContent).join(', ');
                 throw new Error(`Invalid project status. Must be one of: ${human || 'Planning, Active, Completed'}`);
             }
+            
             const payload = {
                 title: titleInput.value.trim(),
                 type: typeSelect.value,
                 description: descInput.value.trim(),
                 max_team_size: maxTeamSize,
-                // Send lowercase key expected by backend
                 status: status,
                 deadline: deadlineInput.value || null,
                 required_skills: selectedSkills.map(s => s.id)
             };
             
+            if (saveBtn) setButtonLoading(saveBtn, true, 'Saving...');
+            
             try {
-                if (saveBtn) setButtonLoading(saveBtn, true, 'Saving...');
                 const response = await projectsAPI.updateProject(projectId, payload);
-                console.log('Update Response:', response);
                 await loadProject();
                 setEditMode(false);
-                // Show success message
-                showError('Project updated successfully!', { type: 'info', duration: 3000 });
-            } catch (apiError) {
+                // Show success notification
+                showSuccessMsg('Project updated successfully!', { duration: 3000 });
+            } catch (error) {
                 // Log the full error for debugging
                 console.error('API Error Details:', {
-                    message: apiError.message,
-                    name: apiError.name,
-                    stack: apiError.stack,
+                    message: error.message,
+                    name: error.name,
+                    stack: error.stack,
                     payload: JSON.stringify(payload)
                 });
                 
-                // Display a more informative error message
-                const errorMessage = handleAPIError(apiError, 'Failed to save changes. Please check your input.');
-                showErrorMsg(`Update failed: ${errorMessage}`);
+                // Show error notification with the error message
+                const errorMsg = handleAPIError(error, 'Failed to update project. Please try again.');
+                showErrorMsg(errorMsg);
             } finally {
                 if (saveBtn) setButtonLoading(saveBtn, false);
             }
-        } catch (e) {
-            const errorMsg = handleAPIError(e, 'Failed to save changes.');
-            showErrorMsg(errorMsg);
+        } catch (error) {
+            // Handle validation errors
+            showError(error.message, { duration: 5000 });
         }
     }
 
@@ -723,7 +729,6 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // Fetch skills with optional department filtering
             allSkills = await projectsAPI.fetchSkills();
-            console.log('Fetched skills:', allSkills);
             await loadUpdateOptions();
         } catch (e) {
             console.error('Skills fetching error:', e);
