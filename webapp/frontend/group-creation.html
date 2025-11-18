@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Group - ScholarX</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/userprofile.css">
+    <link rel="stylesheet" href="styles/project-creation.css">
+    <link rel="stylesheet" href="styles/group-creation.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lenis@1.0.6/dist/lenis.css" />
+    <link rel="icon" href="favicon.ico">
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <style>
+        /* Gradient motion layer */
+        .gradient-motion-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 30%, rgba(100, 108, 255, 0.15) 0%, transparent 40%),
+                        radial-gradient(circle at 80% 70%, rgba(255, 140, 255, 0.15) 0%, transparent 40%),
+                        radial-gradient(circle at 50% 50%, rgba(100, 200, 255, 0.1) 0%, transparent 60%);
+            background-size: 200% 200%;
+            animation: gradientMove 20s ease infinite;
+            z-index: -1;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        @keyframes gradientMove {
+            0% { background-position: 0% 0%; }
+            50% { background-position: 100% 100%; }
+            100% { background-position: 0% 0%; }
+        }
+
+        /* Enhanced form container */
+        .login-form-container {
+            background: rgba(255, 255, 255, 0.1) !important;
+            backdrop-filter: blur(12px) saturate(180%);
+            -webkit-backdrop-filter: blur(12px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15) !important;
+            border-radius: 16px !important;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 1;
+        }
+
+        .dark-mode .login-form-container {
+            background: rgba(15, 23, 42, 0.7) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+        }
+
+        /* Enhanced form inputs */
+        .form-input {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            transition: all 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease !important;
+            color: #1f2937 !important;
+        }
+
+        .form-input::placeholder {
+            color: rgba(0, 0, 0, 0.5) !important;
+        }
+
+        .dark-mode .form-input {
+            background: rgba(30, 41, 59, 0.5) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            color: #f1f5f9 !important;
+        }
+
+        .dark-mode .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.5) !important;
+        }
+
+        .form-input:focus {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.2) !important;
+            border-color: rgba(99, 102, 241, 0.5) !important;
+        }
+
+        /* Button styles */
+        .primary-btn {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease !important;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+            border: none !important;
+            color: white !important;
+            font-weight: 600 !important;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
+        }
+
+        .primary-btn:hover {
+            transform: translateY(-2px) scale(1.02) !important;
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
+        }
+
+        .primary-btn:active {
+            transform: translateY(0) scale(0.99) !important;
+        }
+
+        /* Topic tags with glass effect */
+        .topic-tag {
+            background: rgba(255, 255, 255, 0.15) !important;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.25) !important;
+            transition: all 0.2s ease;
+        }
+
+        .topic-tag:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Fade up animation */
+        .fade-up {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeUp 0.6s ease-out forwards;
+        }
+
+        @keyframes fadeUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Ripple effect */
+        .ripple {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            transform: scale(0);
+            animation: ripple 0.6s linear;
+            pointer-events: none;
+        }
+
+        @keyframes ripple {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body class="topography-page">
+    <div class="background-design">
+        <!-- Gradient Motion Layer -->
+        <div class="gradient-motion-layer" aria-hidden="true"></div>
+        <div class="gradient-overlay"></div>
+        <div class="geometric-pattern">
+            <div class="pattern-circle pattern-1"></div>
+            <div class="pattern-circle pattern-2"></div>
+            <div class="pattern-triangle pattern-3"></div>
+            <div class="pattern-square pattern-4"></div>
+        </div>
+    </div>
+
+    <header class="login-header">
+        <div class="logo-container">
+            <a href="index.html">
+                <h1 class="logo">ScholarX</h1>
+            </a>
+            <p class="tagline">AI-Driven Student<br> Collaboration</p>
+        </div>
+        <div class="profile-title-container">
+            <h1 class="profile-title">CREATE GROUP</h1>
+        </div>
+        <nav class="header-nav">
+            <a href="dashboard.html" class="profile-nav-btn" id="backBtn">
+                BACK
+            </a>
+            <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme"><span class="icon">🌞</span></button>
+        </nav>
+    </header>
+
+    <div class="main-content group-creation-page">
+        <div class="login-form-container fade-up" style="animation-delay: 0.1s">
+            <div id="error-container" class="error-message"></div>
+
+            <form id="group-creation-form" class="auth-form">
+                <div class="input-group fade-up" style="animation-delay: 0.2s">
+                    <label for="group-name" class="input-label">Group Name</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="text" 
+                            id="group-name" 
+                            name="group-name" 
+                            class="form-input"
+                            required 
+                            minlength="3" 
+                            maxlength="100" 
+                            placeholder="Enter group name"
+                        >
+                    </div>
+                </div>
+
+                <div class="input-group fade-up" style="animation-delay: 0.2s">
+                    <label for="subject-code" class="input-label">Subject Code</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="text" 
+                            id="subject-code" 
+                            name="subject-code" 
+                            class="form-input"
+                            placeholder="e.g., CS101"
+                        >
+                    </div>
+                </div>
+
+                <div class="input-group fade-up" style="animation-delay: 0.2s">
+                    <label for="subject" class="input-label">Subject</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="text" 
+                            id="subject" 
+                            name="subject" 
+                            class="form-input"
+                            required 
+                            minlength="2" 
+                            maxlength="100" 
+                            placeholder="Enter subject"
+                        >
+                    </div>
+                </div>
+
+                <div class="input-group fade-up" style="animation-delay: 0.2s">
+                    <label for="group-description" class="input-label">Description</label>
+                    <div class="input-wrapper">
+                        <textarea 
+                            id="group-description" 
+                            name="group-description" 
+                            class="form-input"
+                            rows="4" 
+                            placeholder="Describe your group (optional)"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <div class="input-group fade-up" style="animation-delay: 0.2s">
+                    <label for="topics-input" class="input-label">Topics</label>
+                    <div class="input-wrapper topics-input-wrapper">
+                        <input 
+                            type="text" 
+                            id="topics-input" 
+                            name="topics-input" 
+                            class="form-input topics-input"
+                            placeholder="Type and press Enter to add topics"
+                        >
+                        <div id="selected-topics" class="selected-topics"></div>
+                    </div>
+                    <small class="input-note">Press Enter to add a topic</small>
+                </div>
+
+                <div class="input-group fade-up" style="animation-delay: 0.2s">
+                    <label for="max-group-size" class="input-label">Maximum Group Size</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="number" 
+                            id="max-group-size" 
+                            name="max-group-size" 
+                            class="form-input"
+                            min="1" 
+                            max="5" 
+                            required 
+                            value="3"
+                        >
+                    </div>
+                </div>
+
+                <div class="form-actions fade-up" style="animation-delay: 0.3s">
+                    <button 
+                        type="submit" 
+                        id="create-group-btn" 
+                        class="primary-btn"
+                    >
+                        Create Group
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/lenis@1.0.6/dist/lenis.min.js"></script>
+    <script type="module" src="scripts/group-creation.js?v=20250924-2"></script>
+    <script src="scripts/smooth-scroll.js" type="module"></script>
+    <script>
+        // Enhanced Theme Toggle with Animation
+        const root = document.documentElement;
+        const toggle = document.getElementById('themeToggle');
+        const icon = toggle.querySelector('.icon');
+        let theme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        
+        function setTheme(t) {
+            theme = t;
+            localStorage.setItem('theme', t);
+            
+            // Smooth theme transition
+            document.documentElement.style.transition = 'background-color 0.5s ease, color 0.3s ease';
+            
+            if (t === 'dark') {
+                root.classList.add('dark-mode');
+                icon.textContent = '🌙';
+            } else {
+                root.classList.remove('dark-mode');
+                icon.textContent = '🌞';
+            }
+            
+            // Reset transition after animation
+            setTimeout(() => {
+                document.documentElement.style.transition = '';
+            }, 500);
+            
+            // Button animation
+            icon.classList.remove('anim');
+            void icon.offsetWidth; // Trigger reflow
+            icon.classList.add('anim');
+        }
+        
+        // Initialize theme
+        setTheme(theme);
+        
+        // Toggle theme on button click
+        toggle.addEventListener('click', (e) => {
+            // Ripple effect
+            createRipple(e, toggle);
+            // Toggle theme
+            setTheme(theme === 'dark' ? 'light' : 'dark');
+        });
+        
+        // Ripple effect function
+        function createRipple(event, element) {
+            const rect = element.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const ripple = document.createElement('span');
+            
+            ripple.style.width = ripple.style.height = `${size}px`;
+            ripple.style.left = `${event.clientX - rect.left - size/2}px`;
+            ripple.style.top = `${event.clientY - rect.top - size/2}px`;
+            ripple.classList.add('ripple');
+            
+            element.appendChild(ripple);
+            
+            // Remove ripple after animation
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        }
+        
+        // Add ripple effect to buttons and interactive elements
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add ripple to all buttons and inputs
+            const interactiveElements = [
+                ...document.querySelectorAll('button:not(.remove-topic)'),
+                ...document.querySelectorAll('.primary-btn'),
+                ...document.querySelectorAll('.form-input'),
+                ...document.querySelectorAll('.topic-tag')
+            ];
+            
+            interactiveElements.forEach(element => {
+                element.addEventListener('click', (e) => {
+                    // Don't create ripple for input elements that are being typed in
+                    if (e.target.tagName === 'INPUT' && e.target.type !== 'button' && e.target.type !== 'submit') {
+                        return;
+                    }
+                    createRipple(e, e.currentTarget);
+                });
+                
+                // Add hover effect to interactive elements
+                if (element.tagName === 'BUTTON' || element.classList.contains('primary-btn') || element.classList.contains('topic-tag')) {
+                    element.style.transition = 'transform 0.2s ease, box-shadow 0.2s ease';
+                    
+                    element.addEventListener('mouseenter', () => {
+                        element.style.transform = 'translateY(-2px)';
+                        if (element.classList.contains('primary-btn')) {
+                            element.style.boxShadow = '0 6px 20px rgba(99, 102, 241, 0.4)';
+                        } else {
+                            element.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+                        }
+                    });
+                    
+                    element.addEventListener('mouseleave', () => {
+                        element.style.transform = '';
+                        element.style.boxShadow = '';
+                    });
+                }
+            });
+            
+            // Animate form elements on load
+            const fadeElements = document.querySelectorAll('.fade-up');
+            fadeElements.forEach((el, index) => {
+                el.style.animationDelay = `${index * 0.1}s`;
+                el.style.opacity = '1';
+                el.style.transform = 'translateY(0)';
+            });
+            
+            // Add focus styles to form inputs
+            const formInputs = document.querySelectorAll('.form-input');
+            formInputs.forEach(input => {
+                input.addEventListener('focus', () => {
+                    input.parentElement.classList.add('focused');
+                });
+                
+                input.addEventListener('blur', () => {
+                    input.parentElement.classList.remove('focused');
+                });
+            });
+
+            // Parallax tilting effect only on the main form container (surrounding the inputs)
+            const formContainer = document.querySelector('.login-form-container');
+            if (formContainer) {
+                formContainer.addEventListener('mousemove', e => {
+                    const rect = formContainer.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+
+                    // Calculate rotation based on mouse position
+                    const rotateX = ((y - centerY) / centerY) * 5;
+                    const rotateY = ((centerX - x) / centerX) * 5;
+
+                    // Apply transform with perspective for 3D effect
+                    formContainer.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+
+                    // Add subtle shadow based on mouse position
+                    const shadowX = (x / rect.width - 0.5) * 20;
+                    const shadowY = (y / rect.height - 0.5) * 20;
+                    formContainer.style.boxShadow = `${shadowX}px ${shadowY}px 30px rgba(0, 0, 0, 0.2)`;
+                });
+
+                formContainer.addEventListener('mouseleave', () => {
+                    formContainer.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
+                    formContainer.style.boxShadow = '0 8px 32px 0 rgba(31, 38, 135, 0.15)';
+                });
+            }
+        });
+    </script>
+</body>
+</html>

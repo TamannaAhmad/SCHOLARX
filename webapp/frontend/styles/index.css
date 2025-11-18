@@ -1,0 +1,86 @@
+/* Global CSS file for ScholarX Frontend */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap');
+
+/* Import landing page styles */
+@import url('./styles/landing.css');
+
+/* Import main styles (for login + home page animations) */
+@import url('./styles/main.css');
+
+/* Import registration styles */
+@import url('./styles/register.css');
+
+/* Import user profile styles */
+@import url('./styles/userprofile.css');
+
+/* Import dashboard styles */
+@import url('./styles/dashboard.css');
+
+/* Shared topography background */
+.topography-page {
+  min-height: 100vh;
+  background-color: #d7f1ff;
+  background-image: url("../images/coolbackgrounds-topography-micron (3).svg");
+  background-repeat: no-repeat;
+  background-position: right top;
+  background-size: cover;
+  background-attachment: scroll;
+  position: relative;
+}
+
+.topography-page::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: clamp(180px, 26vh, 320px);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.72) 40%, rgba(255, 255, 255, 0));
+  pointer-events: none;
+  z-index: -1;
+}
+
+.dark-mode .topography-page {
+  background-color: var(--background, #0f172a);
+  background-image: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url("../images/coolbackgrounds-topography-gulf.svg");
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: cover;
+}
+
+.dark-mode .topography-page::after {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.6) 40%, rgba(15, 23, 42, 0));
+}
+
+/* ---------- Global Theme + Transition Defaults ---------- */
+:root {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ensure global fade transitions across all views */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  transition: background 1s ease, color 1s ease, opacity 1s ease;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Add consistent scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Optional: improve link/button feedback globally */
+a, button {
+  cursor: pointer;
+  transition: filter 0.2s ease, background-color 0.3s ease;
+}
+
+/* Keep root centered for pages using flex/grid layouts */
+#root {
+  margin: auto;
+  min-height: 100vh;
+}

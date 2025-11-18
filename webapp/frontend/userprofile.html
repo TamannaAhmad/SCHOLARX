@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile - ScholarX</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/userprofile.css">
+    <style>
+        /* Ripple effect */
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.7);
+            transform: scale(0);
+            animation: ripple 0.6s linear;
+            pointer-events: none;
+        }
+
+        @keyframes ripple {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        /* Gradient text animation */
+        .gradient-text-animated {
+            background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899, #f59e0b);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientFlow 8s ease infinite;
+        }
+
+        @keyframes gradientFlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Glassmorphism */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Glow effect */
+        .glow-wrapper {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .glow-wrapper::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 2px;
+            background: linear-gradient(45deg, #6366f1, #ec4899);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .glow-wrapper:hover::before {
+            opacity: 0.8;
+            animation: gradientFlow 3s ease infinite;
+        }
+    </style>
+</head>
+<body class="topography-page">
+    <div class="login-container">
+        <!-- Background Design -->
+        <div class="background-design">
+            <div class="gradient-overlay"></div>
+            <div class="geometric-pattern">
+                <div class="pattern-circle pattern-1"></div>
+                <div class="pattern-circle pattern-2"></div>
+                <div class="pattern-triangle pattern-3"></div>
+                <div class="pattern-square pattern-4"></div>
+            </div>
+        </div>
+
+        <!-- Profile Header -->
+        <header class="login-header glass-card">
+            <div class="logo-container">
+                <a href="index.html" class="ripple-button">
+                    <h1 class="logo gradient-text-animated">ScholarX</h1>
+                </a>
+                <p class="tagline">AI-Driven Student<br> Collaboration</p>
+            </div>
+            <div class="profile-title-container">
+                <h1 class="profile-title gradient-text-animated">USER PROFILE</h1>
+            </div>
+            <nav class="header-nav">
+                <a href="dashboard.html" class="profile-nav-btn ripple-button" id="backBtn">← BACK</a>
+                <a href="#" class="profile-nav-btn ripple-button" id="editBtn">✏️ EDIT</a>
+                <button id="themeToggle" class="theme-toggle ripple-button" aria-label="Toggle theme"><span class="icon">🌞</span></button>
+            </nav>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content animate__animated animate__fadeIn">
+            <!-- User Information Section -->
+            <section class="login-form-container profile-section glass-card glow-wrapper" id="userInfoSection">
+                <div class="info-field">
+                    <span class="info-label">Name</span>
+                    <div class="info-value" id="userName"></div>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">USN</span>
+                    <div class="info-value" id="userUSN"></div>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">Email</span>
+                    <div class="info-value" id="userEmail"></div>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">Department</span>
+                    <div class="info-value" id="userDepartment"></div>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">Year</span>
+                    <div class="info-value" id="userYear"></div>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">LinkedIn</span>
+                    <div class="info-value">
+                        <a href="#" id="userLinkedIn" class="profile-link" target="_blank"></a>
+                    </div>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">GitHub</span>
+                    <div class="info-value">
+                        <a href="#" id="userGitHub" class="profile-link" target="_blank"></a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Skills Section -->
+            <section class="login-form-container profile-section" id="skillsSection">
+                <div class="form-header">
+                    <h2 class="form-title">SKILLS</h2>
+                </div>
+                <div id="skillsContainer">
+                    <!-- Skills will be populated by JavaScript -->
+                </div>
+            </section>
+
+            <!-- Schedule Section -->
+            <section class="login-form-container schedule-container profile-section" id="scheduleSection">
+                <div class="form-header">
+                    <h2 class="form-title">SCHEDULE</h2>
+                    <div class="availability-indicator">
+                        <div class="available-dot"></div>
+                        <span class="available-text">Available</span>
+                    </div>
+                </div>
+                <div class="schedule-grid" id="scheduleGrid">
+                    <!-- Schedule grid will be populated by JavaScript -->
+                </div>
+            </section>
+
+            <!-- Projects and Study Groups -->
+            <div class="bottom-sections">
+                <!-- Projects Section -->
+                <section class="login-form-container profile-section projects-section" id="projectsSection">
+                    <div class="form-header">
+                        <h2 class="form-title">PROJECTS</h2>
+                    </div>
+                    <div id="projectsList">
+                        <!-- Projects will be populated by JavaScript -->
+                    </div>
+                </section>
+
+                <!-- Study Groups Section -->
+                <section class="login-form-container profile-section study-groups-section" id="studyGroupsSection">
+                    <div class="form-header">
+                        <h2 class="form-title">STUDY GROUPS</h2>
+                    </div>
+                    <div id="studyGroupsList">
+                        <!-- Study groups will be populated by JavaScript -->
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="scripts/userprofile.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Theme Toggle
+            const root = document.documentElement;
+            const toggle = document.getElementById('themeToggle');
+            const icon = toggle?.querySelector('.icon');
+            let theme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            
+            function setTheme(t) {
+                theme = t;
+                localStorage.setItem('theme', t);
+                
+                if (t === 'dark') {
+                    root.classList.add('dark-mode');
+                    if (icon) icon.textContent = '🌙';
+                } else {
+                    root.classList.remove('dark-mode');
+                    if (icon) icon.textContent = '🌞';
+                }
+                
+                if (icon) {
+                    icon.classList.remove('anim');
+                    void icon.offsetWidth; // Trigger reflow
+                    icon.classList.add('anim');
+                }
+            }
+            
+            // Initialize theme
+            setTheme(theme);
+            
+            // Toggle theme on button click
+            if (toggle) {
+                toggle.addEventListener('click', () => {
+                    setTheme(theme === 'dark' ? 'light' : 'dark');
+                });
+            }
+
+            // Ripple effect
+            function createRipple(event) {
+                const button = event.currentTarget;
+                const rect = button.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                const x = event.clientX - rect.left - size / 2;
+                const y = event.clientY - rect.top - size / 2;
+                
+                const ripple = document.createElement('span');
+                ripple.classList.add('ripple');
+                ripple.style.width = ripple.style.height = `${size}px`;
+                ripple.style.left = `${x}px`;
+                ripple.style.top = `${y}px`;
+                
+                button.appendChild(ripple);
+                
+                // Remove ripple after animation completes
+                setTimeout(() => {
+                    ripple.remove();
+                }, 600);
+            }
+            
+            // Add ripple effect to all buttons with ripple-button class
+            document.querySelectorAll('.ripple-button').forEach(button => {
+                button.addEventListener('click', createRipple);
+            });
+
+            // Parallax tilting effect on cards (exclude header)
+            const parallaxEls = document.querySelectorAll('.parallax-card, .glass-card');
+            
+            parallaxEls.forEach(el => {
+                // Skip header elements
+                if (el.closest('header')) return;
+                
+                el.addEventListener('mousemove', e => {
+                    const rect = el.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+                    
+                    // Calculate rotation based on mouse position
+                    const rotateX = ((y - centerY) / centerY) * 5;
+                    const rotateY = ((centerX - x) / centerX) * 5;
+                    
+                    // Apply transform with perspective for 3D effect
+                    el.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+                    
+                    // Add subtle shadow based on mouse position
+                    const shadowX = (x / rect.width - 0.5) * 20;
+                    const shadowY = (y / rect.height - 0.5) * 20;
+                    el.style.boxShadow = `${shadowX}px ${shadowY}px 30px rgba(0, 0, 0, 0.2)`;
+                });
+                
+                el.addEventListener('mouseleave', () => {
+                    el.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
+                    el.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.1)';
+                });
+            });
+        });
+
+        // Wobbly background effect
+        document.addEventListener('mousemove', (e) => {
+            const x = (e.clientX / window.innerWidth - 0.5) * 20;
+            const y = (e.clientY / window.innerHeight - 0.5) * 20;
+            document.body.style.backgroundPosition = `calc(50% + ${x}px) calc(50% + ${y}px)`;
+        });
+    </script>
+</body>
+</html>

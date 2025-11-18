@@ -1,0 +1,81 @@
+/* Keep consistent styling with project-creation while allowing scoped tweaks */
+
+.topography-page {
+    min-height: 100vh;
+    background-color: #d7f1ff;
+    background-image: url("../images/coolbackgrounds-topography-micron (3).svg");
+    background-repeat: no-repeat;
+    background-position: right top;
+    background-size: cover;
+    background-attachment: scroll;
+    position: relative;
+}
+
+.topography-page::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: clamp(180px, 26vh, 320px);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.72) 40%, rgba(255, 255, 255, 0));
+    pointer-events: none;
+    z-index: -1;
+}
+
+.dark-mode .topography-page {
+    background-color: var(--background, #0f172a);
+    background-image: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url("../images/coolbackgrounds-topography-gulf.svg");
+    background-repeat: no-repeat;
+    background-position: center top;
+    background-size: cover;
+}
+
+.dark-mode .topography-page::after {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.6) 40%, rgba(15, 23, 42, 0));
+}
+
+.topics-input-wrapper {
+    position: relative;
+}
+
+.selected-topics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.topic-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 16px;
+    color: #fff;
+    font-size: 12px;
+}
+
+.remove-topic {
+    background: transparent;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.error-message {
+    display: none;
+}
+
+/* Create Group Button - 10% bigger in length */
+.group-creation-page .primary-btn {
+  padding: 0.9rem 2.2rem !important;
+  font-size: 1.05rem;
+  min-width: 165px;
+}
+
+

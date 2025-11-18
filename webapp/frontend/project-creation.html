@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Project - ScholarX</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/project-creation.css">
+    <link rel="stylesheet" href="styles/userprofile.css">
+    <style>
+        /* Ripple effect */
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.7);
+            transform: scale(0);
+            animation: ripple 0.6s linear;
+            pointer-events: none;
+        }
+
+        @keyframes ripple {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        /* Gradient text animation */
+        .gradient-text-animated {
+            background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899, #f59e0b);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientFlow 8s ease infinite;
+        }
+
+        @keyframes gradientFlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Glassmorphism */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Glow effect */
+        .glow-wrapper {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .glow-wrapper::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 2px;
+            background: linear-gradient(45deg, #6366f1, #ec4899);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .glow-wrapper:hover::before {
+            opacity: 0.8;
+            animation: gradientFlow 3s ease infinite;
+        }
+    </style>
+</head>
+<body class="project-creation-page-body topography-page">
+    <!-- Gradient Background Layers -->
+    <div class="gradient-mesh-bg" aria-hidden="true"></div>
+    <div class="gradient-motion-layer" aria-hidden="true">
+        <div class="gradient-circle gradient-circle-1"></div>
+        <div class="gradient-circle gradient-circle-2"></div>
+        <div class="gradient-circle gradient-circle-3"></div>
+    </div>
+
+    <!-- Profile Header -->
+    <header class="login-header glass-card">
+        <div class="logo-container">
+            <a href="index.html" class="ripple-button">
+                <h1 class="logo gradient-text-animated">ScholarX</h1>
+            </a>
+            <p class="tagline">AI-Driven Student<br> Collaboration</p>
+        </div>
+        <div class="profile-title-container">
+            <h1 class="profile-title gradient-text-animated">CREATE PROJECT</h1>
+        </div>
+        <nav class="header-nav">
+            <a href="dashboard.html" class="profile-nav-btn ripple-button" id="backBtn">← BACK</a>
+            <button id="themeToggle" class="theme-toggle ripple-button" aria-label="Toggle theme"><span class="icon">🌞</span></button>
+        </nav>
+    </header>
+    <div class="main-content project-creation-page animate__animated animate__fadeIn">
+        <div class="login-form-container glass-card glow-wrapper">
+            
+            <!-- Error Container -->
+            <div id="error-container" class="error-message"></div>
+
+            <form id="project-creation-form" class="auth-form">
+                <div class="input-group">
+                    <label for="project-title" class="input-label">Project Title</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="text" 
+                            id="project-title" 
+                            name="project-title" 
+                            class="form-input"
+                            required 
+                            minlength="5" 
+                            maxlength="100" 
+                            placeholder="Enter project title"
+                        >
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="project-type" class="input-label">Project Type</label>
+                    <div class="input-wrapper">
+                        <select 
+                            id="project-type" 
+                            name="project-type" 
+                            class="form-input"
+                            required
+                        >
+                            <option value="">Select Project Type</option>
+                            <option value="research">Research</option>
+                            <option value="software">Software Development</option>
+                            <option value="hardware">Hardware Project</option>
+                            <option value="design">Design</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="project-description" class="input-label">Project Description</label>
+                    <div class="input-wrapper">
+                        <textarea 
+                            id="project-description" 
+                            name="project-description" 
+                            class="form-input"
+                            rows="4" 
+                            placeholder="Provide a detailed description of your project"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="skills-input" class="input-label">Required Skills</label>
+                    <div class="input-wrapper skills-autocomplete-wrapper">
+                        <input 
+                            type="text" 
+                            id="skills-input" 
+                            name="skills-input" 
+                            class="form-input skills-input"
+                            placeholder="Type to search and add skills"
+                        >
+                        <div id="skills-suggestions" class="skills-suggestions"></div>
+                        <div id="selected-skills" class="selected-skills"></div>
+                    </div>
+                    <div class="error-message" id="skills-error"></div>
+                    <small class="input-note">Start typing to see skill suggestions</small>
+                </div>
+
+                <div class="input-group">
+                    <label for="max-team-size" class="input-label">Maximum Team Size</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="number" 
+                            id="max-team-size" 
+                            name="max-team-size" 
+                            class="form-input"
+                            min="1" 
+                            max="10" 
+                            required 
+                            value="4"
+                        >
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="project-deadline" class="input-label">Project Deadline</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="date" 
+                            id="project-deadline" 
+                            name="project-deadline" 
+                            class="form-input"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div class="form-actions" style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
+                    <button 
+                        type="button" 
+                        id="save-draft-btn" 
+                        class="secondary-btn ripple-button"
+                        style="padding: 0.75rem 1.5rem; border-radius: 0.5rem; background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); font-weight: 500; cursor: pointer; transition: all 0.2s ease; position: relative; overflow: hidden;"
+                    >
+                        💾 Save Draft
+                    </button>
+                    <button 
+                        type="submit" 
+                        id="create-project-btn" 
+                        class="primary-btn ripple-button"
+                        style="padding: 0.75rem 2rem; border-radius: 0.5rem; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; border: none; font-weight: 500; cursor: pointer; transition: all 0.2s ease; position: relative; overflow: hidden;"
+                    >
+                        🚀 Create Project
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="scripts/project-creation.js?v=20250924-1"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Theme Toggle
+            const root = document.documentElement;
+            const toggle = document.getElementById('themeToggle');
+            const icon = toggle?.querySelector('.icon');
+            let theme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            
+            function setTheme(t) {
+                theme = t;
+                localStorage.setItem('theme', t);
+                
+                if (t === 'dark') {
+                    root.classList.add('dark-mode');
+                    if (icon) icon.textContent = '🌙';
+                } else {
+                    root.classList.remove('dark-mode');
+                    if (icon) icon.textContent = '🌞';
+                }
+                
+                if (icon) {
+                    icon.classList.remove('anim');
+                    void icon.offsetWidth; // Trigger reflow
+                    icon.classList.add('anim');
+                }
+            }
+            
+            // Initialize theme
+            setTheme(theme);
+            
+            // Toggle theme on button click
+            if (toggle) {
+                toggle.addEventListener('click', () => {
+                    setTheme(theme === 'dark' ? 'light' : 'dark');
+                });
+            }
+
+            // Ripple effect
+            function createRipple(event) {
+                const button = event.currentTarget;
+                const rect = button.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                const x = event.clientX - rect.left - size / 2;
+                const y = event.clientY - rect.top - size / 2;
+                
+                const ripple = document.createElement('span');
+                ripple.classList.add('ripple');
+                ripple.style.width = ripple.style.height = `${size}px`;
+                ripple.style.left = `${x}px`;
+                ripple.style.top = `${y}px`;
+                
+                button.appendChild(ripple);
+                
+                // Remove ripple after animation completes
+                setTimeout(() => {
+                    ripple.remove();
+                }, 600);
+            }
+            
+            // Add ripple effect to all buttons with ripple-button class
+            document.querySelectorAll('.ripple-button').forEach(button => {
+                button.addEventListener('click', createRipple);
+            });
+
+            // Parallax tilting effect on form container (exclude header)
+            const formContainer = document.querySelector('.login-form-container');
+            if (formContainer) {
+                formContainer.addEventListener('mousemove', e => {
+                    const rect = formContainer.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+                    
+                    // Calculate rotation based on mouse position
+                    const rotateX = ((y - centerY) / centerY) * 5;
+                    const rotateY = ((centerX - x) / centerX) * 5;
+                    
+                    // Apply transform with perspective for 3D effect
+                    formContainer.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+                    
+                    // Add subtle shadow based on mouse position
+                    const shadowX = (x / rect.width - 0.5) * 20;
+                    const shadowY = (y / rect.height - 0.5) * 20;
+                    formContainer.style.boxShadow = `${shadowX}px ${shadowY}px 30px rgba(0, 0, 0, 0.2)`;
+                });
+                
+                formContainer.addEventListener('mouseleave', () => {
+                    formContainer.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
+                    formContainer.style.boxShadow = '0 4px 30px rgba(0, 0, 0, 0.1)';
+                });
+            }
+        });
+
+        // Wobbly background effect
+        document.addEventListener('mousemove', (e) => {
+            const x = (e.clientX / window.innerWidth - 0.5) * 20;
+            const y = (e.clientY / window.innerHeight - 0.5) * 20;
+            document.body.style.backgroundPosition = `calc(50% + ${x}px) calc(50% + ${y}px)`;
+        });
+    </script>
+</body>
+</html>

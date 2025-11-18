@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot - ScholarX</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/userprofile.css">
+    <link rel="stylesheet" href="styles/chatbot.css">
+    <style>
+        /* Gradient motion layer */
+        .gradient-motion-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 30%, rgba(100, 108, 255, 0.15) 0%, transparent 40%),
+                        radial-gradient(circle at 80% 70%, rgba(255, 140, 255, 0.15) 0%, transparent 40%),
+                        radial-gradient(circle at 50% 50%, rgba(100, 200, 255, 0.1) 0%, transparent 60%);
+            background-size: 200% 200%;
+            animation: gradientMove 20s ease infinite;
+            z-index: -1;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        @keyframes gradientMove {
+            0% { background-position: 0% 0%; }
+            50% { background-position: 100% 100%; }
+            100% { background-position: 0% 0%; }
+        }
+
+        /* Enhanced glass cards */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1) !important;
+            backdrop-filter: blur(12px) saturate(180%);
+            -webkit-backdrop-filter: blur(12px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15) !important;
+            transition: all 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dark-mode .glass-card {
+            background: rgba(15, 23, 42, 0.7) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(
+                circle at var(--x, 50%) var(--y, 50%),
+                rgba(100, 108, 255, 0.1),
+                transparent 200px
+            );
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .glass-card:hover::before {
+            opacity: 1;
+        }
+
+        /* Enhanced chat container with stronger glass effect */
+        .chat-container {
+            background: rgba(255, 255, 255, 0.1) !important;
+            backdrop-filter: blur(20px) saturate(200%) !important;
+            -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15) !important;
+            border-radius: 16px !important;
+            overflow: hidden;
+            transition: all 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+        }
+
+        .dark-mode .chat-container {
+            background: rgba(15, 23, 42, 0.7) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+        }
+
+        .chat-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(
+                circle at var(--x, 50%) var(--y, 50%),
+                rgba(100, 108, 255, 0.15),
+                transparent 200px
+            );
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .chat-container:hover::before {
+            opacity: 1;
+        }
+
+        /* Button ripple effect */
+        .btn {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ripple-active {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ripple-active::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 70%);
+            transform: scale(0);
+            opacity: 0;
+            animation: ripple 0.6s ease-out;
+            border-radius: 50%;
+        }
+
+        @keyframes ripple {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        /* Glow effect for chat container */
+        .glow-wrapper {
+            position: relative;
+            z-index: 1;
+        }
+
+        .glow-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(
+                circle at var(--x, 50%) var(--y, 50%),
+                rgba(100, 108, 255, 0.15),
+                transparent 200px
+            );
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .glow-wrapper:hover::before {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="topography-page">
+    <div class="login-container">
+        <!-- Gradient Motion Layer -->
+        <div class="gradient-motion-layer" aria-hidden="true"></div>
+        
+        <!-- Background Design -->
+        <div class="background-design">
+            <div class="gradient-overlay"></div>
+            <div class="geometric-pattern">
+                <div class="pattern-circle pattern-1"></div>
+                <div class="pattern-circle pattern-2"></div>
+                <div class="pattern-triangle pattern-3"></div>
+                <div class="pattern-square pattern-4"></div>
+            </div>
+        </div>
+
+        <!-- Header -->
+        <header class="login-header">
+            <div class="logo-container">
+                <a href="index.html">
+                    <h1 class="logo">ScholarX</h1>
+                </a>
+                <p class="tagline">AI-Driven Student<br> Collaboration</p>
+            </div>
+            <div class="profile-title-container">
+                <h1 class="profile-title">CHATBOT</h1>
+            </div>
+            <nav class="header-nav">
+                <a href="dashboard.html" class="profile-nav-btn" id="backBtn">BACK</a>
+                <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme"><span class="icon">🌞</span></button>
+            </nav>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content chatbot-page fade-up">
+            <div class="chat-container glow-wrapper">
+                <div class="chat-messages fade-up" id="chatMessages">
+                    <!-- Messages will be dynamically added here -->
+                </div>
+                <div class="chat-input-container fade-up">
+                    <input 
+                        type="text" 
+                        id="chatInput" 
+                        class="chat-input" 
+                        placeholder="Type here..." 
+                        aria-label="Enter your message"
+                    >
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="scripts/chatbot.js"></script>
+    <script>
+        // Enhanced Theme Toggle with Animation
+        const root = document.documentElement;
+        const toggle = document.getElementById('themeToggle');
+        const icon = toggle?.querySelector('.icon');
+        let theme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        
+        function setTheme(t) {
+            theme = t;
+            localStorage.setItem('theme', t);
+            
+            // Smooth theme transition
+            document.documentElement.style.transition = 'background-color 0.5s ease, color 0.3s ease';
+            document.body.style.transition = 'background-color 0.5s ease, color 0.3s ease';
+            
+            if (t === 'dark') {
+                root.classList.add('dark-mode');
+                document.body.classList.add('dark-mode');
+                if (icon) icon.textContent = '🌙';
+            } else {
+                root.classList.remove('dark-mode');
+                document.body.classList.remove('dark-mode');
+                if (icon) icon.textContent = '🌞';
+            }
+            
+            // Reset transition after animation
+            setTimeout(() => {
+                document.documentElement.style.transition = '';
+                document.body.style.transition = '';
+            }, 500);
+            
+            // Button animation
+            if (icon) {
+                icon.classList.remove('anim');
+                void icon.offsetWidth; // Trigger reflow
+                icon.classList.add('anim');
+            }
+        }
+        
+        // Initialize theme
+        setTheme(theme);
+        
+        // Toggle theme on button click with ripple effect
+        if (toggle) {
+            toggle.addEventListener('click', (e) => {
+                createRipple(e, toggle);
+                setTheme(theme === 'dark' ? 'light' : 'dark');
+            });
+        }
+        
+        // Ripple effect function
+        function createRipple(event, element) {
+            const rect = element.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const ripple = document.createElement('span');
+            
+            ripple.style.width = ripple.style.height = `${size}px`;
+            ripple.style.left = `${event.clientX - rect.left - size/2}px`;
+            ripple.style.top = `${event.clientY - rect.top - size/2}px`;
+            ripple.classList.add('ripple');
+            
+            element.appendChild(ripple);
+            
+            // Remove ripple after animation
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        }
+
+        // Enhanced wobbly background effect
+        document.addEventListener('mousemove', (e) => {
+            const x = (e.clientX / window.innerWidth - 0.5) * 30;
+            const y = (e.clientY / window.innerHeight - 0.5) * 30;
+            document.body.style.backgroundPosition = `calc(50% + ${x}px) calc(50% + ${y}px)`;
+        });
+
+        // Parallax tilting effect on chat container and glass cards
+        document.addEventListener('DOMContentLoaded', () => {
+            const parallaxEls = document.querySelectorAll('.chat-container, .glass-card, .glow-wrapper');
+            
+            parallaxEls.forEach(el => {
+                // Skip header elements
+                if (el.closest('header')) return;
+                
+                el.addEventListener('mousemove', e => {
+                    const rect = el.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+                    
+                    // Set CSS variables for glass card hover effect
+                    el.style.setProperty('--x', `${x}px`);
+                    el.style.setProperty('--y', `${y}px`);
+                    
+                    // Calculate rotation based on mouse position
+                    const rotateX = ((y - centerY) / centerY) * 5;
+                    const rotateY = ((centerX - x) / centerX) * 5;
+                    
+                    // Apply transform with perspective for 3D tilt effect
+                    el.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+                    el.style.transition = 'none'; // Disable transition during mouse move for smooth tilt
+                    
+                    // Add subtle shadow based on mouse position
+                    const shadowX = (x / rect.width - 0.5) * 20;
+                    const shadowY = (y / rect.height - 0.5) * 20;
+                    el.style.boxShadow = `${shadowX}px ${shadowY}px 30px rgba(0, 0, 0, 0.2)`;
+                });
+                
+                el.addEventListener('mouseleave', () => {
+                    el.style.transition = 'transform 0.3s ease, box-shadow 0.3s ease';
+                    el.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
+                    el.style.boxShadow = '0 8px 32px 0 rgba(31, 38, 135, 0.15)';
+                    el.style.removeProperty('--x');
+                    el.style.removeProperty('--y');
+                });
+            });
+        });
+
+        // Button ripple effect
+        document.querySelectorAll('.btn, .profile-nav-btn, button, .chat-input').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Ripple effect
+                const ripple = document.createElement('span');
+                const rect = btn.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                
+                ripple.style.width = ripple.style.height = `${size}px`;
+                ripple.style.left = `${e.clientX - rect.left - size/2}px`;
+                ripple.style.top = `${e.clientY - rect.top - size/2}px`;
+                ripple.classList.add('ripple');
+                
+                btn.appendChild(ripple);
+                
+                // Remove ripple after animation
+                setTimeout(() => {
+                    ripple.remove();
+                }, 600);
+            });
+        });
+
+        // Interactive glow effect for chat container
+        const chatContainer = document.querySelector('.chat-container');
+        if (chatContainer) {
+            chatContainer.addEventListener('mousemove', (e) => {
+                const rect = chatContainer.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                chatContainer.style.setProperty('--x', `${x}px`);
+                chatContainer.style.setProperty('--y', `${y}px`);
+            });
+
+            chatContainer.addEventListener('mouseleave', () => {
+                chatContainer.style.removeProperty('--x');
+                chatContainer.style.removeProperty('--y');
+            });
+        }
+
+        // Auto-scroll to bottom of chat
+        const chatMessages = document.getElementById('chatMessages');
+        if (chatMessages) {
+            const observer = new MutationObserver(() => {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            });
+            observer.observe(chatMessages, { childList: true, subtree: true });
+        }
+
+        // Add smooth fade-in for messages
+        document.addEventListener('DOMContentLoaded', () => {
+            const elements = document.querySelectorAll('.fade-up');
+            elements.forEach((el, index) => {
+                setTimeout(() => {
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateY(0)';
+                }, 100 * index);
+            });
+        });
+    </script>
+</body>
+</html>
