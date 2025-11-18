@@ -235,8 +235,11 @@ function renderProfiles(profiles) {
     return null;
   };
 
-  const formatPercentageOrPlaceholder = (value) => {
-    if (value === null) return '—';
+  const formatPercentageOrPlaceholder = (value, isRawNumber = false) => {
+    if (value === null || value === undefined) return '—';
+    if (isRawNumber) {
+      return `${value}%`;
+    }
     return formatPercentage(value);
   };
   
@@ -268,7 +271,7 @@ function renderProfiles(profiles) {
     // Get scores from the profile data and score_breakdown
     const skillMatch = parseFloat(profile.adjusted_skill_match ?? profile.skill_match ?? 0);
     const availabilityMatch = includeAvailability ? parseFloat(profile.availability_match ?? 0) : 0;
-    const proficiencyBonus = parseFloat(profile.score_breakdown?.proficiency_bonus?.percentage || 0);
+    const proficiencyBonus = parseInt(profile.proficiency_bonus || 0);
     const overallPercentage = parseFloat(profile.match_percentage ?? profile.match_score ?? 0);
 
     // Use the backend-calculated values directly
@@ -283,16 +286,25 @@ function renderProfiles(profiles) {
       breakdown.skill_components?.base_skill_component
     );
 
+    console.log('Profile data:', {
+      profileId: profile.user_id,
+      rawProficiency: profile.proficiency_bonus,
+      parsedProficiency: proficiencyBonus,
+      profileData: profile
+    });
+
     const breakdownItems = [
       { label: 'Overall Match', value: overallPercentage },
       { label: 'Skill Match', value: skillPercentage },
       includeAvailability ? { label: 'Availability Match', value: availabilityPercentage } : null,
       { 
         label: 'Proficiency Bonus', 
-        value: profile.proficiency_bonus || 0,
+        value: proficiencyBonus,
         tooltip: 'Bonus based on the proficiency level of matched skills (0-20% of total score)'
       }
     ];
+
+    console.log('Breakdown items:', breakdownItems);
 
     const scoreBreakdownHtml = `
       <div class="detail-row score-breakdown-row">
@@ -302,7 +314,7 @@ function renderProfiles(profiles) {
             ${breakdownItems.filter(Boolean).map(item => `
               <li class="score-breakdown-item">
                 <span class="score-breakdown-label">${item.label}</span>
-                <span class="score-breakdown-value">${formatPercentageOrPlaceholder(item.value)}</span>
+                <span class="score-breakdown-value">${formatPercentageOrPlaceholder(item.value, item.label === 'Proficiency Bonus')}</span>
               </li>
             `).join('')}
           </ul>
@@ -649,7 +661,10 @@ async function loadProfiles() {
       const rawSkillMatch = parseFloat(profile.skill_match ?? 0);
       const adjustedSkillMatch = parseFloat(profile.adjusted_skill_match ?? profile.skill_match ?? 0);
       const availabilityMatch = includeAvailability ? parseFloat(profile.availability_match ?? 0) : 0;
-      const proficiencyBonus = parseFloat(profile.score_breakdown?.proficiency_bonus?.raw || 0) * 100; // Convert from decimal to percentage
+      // Use the direct proficiency_bonus from the profile if available, otherwise try to get it from the breakdown
+      const proficiencyBonus = profile.proficiency_bonus !== undefined 
+        ? parseInt(profile.proficiency_bonus, 10)
+        : parseInt(profile.score_breakdown?.proficiency_bonus?.raw || 0) * 100;
       
       // Get the skill component from the backend (before availability is applied)
       const skillComponent = parseFloat(profile.adjusted_skill_match ?? 0) / 100; // Convert from percentage to decimal
@@ -694,8 +709,8 @@ async function loadProfiles() {
               raw: adjustedSkillMatch / 100
           },
           availability: {
-              percentage: includeAvailability ? availabilityMatch : 0,
-              raw: includeAvailability ? availabilityMatch / 100 : 0
+              percentage: includeAvailability ? availabilityScore : 0,
+              raw: includeAvailability ? availabilityScore / 100 : 0
           },
           proficiency_bonus: { 
               percentage: proficiencyBonus,
@@ -722,7 +737,8 @@ async function loadProfiles() {
           skill_match: profile.skill_match !== undefined ? parseFloat(profile.skill_match) : rawSkillMatch,
           availability_match: profile.availability_match !== undefined ? 
               parseFloat(profile.availability_match) : 
-              (includeAvailability ? availabilityMatch : 0)
+              (includeAvailability ? availabilityMatch : 0),
+          proficiency_bonus: proficiencyBonus
       };
     });
 
