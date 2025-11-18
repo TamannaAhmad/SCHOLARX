@@ -1,3 +1,7 @@
+// Import error handler for notifications
+import errorHandler from '../src/utils/errorHandler.js';
+const { showError: showErrorNotification, showSuccess, showInfo, handleAPIError } = errorHandler;
+
 // API Configuration
 const API_BASE_URL = 'http://127.0.0.1:8000/api/auth';
 
@@ -942,10 +946,13 @@ class RegistrationForm {
                 console.log('Registration successful:', response);
                 this.showSuccessStep();
                 
+                // Show success message
+                showSuccess('Registration successful! Redirecting to login...', { duration: 2000 });
+                
                 // Store the token and redirect after a short delay
                 localStorage.setItem('token', response.data.token);
                 setTimeout(() => {
-                    window.location.href = '/dashboard.html';
+                    window.location.href = '/login.html';
                 }, 2000);
                 
                 return true;
@@ -1107,10 +1114,7 @@ class RegistrationForm {
 
 // Initialize the registration form when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    const registrationForm = new RegistrationForm();
-    
-    // Make it available globally for the step navigation
-    window.registrationForm = registrationForm;
+    window.registrationForm = new RegistrationForm();
 });
 
 // Global functions for button onclick handlers
@@ -1195,3 +1199,6 @@ function completeRegistration() {
 window.nextStep = nextStep;
 window.prevStep = prevStep;
 window.completeRegistration = completeRegistration;
+
+// Export the functions for module usage
+export { nextStep, prevStep, completeRegistration, RegistrationForm };

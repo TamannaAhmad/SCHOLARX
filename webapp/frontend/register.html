@@ -415,7 +415,7 @@
         </div>
     </main>
 
-    <script src="scripts/register.js"></script>
+    <script type="module" src="scripts/register.js"></script>
     <style>
         /* Error message styling */
         .error-message {
@@ -465,12 +465,6 @@
             border-color: #dc2626 !important;
         }
     </style>
-    <script>
-        // Make registration form functions globally available after script loads
-        window.nextStep = nextStep;
-        window.prevStep = prevStep;
-        window.completeRegistration = completeRegistration;
-    </script>
 
 </body>
 </html>
