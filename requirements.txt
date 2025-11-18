@@ -1,39 +1,44 @@
 # Core Dependencies
-supabase>=2.0.0
+python-dotenv>=1.0.1
+
+# Web Framework
+Django==4.2.7
+djangorestframework==3.14.0
+djangorestframework-simplejwt>=5.3.0
+django-cors-headers==4.3.1
+django-rest-knox==4.2.0
 
 # Database
 sqlalchemy>=1.4.0
 psycopg2-binary>=2.9.0
+dj-database-url==2.1.0
+
+# Authentication & Security
 python-jose[cryptography]>=3.3.0
 
-# Date/Time Handling
-python-dateutil>=2.8.2
-
-Django==4.2.7
-djangorestframework==3.14.0
-django-cors-headers==4.3.1
-dj-database-url==2.1.0
-django-rest-knox==4.2.0
-djangorestframework-simplejwt
-Pillow
-
-streamlit>=1.37.0
-pandas>=2.2.0
+# Data Processing
 numpy>=1.26.0
-sentence-transformers>=2.7.0
-scikit-learn>=1.4.0
-plotly>=5.22.0
-textblob>=0.18.0.post0
-spacy>=3.7.0
+pandas>=2.2.0
 openpyxl>=3.1.2
 xlrd>=2.0.1
 xlsxwriter>=3.2.0
-python-dotenv>=1.0.1
-faiss-cpu>=1.7.4
+
+# Machine Learning & NLP
+sentence-transformers>=2.7.0
+scikit-learn>=1.4.0
 torch>=2.0.0
+faiss-cpu>=1.7.4
+spacy>=3.7.0
+textblob>=0.18.0.post0
 google-generativeai>=0.3.0
-djangorestframework
-djangorestframework-simplejwt
-django-cors-headers
-django-rest-knox
-numpy
+
+# Visualization
+plotly>=5.22.0
+
+# Web & API
+supabase>=2.0.0
+streamlit>=1.37.0
+
+# Utilities
+python-dateutil>=2.8.2
+Pillow>=10.0.0

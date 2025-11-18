@@ -172,8 +172,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Validate max group size
         const maxSize = parseInt(maxGroupSize);
-        if (!maxGroupSize || isNaN(maxSize) || maxSize < 1 || maxSize > 5) {
-            showFieldError(document.getElementById('max-group-size'), 'Maximum group size must be between 1 and 5.');
+        if (!maxGroupSize || isNaN(maxSize) || maxSize < 1 || maxSize > 10) {
+            showFieldError(document.getElementById('max-group-size'), 'Maximum group size must be between 1 and 10.');
             isValid = false;
         }
 
