@@ -207,21 +207,23 @@ class GeminiChatbot:
             return "❌ Gemini AI model not available. Please check your API key."
         
         try:
-            prompt = f"""You are a helpful VTU (Visvesvaraya Technological University) assistant.
-Answer the following question in a clear, comprehensive, and educational manner.
+            prompt = f"""You are a helpful assistant for VTU (Visvesvaraya Technological University) students and faculty.
 
-Question: {query}
+Provide a comprehensive answer to this question: {query}
 
-Provide a detailed answer with:
-1. Clear explanation
-2. Key points
-3. Practical examples if relevant
-4. Step-by-step guidance if applicable
+IMPORTANT: 
+- Provide your answer in plain text format only
+- DO NOT use markdown formatting like **bold**, *italic*, or bullet points
+- DO NOT use asterisks, brackets, or special symbols
+- Write in clear, readable sentences and paragraphs
+- Do NOT use bullet points (with * or -) or numbered lists. Instead, write in paragraph form or use simple commas to separate items
+
+{context if context else ""}
 
 Answer:"""
             
             response = self.model.generate_content(prompt)
-            return response.text
+            return clean_text(response.text)
             
         except Exception as e:
             error_msg = str(e)
@@ -252,6 +254,46 @@ This could be due to:
                 return f"❌ Error: {error_msg}\n\n💡 Try using trained textbook data instead!"
 
 
+def clean_text(text: str) -> str:
+    """Remove markdown symbols and clean up text"""
+    if not text:
+        return text
+    
+    import re
+    
+    # Remove all asterisks (bold, italic, bullet points)
+    text = text.replace('*', '')
+    
+    # Remove underscores
+    text = text.replace('_', '')
+    
+    # Remove backticks for code
+    text = text.replace('`', '')
+    
+    # Remove markdown brackets
+    text = text.replace('[', '').replace(']', '')
+    
+    # Remove bullet points and list markers more aggressively
+    # Remove lines starting with * or - or + followed by space
+    text = re.sub(r'^[\s]*[\*\-\+]\s+', '', text, flags=re.MULTILINE)
+    # Remove numbered list markers (e.g., "1.", "2.", etc.)
+    text = re.sub(r'^[\s]*\d+\.\s+', '', text, flags=re.MULTILINE)
+    # Remove any remaining bullet points in the middle of text
+    text = re.sub(r'\s*[\*\-\+]\s*', ' ', text)
+    
+    # Remove any remaining markdown-like patterns
+    # Remove "**word**" patterns (bold)
+    text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
+    # Remove "*word*" patterns (italic)
+    text = re.sub(r'\*(.*?)\*', r'\1', text)
+    
+    # Clean up extra spaces and newlines
+    text = re.sub(r'\s+', ' ', text)
+    text = text.strip()
+    
+    return text
+
+
 def initialize_chatbots():
     """Initialize both chatbots"""
     if 'trained_chatbot' not in st.session_state:
@@ -267,6 +309,9 @@ def initialize_chatbots():
 def display_answer(answer: str, source: str, sources_list: list = None):
     """Display answer with source badge"""
     
+    # Clean the answer text
+    answer = clean_text(answer)
+    
     # Source badge
     if source == "trained":
         st.markdown("""
@@ -281,12 +326,8 @@ def display_answer(answer: str, source: str, sources_list: list = None):
         </div>
         """, unsafe_allow_html=True)
     
-    # Answer
-    st.markdown(f"""
-    <div class="answer-box">
-        {answer}
-    </div>
-    """, unsafe_allow_html=True)
+    # Answer - Use text_area to avoid markup issues
+    st.text_area("Answer:", value=answer, height=200, disabled=True, key=f"answer_{hash(answer)}")
     
     # Show sources if from trained data
     if source == "trained" and sources_list:
@@ -467,19 +508,26 @@ def render_vtu_queries_page():
             # Generate answer with Gemini
             st.info("🤖 Generating comprehensive answer...")
             
-            prompt = f"""You are a helpful VTU (Visvesvaraya Technological University) assistant.
+            # Create a custom Gemini call with context
+            try:
+                prompt = f"""You are a helpful VTU (Visvesvaraya Technological University) assistant.
 Based on the information gathered from VTU websites, answer the following question clearly and comprehensively.
+
+IMPORTANT: Provide your answer in plain text format. DO NOT use markdown formatting, asterisks, brackets, or any special symbols. Just write clear, readable sentences. Do NOT use bullet points (with * or -) or numbered lists. Instead, write in paragraph form or use simple commas to separate items.
 
 Question: {query}
 
 Context from VTU websites:
 {context if context else "No specific information found on VTU websites."}
 
-Provide a detailed, helpful answer. If the context doesn't contain specific information, provide general guidance about VTU procedures.
+Provide a detailed, helpful answer in plain text. If the context doesn't contain specific information, provide general guidance about VTU procedures.
 
 Answer:"""
-            
-            answer = st.session_state.vtu_gemini.get_answer(query)
+                
+                response = st.session_state.vtu_gemini.model.generate_content(prompt)
+                answer = clean_text(response.text)
+            except Exception as e:
+                answer = f"Error generating answer: {str(e)}"
             
             # Save to history
             st.session_state.vtu_history.append({
@@ -498,11 +546,9 @@ Answer:"""
         </div>
         """, unsafe_allow_html=True)
         
-        st.markdown(f"""
-        <div class="answer-box" style="background: linear-gradient(to bottom, #ffffff, #f8f9fa); border-left: 4px solid #11998e;">
-            {answer}
-        </div>
-        """, unsafe_allow_html=True)
+        # Use text_area to avoid markup issues
+        cleaned_answer = clean_text(answer)
+        st.text_area("Answer:", value=cleaned_answer, height=200, disabled=True, key=f"vtu_answer_{hash(answer)}")
         
         # Show which websites had content
         if successful_searches > 0:
@@ -721,19 +767,22 @@ def render_course_questions_page():
                 trained_answer, sources, found = st.session_state.trained_chatbot.get_answer(query)
                 
                 if found and trained_answer:
+                    # Clean the raw trained answer first
+                    trained_answer = clean_text(trained_answer)
+                    
                     # Format with Gemini for better presentation
                     try:
-                        format_prompt = f"""Format this answer in a clear, educational way:
+                        format_prompt = f"""Format this answer in a clear, educational way using plain text only:
 
 Question: {query}
 
 Raw Answer from Textbook:
 {trained_answer}
 
-Provide a well-formatted, clear answer based on this textbook content."""
+IMPORTANT: Provide your answer in plain text format. DO NOT use markdown formatting, asterisks, brackets, or any special symbols. Just write clear, readable sentences. Do NOT use bullet points (with * or -) or numbered lists. Instead, write in paragraph form or use simple commas to separate items."""
                         
                         response = st.session_state.gemini_chatbot.model.generate_content(format_prompt)
-                        answer_text = response.text
+                        answer_text = clean_text(response.text)
                     except:
                         answer_text = trained_answer
                     
@@ -760,7 +809,10 @@ Provide a well-formatted, clear answer based on this textbook content."""
         # Display answer
         st.markdown("---")
         st.markdown("### 💡 Answer")
-        display_answer(answer_text, source_type, sources_list)
+        
+        # Clean the answer text before displaying
+        cleaned_answer_text = clean_text(answer_text)
+        display_answer(cleaned_answer_text, source_type, sources_list)
         
         # Statistics
         st.markdown("---")
