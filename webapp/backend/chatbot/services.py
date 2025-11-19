@@ -103,25 +103,19 @@ class ChatbotService:
             return self.markdown_to_plain_text(raw_answer)
             
         try:
-            prompt = f"""You are a knowledgeable academic assistant providing clear, well-structured responses based on course materials.
+            prompt = f"""Provide a brief and direct answer to this question: {query}
 
-IMPORTANT FORMATTING RULES:
-1. Start with a clear, concise answer to the question
-2. Organize content into logical sections with clear headers
-3. Use bullet points for lists and key points
-4. Keep paragraphs focused (2-4 sentences max)
-5. Use proper spacing between sections
-6. Include relevant examples where helpful
-7. End with a brief summary or conclusion
-*IMPORTANT*: Do not include markdown symbols like *, **, #, etc.
+IMPORTANT GUIDELINES:
+- Keep your answer under 150 words
+- Be direct and to the point
+- Do not use markdown formatting, asterisks, brackets, or any special symbols
+- Write in plain text sentences
+- Do NOT use bullet points or numbered lists
+- Focus on the most important information only
 
-QUESTION: {query}
+Context: {raw_answer[:2000]}
 
-RAW CONTENT TO FORMAT:
-{raw_answer}
-
-FORMATTED RESPONSE (follow exactly):
-"""
+Answer:"""
             
             response = self.gemini_model.generate_content(prompt)
             formatted = response.text.strip()
@@ -152,52 +146,33 @@ FORMATTED RESPONSE (follow exactly):
             is_technical = any(indicator in query.lower() for indicator in technical_indicators)
             
             if is_technical:
-                prompt = f"""You are an expert technical educator. Please provide a comprehensive 
-                explanation for the following technical topic:
-                
-                "{query}"
-                
-                Structure your response with these sections:
-                
-                📚 Overview:
-                - Clear, concise definition
-                - Main purpose and key characteristics
-                
-                🔧 Key Components/Concepts:
-                - Core elements and their functions
-                - Important technical details
-                
-                🚀 Practical Applications:
-                - Common use cases
-                - Real-world examples
-                
-                ⚙️ Technical Details (if applicable):
-                - Performance characteristics
-                - Best practices
-                - Common pitfalls
-                
-                💡 Example (if relevant):
-                - Brief code snippet or practical example
-                
-                Keep the explanation educational, accurate, and suitable for computer science students.
-                Include technical depth where appropriate."""
+                prompt = f"""Provide a brief and direct answer to this question: {query}
+
+IMPORTANT GUIDELINES:
+- Keep your answer under 150 words
+- Be direct and to the point
+- Do not use markdown formatting, asterisks, brackets, or any special symbols
+- Write in plain text sentences
+- Do NOT use bullet points or numbered lists
+- Focus on the most important information only
+
+Answer:"""
             else:
                 # For general knowledge questions
-                prompt = f"""You are a helpful teaching assistant. Please provide a clear, 
-                concise, and well-structured answer to the following question:
-                
-                "{query}"
-                
-                Your response should be:
-                - Accurate and factual
-                - Well-organized with clear sections
-                - Easy to understand
-                - Include examples if helpful
-                
-                Keep the response focused and educational."""
+                prompt = f"""Provide a brief and direct answer to this question: {query}
+
+IMPORTANT GUIDELINES:
+- Keep your answer under 150 words
+- Be direct and to the point
+- Do not use markdown formatting, asterisks, brackets, or any special symbols
+- Write in plain text sentences
+- Do NOT use bullet points or numbered lists
+- Focus on the most important information only
+
+Answer:"""
             
             response = self.gemini_model.generate_content(prompt)
-            answer = response.text
+            answer = self.markdown_to_plain_text(response.text)
             
             # Format the response with proper spacing and structure
             source_type = "Technical Knowledge (Gemini AI)" if is_technical else "General Knowledge (Gemini AI)"
@@ -232,24 +207,20 @@ FORMATTED RESPONSE (follow exactly):
             if GEMINI_AVAILABLE and self.gemini_model and query:
                 try:
                     # Generate a response directly about the query without analyzing course materials
-                    prompt = f"""You are a knowledgeable teaching assistant. Please provide a clear and 
-                    concise explanation about the following topic:
-                    
-                    "{query}"
-                    
-                    Your response should be:
-                    - Educational and accurate
-                    - Well-structured with clear sections if needed
-                    - Include practical examples where applicable
-                    - Be suitable for a student audience
-                    - Keep it under 3-4 paragraphs
-                    
-                    If the topic is too broad or unclear, you can ask for clarification.
-                    
-                    Response:"""
+                    prompt = f"""Provide a brief and direct answer to this question: {query}
+
+IMPORTANT GUIDELINES:
+- Keep your answer under 150 words
+- Be direct and to the point
+- Do not use markdown formatting, asterisks, brackets, or any special symbols
+- Write in plain text sentences
+- Do NOT use bullet points or numbered lists
+- Focus on the most important information only
+
+Answer:"""
                     
                     response = self.gemini_model.generate_content(prompt)
-                    gemini_response = response.text.strip()
+                    gemini_response = self.markdown_to_plain_text(response.text.strip())
                     
                     # Format the response to be clear and helpful
                     formatted_response = (
@@ -273,19 +244,22 @@ FORMATTED RESPONSE (follow exactly):
         # If we have Gemini available, use it to summarize and format the response
         if GEMINI_AVAILABLE and self.gemini_model and len(best_text) > 500:
             try:
-                prompt = f"""Please provide a concise and clear answer to the following question based on the provided context.
-                Keep it under 3-4 paragraphs, focusing on key points and main ideas.
-                Use bullet points for lists and ensure the response is easy to read.
-                
-                Question: {query if query else 'What is this about?'}
-                
-                Context:
-                {best_text[:4000]}
-                
-                Concise answer:"""
+                prompt = f"""Provide a brief and direct answer to this question: {query}
+
+IMPORTANT GUIDELINES:
+- Keep your answer under 150 words
+- Be direct and to the point
+- Do not use markdown formatting, asterisks, brackets, or any special symbols
+- Write in plain text sentences
+- Do NOT use bullet points or numbered lists
+- Focus on the most important information only
+
+Context: {best_text[:2000]}
+
+Answer:"""
                 
                 response = self.gemini_model.generate_content(prompt)
-                formatted_answer = response.text.strip()
+                formatted_answer = self.markdown_to_plain_text(response.text.strip())
                 
                 # Add source information
                 sources = [{
@@ -362,17 +336,38 @@ FORMATTED RESPONSE (follow exactly):
             return ""
             
         try:
+            # Remove all asterisks (bold, italic, bullet points)
+            text = text.replace('*', '')
+            
+            # Remove underscores
+            text = text.replace('_', '')
+            
+            # Remove backticks for code
+            text = text.replace('`', '')
+            
+            # Remove markdown brackets
+            text = text.replace('[', '').replace(']', '')
+            
+            # Remove bullet points and list markers more aggressively
+            # Remove lines starting with * or - or + followed by space
+            text = re.sub(r'^[\s]*[\*\-\+]\s+', '', text, flags=re.MULTILINE)
+            # Remove numbered list markers (e.g., "1.", "2.", etc.)
+            text = re.sub(r'^[\s]*\d+\.\s+', '', text, flags=re.MULTILINE)
+            # Remove any remaining bullet points in the middle of text
+            text = re.sub(r'\s*[\*\-\+]\s*', ' ', text)
+            
+            # Remove any remaining markdown-like patterns
+            # Remove "**word**" patterns (bold)
+            text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
+            # Remove "*word*" patterns (italic)
+            text = re.sub(r'\*(.*?)\*', r'\1', text)
+            
             # Remove markdown links [text](url) -> text
             text = re.sub(r'\[(.*?)\]\(.*?\)', r'\1', text)
             # Remove markdown headers
             text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)
-            # Remove bold/italic/strikethrough
-            text = re.sub(r'\*\*|__|~~|`', '', text)  # Remove **, __, ~~, `
-            text = text.replace('*', '').replace('_', '')  # Remove single * and _
             # Remove code blocks
             text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
-            # Remove inline code
-            text = re.sub(r'`[^`]+`', '', text)
             # Remove blockquotes
             text = re.sub(r'^>\s*', '', text, flags=re.MULTILINE)
             # Remove horizontal rules
@@ -381,14 +376,12 @@ FORMATTED RESPONSE (follow exactly):
             text = re.sub(r'\[.*?\]\s*\[.*?\]', '', text)
             # Remove any remaining HTML tags
             text = re.sub(r'<[^>]+>', '', text)
-            # Clean up multiple newlines and spaces
-            text = re.sub(r'\n{3,}', '\n\n', text)
-            text = re.sub(r' {2,}', ' ', text)
-            # Remove any remaining markdown symbols
-            text = re.sub(r'[#*_~`>\[\]()]', '', text)
-            # Clean up any remaining whitespace issues
-            text = ' '.join(text.split())
-            return text.strip()
+            
+            # Clean up extra spaces and newlines
+            text = re.sub(r'\s+', ' ', text)
+            text = text.strip()
+            
+            return text
             
         except Exception as e:
             logger.error(f"Error in markdown_to_plain_text: {str(e)}")
