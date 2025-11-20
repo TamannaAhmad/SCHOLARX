@@ -173,13 +173,33 @@ document.addEventListener('DOMContentLoaded', () => {
         membersList.innerHTML = '';
         (members || []).forEach(m => {
             const li = document.createElement('li');
+            const memberContainer = document.createElement('div');
+            memberContainer.className = 'member-container';
+            
             const link = document.createElement('a');
             link.href = m.profile_url || (m.usn ? `/userprofile.html?usn=${encodeURIComponent(m.usn)}` : '#');
             const displayName = m.name && m.name.trim().length > 0 ? m.name : (m.usn || 'Member');
             const usnSuffix = m.usn ? ` (${m.usn})` : '';
             link.textContent = `${displayName}${usnSuffix}`;
             link.className = 'profile-link';
-            li.appendChild(link);
+            
+            memberContainer.appendChild(link);
+            
+            // Add remove button for owner (except for themselves)
+            if (currentProject?.is_owner && m.usn !== currentUserUsn && isEditing) {
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-member-btn';
+                removeBtn.title = 'Remove member';
+                removeBtn.innerHTML = '&times;';
+                removeBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    removeMember(m.usn, m.name || 'member');
+                });
+                memberContainer.appendChild(removeBtn);
+            }
+            
+            li.appendChild(memberContainer);
             membersList.appendChild(li);
         });
     }
@@ -271,6 +291,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Re-render skills to update the remove buttons
         renderSkills(selectedSkills);
+
+        if (currentProject?.members) {
+            renderMembers(currentProject.members);
+        }
     }
 
     // Hide edit controls by default until ownership is confirmed
@@ -442,6 +466,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Error container not found! Error message:', errorMsg);
                 showError(errorMsg);
             }
+        }
+    }
+
+    async function removeMember(usn, memberName) {
+        if (!usn || !confirm(`Are you sure you want to remove ${memberName} from this project?`)) {
+            return;
+        }
+
+        try {
+            if (saveBtn) setButtonLoading(saveBtn, true, 'Removing...');
+            await projectsAPI.removeMember(projectId, usn);
+            
+            // Update the UI by removing the member from the list
+            currentProject.members = currentProject.members.filter(m => m.usn !== usn);
+            renderMembers(currentProject.members);
+            showSuccessMsg(`${memberName} has been removed from the project.`);
+        } catch (error) {
+            console.error('Error removing member:', error);
+            handleAPIError(error, 'Failed to remove member');
+        } finally {
+            if (saveBtn) setButtonLoading(saveBtn, false);
         }
     }
 

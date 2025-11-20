@@ -252,6 +252,12 @@ export const groupsAPI = {
     return fetchAPI(url.toString().replace(API_BASE_URL, ''), {
       method: 'GET',
     });
+  },
+
+  async removeMember(groupId, usn) {
+    return fetchAPI(`/groups/${groupId}/members/${usn}/`, {
+      method: 'DELETE',
+    });
   }
 };
 

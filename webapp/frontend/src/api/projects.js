@@ -251,6 +251,12 @@ export const projectsAPI = {
       body: JSON.stringify({ user_usn: userUsn, message: message }),
     });
   },
+
+  async removeMember(projectId, usn) {
+    return fetchAPI(`/${projectId}/members/${usn}/`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 export default projectsAPI;

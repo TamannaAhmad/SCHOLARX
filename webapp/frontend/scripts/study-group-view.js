@@ -70,6 +70,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         members.forEach(m => {
             const li = document.createElement('li');
+            const memberContainer = document.createElement('div');
+            memberContainer.className = 'member-container';
+            
             const link = document.createElement('a');
             
             // Check for user details
@@ -85,7 +88,23 @@ document.addEventListener('DOMContentLoaded', () => {
             link.textContent = displayName;
             link.className = 'profile-link';
             
-            li.appendChild(link);
+            memberContainer.appendChild(link);
+            
+            // Add remove button for owner (except for themselves) - show in edit mode
+            if (currentGroup?.is_owner && usn !== currentUserUsn && isEditing) {
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-member-btn';
+                removeBtn.title = 'Remove member';
+                removeBtn.innerHTML = '&times;';
+                removeBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    removeMember(usn, fullName || 'member');
+                });
+                memberContainer.appendChild(removeBtn);
+            }
+            
+            li.appendChild(memberContainer);
             membersList.appendChild(li);
         });
     }
@@ -180,6 +199,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Re-render skills to update remove buttons
         renderSkills(selectedSkills);
+
+        if (currentGroup?.members) {
+            renderMembers(currentGroup.members);
+        }
+
         
         // Toggle edit/save buttons
         if (editBtn) editBtn.style.display = on ? 'none' : 'inline-block';
@@ -465,6 +489,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Error container not found! Error message:', errorMsg);
                 showError(errorMsg);
             }
+        }
+    }
+
+    async function removeMember(usn, memberName) {
+        if (!usn || !confirm(`Are you sure you want to remove ${memberName} from this study group?`)) {
+            return;
+        }
+
+        try {
+            setButtonLoading(saveBtn, true, 'Removing...');
+            await groupsAPI.removeMember(groupId, usn);
+            
+            // Update the UI by removing the member from the list
+            currentGroup.members = currentGroup.members.filter(m => {
+                const memberUsn = m.user_details?.usn || m.user;
+                return memberUsn !== usn;
+            });
+            renderMembers(currentGroup.members);
+            showSuccessMsg(`${memberName} has been removed from the study group.`);
+        } catch (error) {
+            console.error('Error removing member:', error);
+            handleAPIError(error, 'Failed to remove member');
+        } finally {
+            setButtonLoading(saveBtn, false);
         }
     }
 

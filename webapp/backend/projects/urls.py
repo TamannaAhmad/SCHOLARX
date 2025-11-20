@@ -17,6 +17,7 @@ urlpatterns = [
     path('<int:project_id>/join/', views.join_project, name='join_project'),
     path('<int:project_id>/leave/', views.leave_project, name='leave_project'),
     path('<int:project_id>/add-member/', views.add_team_member, name='add_team_member'),
+    path('<int:project_id>/members/<str:usn>/', views.remove_team_member, name='remove_team_member'),
     path('<int:project_id>/invite/', invite_views.invite_to_project, name='invite_to_project'),
     # Study groups
     path('groups/create/', views.create_study_group, name='create_study_group'),
@@ -29,6 +30,7 @@ urlpatterns = [
     path('groups/<int:group_id>/join/', views.join_group, name='join_group'),
     path('groups/<int:group_id>/leave/', views.leave_group, name='leave_group'),
     path('groups/<int:group_id>/add-member/', views.add_group_member, name='add_group_member'),
+    path('groups/<int:group_id>/members/<str:usn>/', views.remove_group_member, name='remove_group_member'),
     path('groups/<int:group_id>/invite/', invite_views.invite_to_group, name='invite_to_group'),
     # Teammate finding - only advanced matching is available
     path('<int:project_id>/find-teammates/', views.advanced_find_teammates, name='find_teammates'),

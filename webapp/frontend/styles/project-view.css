@@ -98,3 +98,33 @@
 #skills-search-wrapper {
     width: 100%;
 }
+
+/* Member container and remove button styles */
+.member-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.remove-member-btn {
+    background: none;
+    border: none;
+    color: #ff4444;
+    font-size: 1.2em;
+    cursor: pointer;
+    padding: 0 5px;
+    line-height: 1;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.remove-member-btn:hover {
+    opacity: 1;
+    background: rgba(255, 0, 0, 0.1);
+    border-radius: 50%;
+}
+
+.remove-member-btn:focus {
+    outline: none;
+}

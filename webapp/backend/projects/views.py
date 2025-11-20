@@ -1188,3 +1188,110 @@ def find_group_members(request, group_id):
             {'error': 'An error occurred while searching for group members'}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def remove_team_member(request, project_id, usn):
+    """Remove a team member from a project (for project owners)"""
+    project = get_object_or_404(Project, project_id=project_id)
+
+    # Check if user is the project owner
+    if project.created_by != request.user and not request.user.is_staff:
+        return Response(
+            {'detail': 'Only project owners can remove team members.'}, 
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Get the user to remove by USN
+    try:
+        user_to_remove = User.objects.get(usn__iexact=usn)
+    except User.DoesNotExist:
+        return Response(
+            {'detail': 'User not found.'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Get the user profile
+    try:
+        user_profile = UserProfile.objects.get(user=user_to_remove)
+    except UserProfile.DoesNotExist:
+        return Response(
+            {'detail': 'User profile not found.'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Check if user is a member
+    team_member = TeamMember.objects.filter(project=project, user=user_profile).first()
+    if not team_member:
+        return Response(
+            {'detail': 'User is not a member of this project.'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        # Remove the team member
+        team_member.delete()
+        
+        # Update project team size
+        project.current_team_size = TeamMember.objects.filter(project=project).count() + 1  # +1 for creator
+        project.save(update_fields=['current_team_size'])
+
+        return Response({
+            'message': 'Team member removed successfully',
+            'project': ProjectSerializer(project, context={'request': request}).data
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        logger.error(f"Error removing team member: {str(e)}", exc_info=True)
+        return Response(
+            {'detail': 'An error occurred while removing the team member.'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def remove_group_member(request, group_id, usn):
+    """Remove a member from a study group (for group owners)"""
+    group = get_object_or_404(StudyGroup, group_id=group_id)
+
+    # Check if user is the group owner
+    if group.created_by != request.user:
+        return Response(
+            {'detail': 'Only group owners can remove members.'}, 
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Get the user to remove by USN
+    try:
+        user_to_remove = User.objects.get(usn__iexact=usn)
+    except User.DoesNotExist:
+        return Response(
+            {'detail': 'User not found.'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Check if user is a member
+    group_member = StudyGroupMember.objects.filter(group=group, user=user_to_remove).first()
+    if not group_member:
+        return Response(
+            {'detail': 'User is not a member of this study group.'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        # Remove the group member
+        group_member.delete()
+
+        return Response({
+            'message': 'Group member removed successfully',
+            'group': StudyGroupSerializer(group, context={'request': request}).data
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        logger.error(f"Error removing group member: {str(e)}", exc_info=True)
+        return Response(
+            {'detail': 'An error occurred while removing the group member.'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
