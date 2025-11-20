@@ -172,9 +172,9 @@ function displayStudyGroups(groups) {
     }
     
     groupsList.innerHTML = groups.map(group => `
-        <div class="group-item">
-            <h3 class="group-name">${escapeHtml(group.name || 'Untitled Group')}</h3>
-            <a href="study-group-view.html?id=${group.group_id}" class="group-link">View Group</a>
+        <div class="study-group-item">
+            <h3 class="study-group-name">${escapeHtml(group.name || 'Untitled Group')}</h3>
+            <a href="study-group-view.html?id=${group.group_id}" class="study-group-link">View Group</a>
         </div>
     `).join('');
 }
@@ -907,7 +907,12 @@ async function saveProfileChanges() {
         
         // Extract LinkedIn URL
         let linkedinUrl = '';
-        if (userLinkedInEl && userLinkedInEl.href) {
+        const userLinkedInInput = document.getElementById('userLinkedInInput');
+        if (userLinkedInInput && userLinkedInInput.style.display !== 'none') {
+            // In edit mode - get from input
+            linkedinUrl = userLinkedInInput.value.trim();
+        } else if (userLinkedInEl && userLinkedInEl.href) {
+            // In view mode - get from link
             linkedinUrl = userLinkedInEl.href;
         } else if (userLinkedInEl && userLinkedInEl.textContent.trim()) {
             const linkedinText = userLinkedInEl.textContent.trim();
@@ -920,7 +925,12 @@ async function saveProfileChanges() {
         
         // Extract GitHub URL
         let githubUrl = '';
-        if (userGitHubEl && userGitHubEl.href) {
+        const userGitHubInput = document.getElementById('userGitHubInput');
+        if (userGitHubInput && userGitHubInput.style.display !== 'none') {
+            // In edit mode - get from input
+            githubUrl = userGitHubInput.value.trim();
+        } else if (userGitHubEl && userGitHubEl.href) {
+            // In view mode - get from link
             githubUrl = userGitHubEl.href;
         } else if (userGitHubEl && userGitHubEl.textContent.trim()) {
             const githubText = userGitHubEl.textContent.trim();
@@ -948,15 +958,16 @@ async function saveProfileChanges() {
             data.study_year = year;
         }
         
-        // Add profile URLs
-        if (linkedinUrl || githubUrl) {
-            data.profile = {};
-            if (linkedinUrl) {
-                data.profile.linkedin_url = linkedinUrl;
-            }
-            if (githubUrl) {
-                data.profile.github_url = githubUrl;
-            }
+        // Add LinkedIn and GitHub URLs (always send them, even if empty, to allow deletion)
+        // Check if we're in edit mode - if so, always send the values to allow clearing
+        const inEditMode = (userLinkedInInput && userLinkedInInput.style.display !== 'none') || 
+                          (userGitHubInput && userGitHubInput.style.display !== 'none');
+        
+        if (inEditMode || linkedinUrl) {
+            data.linkedin_url = linkedinUrl || '';
+        }
+        if (inEditMode || githubUrl) {
+            data.github_url = githubUrl || '';
         }
         
         // Get the USN from the URL or use the current user's USN
@@ -986,9 +997,11 @@ async function saveProfileChanges() {
             await updateUserAvailability();
         }
 
-        // Restore dropdowns back to text elements first (before refresh)
+        // Restore dropdowns and input fields back to text elements first (before refresh)
         restoreDepartmentFromDropdown();
         restoreYearFromDropdown();
+        restoreLinkedInFromInput();
+        restoreGitHubFromInput();
         
         // Refresh profile data
         if (usn === currentUser.usn) {
@@ -1003,9 +1016,11 @@ async function saveProfileChanges() {
         console.error('Error updating profile:', error);
         showError(error.message || 'Failed to update profile. Please try again.');
         
-        // Restore dropdowns even on error so UI is consistent
+        // Restore dropdowns and input fields even on error so UI is consistent
         restoreDepartmentFromDropdown();
         restoreYearFromDropdown();
+        restoreLinkedInFromInput();
+        restoreGitHubFromInput();
     } finally {
         showLoading(false);
     }
@@ -2049,6 +2064,100 @@ function handleTimeSlotClick(event) {
     }
 }
 
+// Convert LinkedIn link to input field for editing
+function convertLinkedInToInput() {
+    const linkedInLink = document.getElementById('userLinkedIn');
+    const linkedInInput = document.getElementById('userLinkedInInput');
+    
+    if (!linkedInLink || !linkedInInput) return;
+    
+    // Get current URL value - only use href if it's a valid URL (not just '#')
+    let currentUrl = '';
+    if (linkedInLink.href && linkedInLink.href !== '#' && !linkedInLink.href.endsWith('#')) {
+        currentUrl = linkedInLink.href;
+    }
+    linkedInInput.value = currentUrl;
+    
+    // Hide link, show input
+    linkedInLink.style.display = 'none';
+    linkedInInput.style.display = 'block';
+    linkedInInput.focus();
+}
+
+// Convert LinkedIn input back to link
+function restoreLinkedInFromInput() {
+    const linkedInLink = document.getElementById('userLinkedIn');
+    const linkedInInput = document.getElementById('userLinkedInInput');
+    
+    if (!linkedInLink || !linkedInInput) return;
+    
+    const inputValue = linkedInInput.value.trim();
+    
+    if (inputValue) {
+        // Ensure it's a valid URL format
+        let url = inputValue;
+        if (!url.match(/^https?:\/\//)) {
+            url = `https://${url}`;
+        }
+        linkedInLink.href = url;
+        linkedInLink.textContent = inputValue;
+        linkedInLink.target = '_blank';
+        linkedInLink.rel = 'noopener noreferrer';
+        linkedInLink.style.display = 'block';
+    } else {
+        linkedInLink.style.display = 'none';
+    }
+    
+    linkedInInput.style.display = 'none';
+}
+
+// Convert GitHub link to input field for editing
+function convertGitHubToInput() {
+    const gitHubLink = document.getElementById('userGitHub');
+    const gitHubInput = document.getElementById('userGitHubInput');
+    
+    if (!gitHubLink || !gitHubInput) return;
+    
+    // Get current URL value - only use href if it's a valid URL (not just '#')
+    let currentUrl = '';
+    if (gitHubLink.href && gitHubLink.href !== '#' && !gitHubLink.href.endsWith('#')) {
+        currentUrl = gitHubLink.href;
+    }
+    gitHubInput.value = currentUrl;
+    
+    // Hide link, show input
+    gitHubLink.style.display = 'none';
+    gitHubInput.style.display = 'block';
+    gitHubInput.focus();
+}
+
+// Convert GitHub input back to link
+function restoreGitHubFromInput() {
+    const gitHubLink = document.getElementById('userGitHub');
+    const gitHubInput = document.getElementById('userGitHubInput');
+    
+    if (!gitHubLink || !gitHubInput) return;
+    
+    const inputValue = gitHubInput.value.trim();
+    
+    if (inputValue) {
+        // Ensure it's a valid URL format
+        let url = inputValue;
+        if (!url.match(/^https?:\/\//)) {
+            url = `https://${url}`;
+        }
+        gitHubLink.href = url;
+        gitHubLink.textContent = inputValue;
+        gitHubLink.target = '_blank';
+        gitHubLink.rel = 'noopener noreferrer';
+        gitHubLink.style.display = 'block';
+    } else {
+        gitHubLink.style.display = 'none';
+    }
+    
+    gitHubInput.style.display = 'none';
+}
+
 // Setup event listeners
 function setupEventListeners() {
     console.log('Setting up event listeners...');
@@ -2096,7 +2205,7 @@ function setupEventListeners() {
                     
                     // Make text fields clickable for editing
                     const editableFields = [
-                        'userName', 'userEmail', 'userLinkedIn', 'userGitHub'
+                        'userName', 'userEmail'
                     ];
                     
                     editableFields.forEach(fieldId => {
@@ -2111,6 +2220,10 @@ function setupEventListeners() {
                             });
                         }
                     });
+                    
+                    // Convert LinkedIn and GitHub links to input fields
+                    convertLinkedInToInput();
+                    convertGitHubToInput();
                     
                     // Convert department and year to dropdowns
                     // Make sure departments are loaded first

@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const projects = await projectsAPI.getUserProjects();
             if (!projects || projects.length === 0) {
-                projectsList.innerHTML = '<p class="no-data">No projects found. <a href="project-creation.html">Create your first project</a></p>';
+                projectsList.innerHTML = '<p class="no-data">No projects found. </p>';
             } else {
                 projectsList.innerHTML = projects.map(project => {
                     const statusLabel = project.status_display || toTitleCase(project.status) || 'Unknown';

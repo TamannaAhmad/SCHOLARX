@@ -3,7 +3,7 @@
 
 /* Project and Group Items */
 .project-item,
-.group-item {
+.study-group-item {
   background-color: var(--card-background);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -17,24 +17,24 @@
 }
 
 .project-item:hover,
-.group-item:hover {
+.study-group-item:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-medium);
   border-color: var(--border-focus);
 }
 
 .project-title,
-.group-name {
+.study-group-name {
   font-family: var(--font-primary);
   font-size: 1.125rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
   margin: 0;
   flex-grow: 1;
 }
 
 .project-link,
-.group-link {
+.study-group-link {
   background-color: var(--primary-color);
   color: white;
   text-decoration: none;
@@ -48,7 +48,7 @@
 }
 
 .project-link:hover,
-.group-link:hover {
+.study-group-link:hover {
   background-color: #1d4ed8;
   transform: translateY(-1px);
 }
@@ -106,7 +106,7 @@
 }
 
 .profile-section .form-header {
-  margin-bottom: var(--spacing-xl);
+  margin-bottom: var(--spacing-md);
 }
 
 .profile-section .form-title {
@@ -121,6 +121,10 @@
   align-items: center;
   margin-bottom: var(--spacing-lg);
   gap: var(--spacing-lg);
+}
+
+.info-field:last-child {
+  margin-bottom: 0;
 }
 
 .info-label {
@@ -142,7 +146,7 @@
   align-items: center;
   padding: var(--spacing-md);
   color: var(--text-primary);
-  font-size: 1rem;
+  font-size: medium;
   font-family: var(--font-primary);
   transition: border-color var(--transition-fast);
 }
@@ -168,7 +172,8 @@
   cursor: text;
   background-color: #f8f9fa;
   border: 2px solid #dee2e6;
-  padding: 0.5rem;
+  padding: 0.3rem;
+  padding-left: 0.8rem;
   border-radius: 0.25rem;
   transition: all 0.2s ease;
 }
@@ -446,7 +451,6 @@
 }
 
 .time-slot {
-  aspect-ratio: 1;
   background-color: white;
   border: 1px solid #e2e8f0;
   cursor: default;
@@ -457,6 +461,8 @@
   justify-content: center;
   font-size: 0.75rem;
   color: #475569;
+  margin: 0.05rem;
+  border-radius: var(--radius-sm);
 }
 
 .schedule-grid.editing .time-slot:hover {
@@ -511,6 +517,10 @@
 /* Skill Level Groups */
 .skill-level-group {
   margin-bottom: var(--spacing-xl);
+}
+
+.skill-level-group:last-child {
+  margin-bottom: 0;
 }
 
 .skill-level-title {
@@ -572,12 +582,11 @@
 
 .schedule-grid {
   width: 100%;
-  margin-bottom: var(--spacing-xl);
   display: grid;
   grid-template-columns: 100px repeat(7, 1fr);
   gap: 2px;
   background-color: var(--border-color);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-sm);
   overflow: hidden;
   box-shadow: var(--shadow-medium);
   padding: 2px;
@@ -595,6 +604,7 @@
   align-items: center;
   justify-content: center;
   min-height: 50px;
+  margin: 0.05rem;
 }
 
 .schedule-time-cell {

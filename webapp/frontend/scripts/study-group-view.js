@@ -29,9 +29,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let allSkills = [];
     let selectedSkills = []; // array of {id, name}
     
-    // Set up Find Members button link
+    // Set up Find Members button click handler
     if (findMembersBtn && groupId) {
-        findMembersBtn.href = `find-teammates.html?type=study-group&id=${groupId}`;
+        findMembersBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = `/find-teammates.html?type=study-group&id=${groupId}`;
+        });
     }
 
     let currentGroup = null;
@@ -103,14 +106,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // Owner sees "Find Members" and "Find Meeting Times" buttons
             if (findMembersBtn) {
                 findMembersBtn.style.display = 'inline-block';
-                if (groupId) {
-                    findMembersBtn.href = `find-teammates.html?type=study-group&id=${groupId}`;
-                }
             }
             if (findMeetingTimesBtn) {
                 findMeetingTimesBtn.style.display = 'inline-block';
-                if (groupId) {
-                    findMeetingTimesBtn.href = `meeting-slots.html?id=${groupId}`;
+                if (groupId && !findMeetingTimesBtn.onclick) {
+                    findMeetingTimesBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        window.location.href = `/meeting-slots.html?type=study-group&id=${groupId}`;
+                    });
                 }
             }
         } else if (isMember) {

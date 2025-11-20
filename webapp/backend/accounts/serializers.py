@@ -54,8 +54,8 @@ class UserSerializer(serializers.ModelSerializer):
     )
     
     # Include profile fields directly
-    linkedin_url = serializers.URLField(source='profile.linkedin_url', read_only=True)
-    github_url = serializers.URLField(source='profile.github_url', read_only=True)
+    linkedin_url = serializers.URLField(source='profile.linkedin_url', required=False, allow_blank=True)
+    github_url = serializers.URLField(source='profile.github_url', required=False, allow_blank=True)
     bio = serializers.CharField(source='profile.bio', read_only=True)
     availability = UserAvailabilitySerializer(many=True, read_only=True)
     skills = UserSkillSerializer(source='user_skills', many=True, read_only=True)
@@ -74,6 +74,36 @@ class UserSerializer(serializers.ModelSerializer):
             'first_name': {'required': True},
             'last_name': {'required': False, 'allow_blank': True},
         }
+    
+    def update(self, instance, validated_data):
+        # Handle nested profile updates
+        profile_data = {}
+        if 'profile' in validated_data:
+            profile_data = validated_data.pop('profile')
+        
+        # Extract linkedin_url and github_url if they're in validated_data
+        linkedin_url = validated_data.pop('linkedin_url', None)
+        github_url = validated_data.pop('github_url', None)
+        
+        # Update user fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # Update profile fields
+        if linkedin_url is not None or github_url is not None or profile_data:
+            profile, created = instance.profile.__class__.objects.get_or_create(user=instance)
+            
+            if linkedin_url is not None:
+                profile.linkedin_url = linkedin_url if linkedin_url else None
+            if github_url is not None:
+                profile.github_url = github_url if github_url else None
+            
+            for attr, value in profile_data.items():
+                setattr(profile, attr, value)
+            profile.save()
+        
+        return instance
 
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:

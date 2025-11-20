@@ -27,9 +27,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const requestJoinBtn = document.getElementById('request-join-btn');
     const leaveProjectBtn = document.getElementById('leave-project-btn');
     
-    // Set up Find Teammates button link
+    // Set up Find Teammates button click handler
     if (findTeammatesBtn && projectId) {
-        findTeammatesBtn.href = `/find-teammates.html?type=project&id=${projectId}`;
+        findTeammatesBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = `/find-teammates.html?type=project&id=${projectId}`;
+        });
     }
 
     let currentProject = null;
@@ -198,14 +201,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // Owner sees "Find Teammates" and "Find Meeting Times" buttons
             if (findTeammatesBtn) {
                 findTeammatesBtn.style.display = 'inline-block';
-                if (projectId) {
-                    findTeammatesBtn.href = `/find-teammates.html?type=project&id=${projectId}`;
-                }
             }
             if (findMeetingTimesBtn) {
                 findMeetingTimesBtn.style.display = 'inline-block';
-                if (projectId) {
-                    findMeetingTimesBtn.href = `meeting-slots.html?type=project&id=${projectId}`;
+                if (projectId && !findMeetingTimesBtn.onclick) {
+                    findMeetingTimesBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        window.location.href = `/meeting-slots.html?type=project&id=${projectId}`;
+                    });
                 }
             }
         } else if (isMember) {

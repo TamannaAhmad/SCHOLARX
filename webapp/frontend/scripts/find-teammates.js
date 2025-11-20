@@ -568,7 +568,7 @@ async function loadProfiles() {
     emptyState.hidden = true;
 
     // Get the current user's authentication token
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('authToken');
     if (!token) {
       window.location.href = 'login.html';
       return;
@@ -601,7 +601,7 @@ async function loadProfiles() {
       
       const response = await fetch(url, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Token ${token}`,
           'Content-Type': 'application/json',
         },
       });
@@ -1061,7 +1061,7 @@ document.addEventListener('click', async (event) => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Authorization': `Token ${localStorage.getItem('authToken')}`,
             'X-CSRFToken': getCookie('csrftoken')
           },
           body: JSON.stringify({
@@ -1098,7 +1098,7 @@ document.addEventListener('click', async (event) => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Authorization': `Token ${localStorage.getItem('authToken')}`,
             'X-CSRFToken': getCookie('csrftoken')
           },
           body: JSON.stringify({

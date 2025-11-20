@@ -104,12 +104,11 @@
 
 /* Card Styles */
 .card {
-  background-color: var(--card-background);
+  background-color: #FFFFFF;
   border-radius: var(--radius-xl);
   padding: var(--spacing-xl);
   box-shadow: var(--shadow-light);
   transition: all var(--transition-normal);
-  border: 1px solid var(--border-color);
   position: relative;
   overflow: hidden;
 }
@@ -157,6 +156,7 @@
 .card p {
   color: var(--text-secondary);
   margin-bottom: var(--spacing-lg);
+  margin-top: var(--spacing-sm);
   line-height: 1.6;
 }
 
@@ -332,16 +332,12 @@
 
 /* Welcome Message */
 .welcome-message {
-  background: linear-gradient(135deg, 
-    rgba(37, 99, 235, 0.02) 0%, 
-    rgba(124, 58, 237, 0.02) 50%, 
-    rgba(6, 182, 212, 0.02) 100%);
+  background: var(--card-background);
   border-radius: var(--radius-xl);
   padding: var(--spacing-2xl);
   margin-top: var(--spacing-xl);
   margin-bottom: var(--spacing-l);
   box-shadow: var(--shadow-light);
-  border: 1px solid rgba(37, 99, 235, 0.1);
   position: relative;
   overflow: hidden;
 }
@@ -528,10 +524,10 @@
 @media (prefers-color-scheme: light) {
   :root {
     --background-color: #F1F5F9;
-    --card-background: #94A3B8;
+    --card-background: #FFFFFF;
     --text-primary: #0F172A;
     --text-secondary: #1E293B;
-    --border-color: #334155;
+    --border-color: #929fb0;
     --dashboard-card-hover: #334155;
   }
 }
