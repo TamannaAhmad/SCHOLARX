@@ -1,5 +1,6 @@
 import { projectsAPI } from '../src/api/projects.js';
 import { groupsAPI } from '../src/api/groups.js';
+import profilesAPI from '../src/api/profiles.js';
 import { showError as showErrorUtil, handleAPIError } from '../src/utils/errorHandler.js';
 
 // DOM elements
@@ -10,10 +11,14 @@ const groupsEmptyState = document.getElementById('groupsEmptyState');
 const projectsEmptyState = document.getElementById('projectsEmptyState');
 const groupCardTemplate = document.getElementById('groupCardTemplate');
 const projectCardTemplate = document.getElementById('projectCardTemplate');
+const profilesResults = document.getElementById('profilesResults');
+const profilesEmptyState = document.getElementById('profilesEmptyState');
+const profileCardTemplate = document.getElementById('profileCardTemplate');
 
 // Data storage
 let allProjects = [];
 let allGroups = [];
+let allProfiles = [];
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', async () => {
@@ -26,48 +31,45 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// Load all projects and study groups
+// Load all projects, study groups, and profiles
 async function loadAllData() {
   try {
-    // Try to fetch all projects and groups
-    // If these endpoints don't exist, they'll fall back to user's own items
+    // Load projects
     try {
       allProjects = await projectsAPI.getAllProjects();
     } catch (error) {
       console.warn('getAllProjects endpoint not available, using getUserProjects:', error);
       try {
-        // Fallback to user's projects if endpoint doesn't exist
         allProjects = await projectsAPI.getUserProjects();
       } catch (fallbackError) {
-        const errorMsg = handleAPIError(fallbackError, 'Failed to load projects. Please refresh the page.');
-        showError(errorMsg);
+        console.error('Error getting user projects:', fallbackError);
         allProjects = [];
       }
     }
 
+    // Load groups
     try {
       allGroups = await groupsAPI.getAllGroups();
+      console.log('Loaded groups:', allGroups);
     } catch (error) {
-      console.warn('getAllGroups endpoint not available, using listMyGroups:', error);
-      try {
-        // Fallback to user's groups if endpoint doesn't exist
-        allGroups = await groupsAPI.listMyGroups();
-      } catch (fallbackError) {
-        const errorMsg = handleAPIError(fallbackError, 'Failed to load study groups. Please refresh the page.');
-        showError(errorMsg);
-        allGroups = [];
-      }
+      console.error('Error loading study groups:', error);
+      allGroups = [];
     }
 
-    // Initial render with all data
+    // Load profiles
+    try {
+      allProfiles = await profilesAPI.getAllProfiles();
+      console.log('Loaded profiles:', allProfiles);
+    } catch (error) {
+      console.error('Error loading profiles:', error);
+      allProfiles = [];
+    }
+
+    // Initial render
     performSearch('');
   } catch (error) {
-    console.error('Error loading data:', error);
-    const errorMsg = handleAPIError(error, 'Failed to load search data. Please refresh the page.');
-    showError(errorMsg);
-    // Initialize with empty arrays to prevent further errors
-    allProjects = allProjects || [];
-    allGroups = allGroups || [];
+    console.error('Unexpected error in loadAllData:', error);
+    showError('Failed to load data. Please try again later.');
     performSearch('');
   }
 }
@@ -94,25 +96,22 @@ function setupEventListeners() {
 
 // Perform search
 function performSearch(query) {
-  const keywords = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const keywords = query.toLowerCase().split(/\s+/).filter(Boolean);
   
   if (keywords.length === 0) {
     renderGroups(allGroups);
     renderProjects(allProjects);
+    renderProfiles(allProfiles);
     return;
   }
 
-  // Filter groups and projects based on search query
-  const filteredGroups = allGroups.filter(group => 
-    matchesSearch(group, keywords)
-  );
-
-  const filteredProjects = allProjects.filter(project => 
-    matchesSearch(project, keywords)
-  );
-
+  const filteredGroups = allGroups.filter(group => matchesSearch(group, keywords));
+  const filteredProjects = allProjects.filter(project => matchesSearch(project, keywords));
+  const filteredProfiles = allProfiles.filter(profile => matchesProfileSearch(profile, keywords));
+  
   renderGroups(filteredGroups);
   renderProjects(filteredProjects);
+  renderProfiles(filteredProfiles);
 }
 
 // Check if an item matches the search keywords
@@ -155,13 +154,6 @@ function matchesSearch(item, keywords) {
 
   // For study groups
   if (item.group_id !== undefined) {
-    console.log('Processing group:', { 
-      name: item.name, 
-      topics: item.topics, 
-      topicsType: typeof item.topics,
-      topicsDisplay: item.topics_display
-    });
-
     // Check name with higher weight
     if (item.name) matchScore += checkField(item.name, fieldWeights.name);
     
@@ -178,15 +170,10 @@ function matchesSearch(item, keywords) {
     if (topicsSource) {
       let topics = [];
       
-      // Log the raw topics value before processing
-      console.log('Raw topics value:', topicsSource);
-      
       // Handle different possible formats of topics
       if (Array.isArray(topicsSource)) {
         topics = [...topicsSource]; // Create a copy of the array
-        console.log('Topics is an array');
       } else if (typeof topicsSource === 'string') {
-        console.log('Topics is a string, splitting by comma');
         // Handle case where topics is a comma-separated string
         topics = topicsSource.split(',').map(t => t.trim()).filter(t => t);
       } else {
@@ -195,15 +182,10 @@ function matchesSearch(item, keywords) {
         topics = String(topicsSource).split(',').map(t => t.trim()).filter(t => t);
       }
       
-      // Debug log to see the processed topics
-      console.log('Processed topics array:', topics);
-      
       // Check each topic individually
       topics.forEach((topic, index) => {
         if (topic) {  // Ensure topic is not empty
-          console.log(`Processing topic ${index + 1}:`, topic);
           const topicScore = checkField(topic, fieldWeights.topics);
-          console.log(`Topic "${topic}" match score:`, topicScore);
           matchScore += topicScore;
           
           // Also check for partial matches within each topic
@@ -212,7 +194,6 @@ function matchesSearch(item, keywords) {
               if (word.length > 2) {  // Only check words longer than 2 characters
                 const wordScore = checkField(word, fieldWeights.topics * 0.7);
                 if (wordScore > 0) {
-                  console.log(`  Found match in word "${word}":`, wordScore);
                   matchScore += wordScore;
                 }
               }
@@ -248,6 +229,38 @@ function matchesSearch(item, keywords) {
     if (item.description) matchScore += checkField(item.description, fieldWeights.description);
   }
 
+  // For profiles
+  if (item.profile_id !== undefined) {
+    // Check name with higher weight
+    if (item.name) matchScore += checkField(item.name, fieldWeights.name);
+    
+    // Check department with medium weight
+    if (item.department) matchScore += checkField(item.department, fieldWeights.department);
+    
+    // Check year with medium weight
+    if (item.year) matchScore += checkField(item.year, fieldWeights.year);
+    
+    // Check skills with slightly higher weight
+    if (item.skills && Array.isArray(item.skills)) {
+      item.skills.forEach(skill => {
+        const skillName = skill.skill_name || skill.skill?.name || skill.name || '';
+        matchScore += checkField(skillName, fieldWeights.skills);
+      });
+    }
+    const profileText = [
+            item.name || '',
+            item.department || '',
+            item.year ? `year ${item.year}` : '',
+            item.skills ? item.skills.map(s => typeof s === 'string' ? s : s.name || '').join(' ') : ''
+        ].join(' ').toLowerCase();
+
+        matchesFound = keywords.filter(keyword => profileText.includes(keyword)).length;
+        return matchesFound >= Math.max(1, requiredMatches * 0.5) && matchScore > 0;
+    }
+    
+    // If we get here, it's not a profile, so we need to reset matchesFound
+    matchesFound = 0;
+
   // Count how many keywords were matched (at least partially)
   const fullText = [
     item.name || '',
@@ -265,6 +278,27 @@ function matchesSearch(item, keywords) {
 
   // Return true if all keywords are found and the match score is above threshold
   return matchesFound >= Math.max(1, requiredMatches * 0.5) && matchScore > 0;
+}
+
+// Check if a profile matches search keywords
+function matchesProfileSearch(profile, keywords) {
+  if (!profile) return false;
+
+  const searchFields = [
+    profile.first_name || '',
+    profile.last_name || '',
+    profile.email || '',
+    profile.usn || '',
+    profile.bio || '',
+    profile.department ? (typeof profile.department === 'object' ? profile.department.name : profile.department) : '',
+    profile.study_year || '',
+    (profile.skills || []).map(skill => skill.skill?.name || skill.skill_name || skill.name || '').join(' '),
+    (profile.user_skills || []).map(skill => skill.name).join(' ')
+  ].join(' ').toLowerCase();
+
+  return keywords.some(keyword => 
+    searchFields.includes(keyword)
+  );
 }
 
 // Render study groups
@@ -288,7 +322,7 @@ function renderGroups(groups) {
     const subjectMeta = card.querySelector('[data-field="subject"]');
     const courseCodeMeta = card.querySelector('[data-field="course_code"]');
     const groupSizeMeta = card.querySelector('[data-field="group_size"]');
-    const topicsMeta = card.querySelector('[data-field="topics"]');
+    const skillsMeta = card.querySelector('[data-field="skills"]');
 
     // Set title and link
     titleLink.textContent = group.name || 'Unnamed Group';
@@ -313,15 +347,6 @@ function renderGroups(groups) {
     } else {
       courseCodeMeta.hidden = true;
     }
-
-    // Set group size
-    console.log('Group members data:', {
-      groupId: group.group_id,
-      max_members: group.max_members,
-      max_size: group.max_size,
-      members: group.members,
-      membersLength: group.members ? group.members.length : 0
-    });
     
     const currentMembers = group.members ? group.members.length : 1; // At least 1 for the creator
     const maxMembers = group.max_members ?? group.max_size; // Use max_members or fall back to max_size
@@ -334,14 +359,26 @@ function renderGroups(groups) {
     }
     groupSizeMeta.hidden = false;
 
-    // Set topics
-    if (group.topics || group.topics_display) {
-      const topics = Array.isArray(group.topics) 
-        ? group.topics 
-        : (group.topics_display || (group.topics ? group.topics.split(',').map(t => t.trim()).filter(t => t) : []));
-      
-      if (topics && topics.length > 0) {
-        topicsMeta.textContent = `Topics: ${topics.slice(0, 3).join(', ')}${topics.length > 3 ? '...' : ''}`;
+    // Set skills (using topics meta item since that's what's in the template)
+    const topicsMeta = card.querySelector('[data-field="topics"]');
+    
+    // Check both skills and studygroupskill_set for backward compatibility
+    const skills = group.skills || group.studygroupskill_set || [];
+    
+    if (skills.length > 0) {
+      const skillsText = skills
+        .map(skill => {
+          // Handle both direct skill object and nested studygroupskill_set structure
+          if (skill.skill) {
+            return skill.skill.name || 'None';
+          }
+          return skill.name || 'None';
+        })
+        .filter(skillName => skillName) // Remove empty strings
+        .join(', ');
+        
+      if (skillsText) {
+        topicsMeta.textContent = `Skills: ${skillsText}`;
         topicsMeta.hidden = false;
       } else {
         topicsMeta.hidden = true;
@@ -362,8 +399,6 @@ function renderProjects(projects) {
     projectsEmptyState.hidden = false;
     return;
   }
-  
-  console.log('Rendering projects:', projects);
 
   projectsEmptyState.hidden = true;
 
@@ -391,15 +426,6 @@ function renderProjects(projects) {
     } else {
       statusMeta.hidden = true;
     }
-
-    // Set team size for projects
-    console.log('Project team data:', {
-      projectId: project.project_id,
-      max_team_size: project.max_team_size,
-      max_members: project.max_members,
-      members: project.members,
-      membersLength: project.members ? project.members.length : 0
-    });
     
     const currentMembers = project.members ? project.members.length : 1; // At least 1 for the creator
     const maxTeamSize = project.max_team_size ?? project.max_members; // First check max_team_size, then fall back to max_members
@@ -429,6 +455,64 @@ function renderProjects(projects) {
     }
 
     projectsResults.appendChild(card);
+  });
+}
+
+// Render profiles
+function renderProfiles(profiles) {
+  const container = document.getElementById('profilesResults');
+  const emptyState = document.getElementById('profilesEmptyState');
+  const template = document.getElementById('profileCardTemplate');
+  
+  if (!container) return;
+  
+  container.innerHTML = '';
+  
+  if (!profiles || profiles.length === 0) {
+    if (emptyState) {
+      emptyState.hidden = false;
+    }
+    return;
+  }
+  
+  if (emptyState) emptyState.hidden = true;
+  
+  profiles.forEach(profile => {
+    const card = template.content.cloneNode(true);
+    const profileLink = card.querySelector('.result-card-link');
+    const profileUsn = card.querySelector('.profile-usn');
+    const profileDepartment = card.querySelector('.profile-department');
+    const skillsMeta = card.querySelector('#profileSkillsMeta');
+
+    // Set profile data
+    const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(' ').trim() || 'User';
+    const department = profile.department ? 
+        (typeof profile.department === 'object' ? profile.department.name : profile.department) : '';
+    const studyYear = profile.study_year ? `Year ${profile.study_year}` : '';
+    
+    // Set basic info
+    if (profileLink) {
+        profileLink.textContent = fullName;
+        profileLink.href = `userprofile.html?usn=${encodeURIComponent(profile.usn || '')}`;
+        profileLink.setAttribute('data-profile-id', profile.profile_id || '');
+    }
+    if (profileUsn) profileUsn.textContent = profile.usn || '';
+    if (profileDepartment) {
+        profileDepartment.textContent = [department, studyYear].filter(Boolean).join(' • ');
+    }
+    
+    // Set skills as meta-items
+    if (skillsMeta && profile.skills && profile.skills.length > 0) {
+        profile.skills.forEach(skill => {
+            const skillName = skill.skill?.name || skill.skill_name || 'Unknown Skill';
+            const skillElement = document.createElement('span');
+            skillElement.className = 'meta-item';
+            skillElement.textContent = skillName;
+            skillsMeta.appendChild(skillElement);
+        });
+    }
+    
+    container.appendChild(card);
   });
 }
 

@@ -61,6 +61,14 @@
                     </div>
                     <p class="empty-state" id="projectsEmptyState" hidden>No projects match your search.</p>
                 </section>
+
+                <section class="results-section" id="profilesSection">
+                    <h2 class="results-title">PROFILES</h2>
+                    <div class="results-list" id="profilesResults">
+                        <!-- Profile results will be populated here -->
+                    </div>
+                    <p class="empty-state" id="profilesEmptyState" hidden>No profiles match your search.</p>
+                </section>
             </div>
         </div>
     </main>
@@ -93,6 +101,27 @@
                     <span class="meta-item" data-field="status"></span>
                     <span class="meta-item" data-field="team_size"></span>
                     <span class="meta-item" data-field="skills"></span>
+                </div>
+            </div>
+        </article>
+    </template>
+
+    <template id="profileCardTemplate">
+        <article class="result-card profile-card">
+            <div class="result-card-body">
+                <div class="profile-header">
+                    <div class="profile-info">
+                        <h3 class="result-card-title">
+                            <a href="#" class="result-card-link" data-profile-id=""></a>
+                        </h3>
+                        <p class="profile-email"></p>
+                        <p class="profile-usn"></p>
+                        <p class="profile-department"></p>
+                    </div>
+                </div>
+                <div class="result-card-meta" id="profileSkillsMeta">
+                    <h4 style="font-weight: 500;">Skills</h4>
+                    <!-- Skills will be populated here as meta-items -->
                 </div>
             </div>
         </article>

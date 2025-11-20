@@ -64,10 +64,10 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'usn', 'email', 'first_name', 'last_name', 'phone_number',
-            'department', 'department_id', 'study_year', 'is_active', 'date_joined',
+            'department', 'department_id', 'study_year', 'is_active', 'is_staff', 'date_joined',
             'linkedin_url', 'github_url', 'bio', 'availability', 'skills'  # Include skills in response
         )
-        read_only_fields = ('is_active', 'date_joined')
+        read_only_fields = ('is_active', 'is_staff', 'date_joined')
         extra_kwargs = {
             'usn': {'required': True},
             'email': {'required': True},
