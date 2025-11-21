@@ -41,6 +41,7 @@ urlpatterns = [
     path('messages/<int:request_id>/approve/', views.approve_request, name='approve_request'),
     path('messages/<int:request_id>/reject/', views.reject_request, name='reject_request'),
     path('messages/<int:message_id>/read/', views.mark_message_read, name='mark_message_read'),
+    path('leave-requests/', views.get_leave_requests, name='get_leave_requests'),
     # Invitations
     path('invitations/', invite_views.get_my_invitations, name='get_my_invitations'),
     path('invitations/sent/', invite_views.get_sent_invitations, name='get_sent_invitations'),

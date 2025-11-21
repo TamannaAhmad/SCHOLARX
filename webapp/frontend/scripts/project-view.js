@@ -476,6 +476,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             if (saveBtn) setButtonLoading(saveBtn, true, 'Removing...');
+            
+            // Send notification to the member being removed
+            try {
+                await fetch('/api/notifications/send/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken(),
+                    },
+                    body: JSON.stringify({
+                        recipient_usn: usn,
+                        message: `You have been removed from the project "${currentProject.title}" by the project owner.`,
+                        notification_type: 'project_removal',
+                        related_id: projectId
+                    })
+                });
+            } catch (notifError) {
+                console.error('Error sending notification:', notifError);
+                // Don't fail the entire operation if notification fails
+            }
+            
             await projectsAPI.removeMember(projectId, usn);
             
             // Update the UI by removing the member from the list

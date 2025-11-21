@@ -8,11 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const outgoingTab = document.getElementById('outgoing-tab');
     
     let currentTab = 'incoming';
-    let currentType = 'requests'; // 'requests' or 'invitations'
     let incomingRequests = [];
     let outgoingRequests = [];
-    let incomingInvitations = [];
-    let sentInvitations = [];
 
     function showErrorMsg(message) {
         if (errorContainer) {
@@ -52,7 +49,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderIncomingRequests(requests) {
+        console.log('=== renderIncomingRequests START ===');
+        console.log('Requests to render:', requests);
+        console.log('Number of requests:', requests ? requests.length : 0);
+        
         if (!requests || requests.length === 0) {
+            console.log('No requests to render');
             messagesContainer.innerHTML = `
                 <div class="no-messages">
                     <h3>No Incoming Messages</h3>
@@ -62,7 +64,18 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        messagesContainer.innerHTML = requests.map(request => {
+        messagesContainer.innerHTML = requests.map((request, idx) => {
+            // Check if this is a leave notification based on request_type
+            const isLeaveNotification = request.request_type && (request.request_type === 'project_leave' || request.request_type === 'study_group_leave');
+            console.log(`Rendering request ${idx}:`, {
+                request_type: request.request_type,
+                isLeaveNotification: isLeaveNotification,
+                has_user_name: !!request.user_name,
+                has_requester_name: !!request.requester_name,
+                project: request.project?.title,
+                group: request.group?.name
+            });
+            
             const status = request.status || 'pending';
             const statusClass = status === 'approved' ? 'status-approved' : 
                               status === 'rejected' ? 'status-rejected' : 'status-pending';
@@ -70,10 +83,24 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const itemClass = request.is_read ? 'message-item' : 'message-item unread';
             
-            // For leave notifications, extract the leaver's info from the message
-            let displayName = request.requester_name || request.requester?.full_name || 'Unknown User';
-            let displayUsn = request.requester_usn || request.requester?.usn || '';
-            let isLeaveNotification = request.request_type === 'member_left';
+            // Extract user info based on request type
+            let displayName, displayUsn;
+            const isInvitation = request.invite_id !== undefined;
+            
+            if (isLeaveNotification) {
+                // For leave requests, use user_name and user_usn
+                displayName = request.user_name || 'A user';
+                displayUsn = request.user_usn || '';
+            } else if (isInvitation) {
+                // For invitations, use inviter_name and inviter_usn
+                displayName = request.inviter_name || 'A user';
+                displayUsn = request.inviter_usn || '';
+            } else {
+                // For join requests, use requester_name and requester_usn
+                displayName = request.requester_name || request.requester?.full_name || 'Unknown User';
+                displayUsn = request.requester_usn || request.requester?.usn || '';
+            }
+            
             const projectName = request.project?.title || request.group?.name || 'Unknown';
             const projectType = request.project ? 'project' : 'study-group';
             const projectId = (
@@ -94,22 +121,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? (projectId ? `project-view.html?id=${projectId}` : null)
                 : (groupId ? `study-group-view.html?id=${groupId}` : null);
             
-            const requestId = request.request_id || request.id;
+            // Get the appropriate ID based on request type
+            let requestId;
+            let actionFunction = 'approveRequest';
+            
+            if (isInvitation) {
+                requestId = request.invite_id;
+                actionFunction = 'respondToInvitation';
+            } else if (isLeaveNotification) {
+                requestId = null; // Leave requests don't have approve/reject actions
+            } else {
+                requestId = request.request_id || request.id;
+                actionFunction = 'approveRequest';
+            }
+            
             const viewProfileBtn = displayUsn ? `
                 <a href="/userprofile.html?usn=${encodeURIComponent(displayUsn)}" class="btn-view-profile" target="_blank">
                     View Profile
                 </a>
             ` : '';
             
-            const actionsHtml = status === 'pending' ? `
+            // Only show approve/reject buttons for join requests and invitations
+            const showActionButtons = (status === 'pending') && (isInvitation || (!isLeaveNotification && !isInvitation));
+            
+            const actionsHtml = showActionButtons && requestId ? `
                 <div class="message-actions">
                     ${viewProfileBtn}
-                    <button class="btn-approve" onclick="approveRequest(${requestId})">
-                        Approve
-                    </button>
-                    <button class="btn-reject" onclick="rejectRequest(${requestId})">
-                        Reject
-                    </button>
+                    ${isInvitation ? `
+                        <button class="btn-approve" onclick="respondToInvitation(${requestId}, true)">
+                            Accept
+                        </button>
+                        <button class="btn-reject" onclick="respondToInvitation(${requestId}, false)">
+                            Decline
+                        </button>
+                    ` : `
+                        <button class="btn-approve" onclick="approveRequest(${requestId})">
+                            Approve
+                        </button>
+                        <button class="btn-reject" onclick="rejectRequest(${requestId})">
+                            Reject
+                        </button>
+                    `}
                 </div>
             ` : viewProfileBtn ? `
                 <div class="message-actions">
@@ -119,21 +171,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Construct the appropriate message based on the request type
             let message = '';
-            
-            // Check if this is a leave notification
-            if (request.request_type && (request.request_type === 'project_leave' || request.request_type === 'study_group_leave')) {
-                isLeaveNotification = true;
-                // Use the structured data from the API response
-                displayName = request.user_name || 'A user';
-                displayUsn = request.user_usn || request.user || '';
+            if (isLeaveNotification) {
                 message = `${escapeHtml(displayName)}${displayUsn ? ` (${displayUsn})` : ''} has left`;
+            } else if (isInvitation) {
+                message = `${escapeHtml(displayName)}${displayUsn ? ` (${displayUsn})` : ''} invited you to`;
             } else {
-                // Regular join request
                 message = `${escapeHtml(displayName)}${displayUsn ? ` (${displayUsn})` : 'A user'} wants to join`;
             }
 
             return `
-                <div class="${itemClass}" id="message-${request.id}">
+                <div class="${itemClass}" id="message-${request.request_id || request.id}">
                     <div class="message-header">
                         <div class="message-info">
                             <div class="message-title">
@@ -226,23 +273,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadIncomingRequests() {
         try {
-            hideError();
-            messagesContainer.innerHTML = '<div class="loading-message">Loading requests...</div>';
+            console.log('=== loadIncomingRequests START ===');
+            const allRequests = await messagesAPI.getIncomingRequests();
+            console.log('Raw API response from /messages/incoming/:', allRequests);
+            console.log('Response type:', typeof allRequests);
+            console.log('Is array?', Array.isArray(allRequests));
             
-            const data = await messagesAPI.getIncomingRequests();
-            incomingRequests = Array.isArray(data) ? data : (data.results || data.requests || []);
+            // The API returns a combined list of join and leave requests
+            // Separate them based on request_type
+            const requestsList = Array.isArray(allRequests) ? allRequests : allRequests.data || [];
+            console.log('Extracted requests list:', requestsList);
+            console.log('Number of requests:', requestsList.length);
             
+            incomingRequests = requestsList.map((r, index) => {
+                const isLeaveRequest = r.request_type && (r.request_type === 'project_leave' || r.request_type === 'study_group_leave');
+                console.log(`Request ${index}:`, {
+                    request_id: r.request_id,
+                    request_type: r.request_type,
+                    isLeaveRequest: isLeaveRequest,
+                    user_name: r.user_name,
+                    user_usn: r.user_usn,
+                    requester_name: r.requester_name,
+                    requester_usn: r.requester_usn
+                });
+                return {
+                    ...r,
+                    is_leave_request: isLeaveRequest,
+                    is_join_request: !isLeaveRequest
+                };
+            });
+            
+            console.log('Processed incoming requests:', incomingRequests);
+            console.log('=== loadIncomingRequests END ===');
             renderIncomingRequests(incomingRequests);
+            hideError();
         } catch (error) {
-            console.error('Error loading incoming requests:', error);
-            const errorMsg = handleAPIError(error, 'Failed to load join requests. Please try again.');
-            showErrorMsg(errorMsg);
-            messagesContainer.innerHTML = `
-                <div class="no-messages">
-                    <h3>Error Loading Requests</h3>
-                    <p>${errorMsg}</p>
-                </div>
-            `;
+            console.error('Error in loadIncomingRequests:', error);
+            showErrorMsg(error.message || 'Failed to load incoming requests');
         }
     }
 
@@ -343,6 +410,45 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    window.respondToInvitation = async function(inviteId, accepted) {
+        if (!accepted && !confirm('Are you sure you want to decline this invitation?')) {
+            return;
+        }
+        
+        try {
+            hideError();
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = accepted ? 'Accepting...' : 'Declining...';
+            
+            await messagesAPI.respondToInvitation(inviteId, accepted);
+            
+            // Show success notification
+            if (errorContainer) {
+                errorContainer.textContent = accepted ? 'Invitation accepted!' : 'Invitation declined.';
+                errorContainer.style.display = 'block';
+                errorContainer.style.backgroundColor = accepted ? '#d1fae5' : '#fee2e2';
+                errorContainer.style.border = accepted ? '1px solid #10b981' : '1px solid #ef4444';
+                errorContainer.style.borderRadius = '0.5rem';
+                errorContainer.style.padding = '0.75rem 1rem';
+                errorContainer.style.color = accepted ? '#065f46' : '#991b1b';
+                setTimeout(() => hideError(), 3000);
+            }
+            
+            // Reload requests
+            if (currentTab === 'incoming') {
+                await loadIncomingRequests();
+            }
+        } catch (error) {
+            console.error('Error responding to invitation:', error);
+            const errorMsg = handleAPIError(error, `Failed to ${accepted ? 'accept' : 'decline'} invitation. Please try again.`);
+            showErrorMsg(errorMsg);
+            const button = event.target;
+            button.disabled = false;
+            button.textContent = accepted ? 'Accept' : 'Decline';
+        }
+    };
+
     // Update tab styles
     function updateTabStyles(activeTab) {
         // Reset both tabs first
@@ -369,271 +475,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // Tab switching
     incomingTab.addEventListener('click', () => {
         if (currentTab === 'incoming') return; // Skip if already active
-        currentTab = 'incoming';    // Set initial tab state
-        incomingTab.classList.remove('active');
-        outgoingTab.classList.remove('active');
+        currentTab = 'incoming';
         updateTabStyles('incoming');
-        if (currentType === 'requests') {
-            loadIncomingRequests();
-        } else {
-            loadIncomingInvitations();
-        }
+        loadIncomingRequests();
     });
 
     outgoingTab.addEventListener('click', () => {
         if (currentTab === 'outgoing') return; // Skip if already active
         currentTab = 'outgoing';
         updateTabStyles('outgoing');
-        if (currentType === 'requests') {
-            loadOutgoingRequests();
-        } else {
-            loadSentInvitations();
-        }
+        loadOutgoingRequests();
     });
 
-    // Toggle between requests and invitations
-    function toggleMessageType(type) {
-        currentType = type;
-        
-        // Update active state of type toggle buttons
-        const requestsBtn = document.getElementById('toggle-requests');
-        const invitationsBtn = document.getElementById('toggle-invitations');
-        
-        if (type === 'requests') {
-            requestsBtn.classList.add('active');
-            requestsBtn.style.background = '#2563EB';
-            requestsBtn.style.color = 'white';
-            invitationsBtn.classList.remove('active');
-            invitationsBtn.style.background = '#e5e7eb';
-            invitationsBtn.style.color = '#4b5563';
-        } else {
-            requestsBtn.classList.remove('active');
-            requestsBtn.style.background = '#e5e7eb';
-            requestsBtn.style.color = '#4b5563';
-            invitationsBtn.classList.add('active');
-            invitationsBtn.style.background = '#2563EB';
-            invitationsBtn.style.color = 'white';
-        }
-        
-        if (currentTab === 'incoming') {
-            if (type === 'requests') {
-                loadIncomingRequests();
-            } else {
-                loadIncomingInvitations();
-            }
-        } else {
-            if (type === 'requests') {
-                loadOutgoingRequests();
-            } else {
-                loadSentInvitations();
-            }
-        }
-    }
-
-    // Load incoming invitations
-    async function loadIncomingInvitations() {
-        try {
-            hideError();
-            messagesContainer.innerHTML = '<div class="loading-message">Loading invitations...</div>';
-            
-            const data = await messagesAPI.getIncomingInvitations();
-            incomingInvitations = Array.isArray(data) ? data : (data.results || data.invitations || []);
-            
-            if (incomingInvitations.length === 0) {
-                messagesContainer.innerHTML = `
-                    <div class="no-messages">
-                        <h3>No Invitations</h3>
-                        <p>You don't have any pending invitations.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            let html = `
-                <div class="message-list">
-                    ${incomingInvitations.map(invite => {
-                        const isProject = invite.request_type === 'project';
-                        const entity = isProject ? invite.project : invite.group;
-                        const entityName = entity?.title || entity?.name || 'Unknown';
-                        const entityType = isProject ? 'Project' : 'Study Group';
-                        const entityId = isProject 
-                            ? (entity?.project_id || '') 
-                            : (entity?.group_id || '');
-                        const entityLink = isProject 
-                            ? `project-view.html?id=${entityId}` 
-                            : `group-view.html?id=${entityId}`;
-                        
-                        const status = invite.status || 'pending';
-                        const statusClass = status === 'accepted' ? 'status-approved' : 
-                                          status === 'declined' ? 'status-rejected' : 'status-pending';
-                        const statusText = status.charAt(0).toUpperCase() + status.slice(1);
-                        
-                        const itemClass = invite.is_read ? 'message-item' : 'message-item unread';
-                        const viewProfileBtn = invite.inviter_usn ? `
-                            <a href="/userprofile.html?usn=${encodeURIComponent(invite.inviter_usn)}" class="btn-view-profile" target="_blank">
-                                View Profile
-                            </a>
-                        ` : '';
-                        
-                        const actionsHtml = status === 'pending' ? `
-                            <div class="message-actions">
-                                ${viewProfileBtn}
-                                <button class="btn-approve" onclick="acceptInvitation('${invite.invite_id || invite.id}')">
-                                    Accept
-                                </button>
-                                <button class="btn-reject" onclick="rejectInvitation('${invite.invite_id || invite.id}')">
-                                    Decline
-                                </button>
-                            </div>
-                        ` : viewProfileBtn ? `
-                            <div class="message-actions">
-                                ${viewProfileBtn}
-                            </div>
-                        ` : '';
-
-                        return `
-                        <div class="${itemClass}" id="invite-${invite.invite_id || invite.id}">
-                            <div class="message-header">
-                                <div class="message-info">
-                                    <div class="message-title">
-                                        ${escapeHtml(invite.inviter_name || 'Unknown User')}${invite.inviter_usn ? ` (${invite.inviter_usn})` : ''} invited you to join 
-                                        <a href="${entityLink}" style="color: #2563EB; text-decoration: none;">${escapeHtml(entityName)}</a>
-                                    </div>
-                                    <div class="message-meta">
-                                        ${formatDate(invite.updated_at)} • ${entityType}
-                                    </div>
-                                </div>
-                                <span class="message-status ${statusClass}">${statusText}</span>
-                            </div>
-                            ${invite.message ? `
-                                <div class="message-body">
-                                    <div class="message-text">${escapeHtml(invite.message)}</div>
-                                </div>
-                            ` : ''}
-                            <div class="message-actions">
-                                ${viewProfileBtn}
-                                <button class="btn-approve" onclick="acceptInvitation('${invite.invite_id || invite.id}')">
-                                    Accept
-                                </button>
-                                <button class="btn-reject" onclick="rejectInvitation('${invite.invite_id || invite.id}')">
-                                    Decline
-                                </button>
-                            </div>
-                        </div>`;
-                    }).join('')}
-                </div>
-            `;
-            messagesContainer.innerHTML = html;
-        } catch (error) {
-            console.error('Error loading invitations:', error);
-            const errorMsg = handleAPIError(error, 'Failed to load invitations. Please try again.');
-            showErrorMsg(errorMsg);
-            messagesContainer.innerHTML = `
-                <div class="no-messages">
-                    <h3>Error Loading Invitations</h3>
-                    <p>${errorMsg}</p>
-                </div>
-            `;
-        }
-    }
-
-    // Load sent invitations
-    async function loadSentInvitations() {
-        try {
-            hideError();
-            messagesContainer.innerHTML = '<div class="loading-message">Loading sent invitations...</div>';
-            
-            const data = await messagesAPI.getSentInvitations();
-            sentInvitations = Array.isArray(data) ? data : (data.results || data.invitations || []);
-            
-            if (sentInvitations.length === 0) {
-                messagesContainer.innerHTML = `
-                    <div class="no-messages">
-                        <h3>No Sent Invitations</h3>
-                        <p>You haven't sent any invitations yet.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            let html = `
-                <div class="message-list">
-                    ${sentInvitations.map(invite => {
-                        const isProject = invite.request_type === 'project';
-                        const entity = isProject ? invite.project : invite.group;
-                        const entityName = entity?.title || entity?.name || 'Unknown';
-                        const entityType = isProject ? 'Project' : 'Study Group';
-                        const entityId = isProject 
-                            ? (entity?.project_id || '')
-                            : (entity?.group_id || '');
-                        const entityLink = isProject 
-                            ? `project-view.html?id=${entityId}`
-                            : `group-view.html?id=${entityId}`;
-                            
-                        const status = invite.status || 'pending';
-                        const statusClass = status === 'accepted' ? 'status-approved' : 
-                                          status === 'declined' ? 'status-rejected' : 'status-pending';
-                        const statusText = status.charAt(0).toUpperCase() + status.slice(1);
-                        
-                        const itemClass = 'message-item';
-                        const viewProfileBtn = invite.invitee_usn ? `
-                            <a href="/userprofile.html?usn=${encodeURIComponent(invite.invitee_usn)}" class="btn-view-profile" target="_blank">
-                                View Profile
-                            </a>
-                        ` : '';
-
-                        // Determine the message based on the status
-                        let message = '';
-                        if (invite.is_leave_notification) {
-                            message = `${escapeHtml(invite.leaver_name || 'A member')}${invite.leaver_usn ? ` (${invite.leaver_usn})` : ''} left the ${entityType.toLowerCase()}`;
-                        } else if (status === 'declined') {
-                            message = `${escapeHtml(invite.invitee_name || 'The user')}${invite.invitee_usn ? ` (${invite.invitee_usn})` : ''} declined your invitation to join`;
-                        } else if (status === 'accepted') {
-                            message = `${escapeHtml(invite.invitee_name || 'The user')}${invite.invitee_usn ? ` (${invite.invitee_usn})` : ''} accepted your invitation to join`;
-                        } else {
-                            message = `You invited ${escapeHtml(invite.invitee_name || 'a user')}${invite.invitee_usn ? ` (${invite.invitee_usn})` : ''} to join`;
-                        }
-
-                        return `
-                        <div class="${itemClass}" id="sent-invite-${invite.invite_id || invite.id}">
-                            <div class="message-header">
-                                <div class="message-info">
-                                    <div class="message-title">
-                                        ${message} ${!invite.is_leave_notification ? `<a href="${entityLink}" style="color: #2563EB; text-decoration: none;">${escapeHtml(entityName)}</a>` : ''}
-                                    </div>
-                                    <div class="message-meta">
-                                        ${formatDate(invite.created_at)} • ${entityType}
-                                    </div>
-                                </div>
-                                <span class="message-status ${statusClass}">${statusText}</span>
-                            </div>
-                            ${invite.message ? `
-                                <div class="message-body">
-                                    <div class="message-text">${escapeHtml(invite.message)}</div>
-                                </div>
-                            ` : ''}
-                            ${viewProfileBtn ? `
-                                <div class="message-actions">
-                                    ${viewProfileBtn}
-                                </div>
-                            ` : ''}
-                        </div>`;
-                    }).join('')}
-                </div>
-            `;
-            messagesContainer.innerHTML = html;
-        } catch (error) {
-            console.error('Error loading sent invitations:', error);
-            const errorMsg = handleAPIError(error, 'Failed to load sent invitations. Please try again.');
-            showErrorMsg(errorMsg);
-            messagesContainer.innerHTML = `
-                <div class="no-messages">
-                    <h3>Error Loading Sent Invitations</h3>
-                    <p>${errorMsg}</p>
-                </div>
-            `;
-        }
-    }
 
     // Show success message in top right corner
     function showSuccessMessage(message) {
@@ -687,60 +540,6 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     document.head.appendChild(style);
 
-    // Global functions for invitation actions
-    window.acceptInvitation = async function(inviteId) {
-        if (!inviteId) return;
-        
-        try {
-            const response = await messagesAPI.respondToInvitation(inviteId, true);
-            // Show success message
-            const message = response.message || 'Invitation accepted successfully!';
-            showSuccessMessage(message);
-            
-            // Reload the list to show updated status
-            loadIncomingInvitations();
-        } catch (error) {
-            console.error('Error accepting invitation:', error);
-            alert(handleAPIError(error, 'Failed to accept invitation. Please try again.'));
-        }
-    };
-
-    window.rejectInvitation = async function(inviteId) {
-        if (!confirm('Are you sure you want to decline this invitation?')) {
-            return;
-        }
-        
-        try {
-            hideError();
-            const button = event.target;
-            button.disabled = true;
-            button.textContent = 'Declining...';
-            
-            await messagesAPI.respondToInvitation(inviteId, false);
-            
-            // Show success notification
-            if (errorContainer) {
-                errorContainer.textContent = 'Invitation declined.';
-                errorContainer.style.display = 'block';
-                errorContainer.style.backgroundColor = '#fee2e2';
-                errorContainer.style.border = '1px solid #ef4444';
-                errorContainer.style.borderRadius = '0.5rem';
-                errorContainer.style.padding = '0.75rem 1rem';
-                errorContainer.style.color = '#991b1b';
-                setTimeout(() => hideError(), 3000);
-            }
-            
-            // Reload invitations
-            loadIncomingInvitations();
-        } catch (error) {
-            console.error('Error declining invitation:', error);
-            const errorMsg = handleAPIError(error, 'Failed to decline invitation. Please try again.');
-            showErrorMsg(errorMsg);
-            const button = event.target;
-            button.disabled = false;
-            button.textContent = 'Decline';
-        }
-    };
 
     // Show leave confirmation modal
     window.showLeaveConfirmation = function(groupId, isProject = false) {
@@ -931,30 +730,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load initial tab
     loadIncomingRequests();
-    
-    // Add event listeners for request/invitation toggles if they exist
-    const requestToggle = document.getElementById('toggle-requests');
-    const invitationToggle = document.getElementById('toggle-invitations');
-    
-    if (requestToggle && invitationToggle) {
-        // Set initial active state
-        if (currentType === 'requests') {
-            requestToggle.classList.add('active');
-            invitationToggle.classList.remove('active');
-        } else {
-            requestToggle.classList.remove('active');
-            invitationToggle.classList.add('active');
-        }
-        
-        requestToggle.addEventListener('click', (e) => {
-            e.preventDefault();
-            toggleMessageType('requests');
-        });
-        
-        invitationToggle.addEventListener('click', (e) => {
-            e.preventDefault();
-            toggleMessageType('invitations');
-        });
-    }
 });
 

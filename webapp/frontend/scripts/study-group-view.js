@@ -3,6 +3,48 @@ import { authAPI } from '../src/api/auth.js';
 import { showError, showSuccess, handleAPIError, setButtonLoading } from '../src/utils/errorHandler.js';
 import { createMessageModal } from '../src/utils/modal.js';
 
+// Function to get CSRF token from cookies
+function getCSRFToken() {
+    const name = 'csrftoken=';
+    const decodedCookie = decodeURIComponent(document.cookie);
+    const cookieArray = decodedCookie.split(';');
+    
+    for (let i = 0; i < cookieArray.length; i++) {
+        let cookie = cookieArray[i];
+        while (cookie.charAt(0) === ' ') {
+            cookie = cookie.substring(1);
+        }
+        if (cookie.indexOf(name) === 0) {
+            return cookie.substring(name.length, cookie.length);
+        }
+    }
+    return '';
+}
+
+// Function to ensure we have a CSRF token
+async function ensureCSRFToken() {
+    let token = getCSRFToken();
+    if (!token) {
+        try {
+            const response = await fetch('/api/auth/csrf/', {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                token = data.csrfToken || data.csrf;
+            }
+        } catch (error) {
+            console.error('Error getting CSRF token:', error);
+        }
+    }
+    return token;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     const groupId = params.get('id');
@@ -493,17 +535,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function removeMember(usn, memberName) {
-        if (!usn || !confirm(`Are you sure you want to remove ${memberName} from this study group?`)) {
+        if (!usn || !confirm(`Are you sure you want to remove ${memberName} from this group?`)) {
             return;
         }
 
         try {
             setButtonLoading(saveBtn, true, 'Removing...');
+            // Note: Notification system is not yet implemented in the backend
+            // Member will be removed but won't receive a notification
+
             await groupsAPI.removeMember(groupId, usn);
             
             // Update the UI by removing the member from the list
             currentGroup.members = currentGroup.members.filter(m => {
-                const memberUsn = m.user_details?.usn || m.user;
+                const memberUsn = m.usn || m.user?.usn;
                 return memberUsn !== usn;
             });
             renderMembers(currentGroup.members);

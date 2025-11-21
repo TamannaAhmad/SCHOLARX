@@ -23,9 +23,10 @@ from collections import defaultdict, Counter
 from datetime import time, datetime, timedelta
 from typing import List, Dict, Any, Optional
 import logging
+import json
 
 # Import models
-from .models import Project, StudyGroup, TeamMember, StudyGroupMember, JoinRequest, LeaveRequest, ProjectSkill, StudyGroupSkill
+from .models import Project, StudyGroup, TeamMember, StudyGroupMember, JoinRequest, LeaveRequest, InviteRequest, ProjectSkill, StudyGroupSkill
 from accounts.models import UserAvailability, Skill, UserProfile, UserSkill
 
 # Import serializers
@@ -35,12 +36,15 @@ from .serializers import (
     StudyGroupSerializer, 
     JoinRequestSerializer, 
     UserProfileSerializer,
-    LeaveRequestSerializer
+    LeaveRequestSerializer,
+    InviteRequestSerializer
 )
 
 # Import other local modules
 from .meeting_slots import get_meeting_slots
 from .advanced_matching import get_advanced_matches, ADVANCED_MATCHING_AVAILABLE
+from django.db.models.functions import Coalesce
+from accounts.models import Skill, UserProfile
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -578,33 +582,81 @@ def get_incoming_requests(request):
     """
     from django.db.models import Q
     
+    logger.info(f"=== get_incoming_requests START for user {request.user.usn} ===")
+    
     # Get projects and groups owned by user
     user_projects = Project.objects.filter(created_by=request.user)
     user_groups = StudyGroup.objects.filter(created_by=request.user)
+    logger.info(f"User owns {user_projects.count()} projects and {user_groups.count()} groups")
+    
+    # Log project and group IDs
+    if user_projects.exists():
+        logger.info(f"Project IDs: {list(user_projects.values_list('project_id', flat=True))}")
+    if user_groups.exists():
+        logger.info(f"Group IDs: {list(user_groups.values_list('group_id', flat=True))}")
+    
+    # Also check all leave requests in database for this user
+    all_leave_requests = LeaveRequest.objects.all()
+    logger.info(f"Total leave requests in database: {all_leave_requests.count()}")
+    for lr in all_leave_requests:
+        logger.info(f"DB Leave request: user={lr.user.usn}, project_id={lr.project_id}, group_id={lr.group_id}")
     
     # Get join requests for user's projects and groups
     join_requests = JoinRequest.objects.filter(
         Q(project__in=user_projects) | Q(group__in=user_groups),
         status='pending'  # Only show pending join requests
     ).select_related('project', 'group', 'requester')
+    logger.info(f"Found {join_requests.count()} pending join requests")
     
-    # Get leave requests for user's projects and groups
+    # Get leave requests for the current user (where they left) OR where they are the owner
+    # Include both read and unread leave requests
     leave_requests = LeaveRequest.objects.filter(
-        Q(project__in=user_projects) | Q(group__in=user_groups),
-        is_read=False  # Only show unread leave requests
-    ).select_related('project', 'group', 'user')
+        Q(user=request.user) |  # Leave requests where the current user left
+        Q(project__in=user_projects) |  # Leave requests for projects they own
+        Q(group__in=user_groups)  # Leave requests for groups they own
+    ).select_related('project', 'group', 'user').distinct()
+    logger.info(f"Found {leave_requests.count()} leave requests for this user")
     
-    # Serialize both types of requests
+    # Get invitations for the current user (where they are the invitee)
+    invitations = InviteRequest.objects.filter(
+        invitee=request.user,
+        status='pending'
+    ).select_related('project', 'group', 'inviter')
+    logger.info(f"Found {invitations.count()} pending invitations for this user")
+    
+    # Log details of leave requests
+    for lr in leave_requests:
+        logger.info(f"Leave request: user={lr.user.usn}, project={lr.project_id}, group={lr.group_id}, is_read={lr.is_read}")
+    
+    # Log details of invitations
+    for inv in invitations:
+        logger.info(f"Invitation: invitee={inv.invitee.usn}, project={inv.project_id}, group={inv.group_id}")
+    
+    # Serialize all types of requests
     join_serializer = JoinRequestSerializer(join_requests, many=True, context={'request': request})
     leave_serializer = LeaveRequestSerializer(leave_requests, many=True, context={'request': request})
+    invite_serializer = InviteRequestSerializer(invitations, many=True, context={'request': request})
+    
+    logger.info(f"Serialized {len(join_serializer.data)} join requests, {len(leave_serializer.data)} leave requests, and {len(invite_serializer.data)} invitations")
+    
+    # Log serialized leave data
+    for i, leave_data in enumerate(leave_serializer.data):
+        logger.info(f"Serialized leave request {i}: request_type={leave_data.get('request_type')}, user_name={leave_data.get('user_name')}, user_usn={leave_data.get('user_usn')}")
+    
+    # Log serialized invitation data
+    for i, invite_data in enumerate(invite_serializer.data):
+        logger.info(f"Serialized invitation {i}: request_type={invite_data.get('request_type')}, inviter_name={invite_data.get('inviter_name')}, inviter_usn={invite_data.get('inviter_usn')}")
     
     # Combine and sort by creation date (newest first)
-    all_requests = join_serializer.data + leave_serializer.data
+    all_requests = join_serializer.data + leave_serializer.data + invite_serializer.data
     all_requests_sorted = sorted(
         all_requests, 
         key=lambda x: x.get('created_at', ''), 
         reverse=True
     )
+    
+    logger.info(f"Total combined requests: {len(all_requests_sorted)}")
+    logger.info(f"=== get_incoming_requests END ===")
     
     return Response(all_requests_sorted)
 
@@ -690,7 +742,7 @@ def add_team_member(request, project_id):
         )
 
     # Get the user to add - can be by USN or user ID
-    user_identifier = request.data.get('user_usn') or request.data.get('user_id')
+    user_identifier = request.data.get('user_usn') or request.data.get('usn')
     if not user_identifier:
         return Response(
             {'detail': 'User USN or ID is required.'}, 
@@ -1281,6 +1333,14 @@ def remove_group_member(request, group_id, usn):
         )
 
     try:
+        # Create a leave request to notify the user they were removed
+        LeaveRequest.objects.create(
+            user=user_to_remove,
+            group=group,
+            message=f"You have been removed from the study group '{group.name}' by the group owner.",
+            is_read=False
+        )
+        
         # Remove the group member
         group_member.delete()
 
@@ -1295,3 +1355,25 @@ def remove_group_member(request, group_id, usn):
             {'detail': 'An error occurred while removing the group member.'}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_leave_requests(request):
+    """
+    Get leave requests for projects/groups owned by the current user
+    """
+    from django.db.models import Q
+    
+    # Get projects and groups owned by user
+    user_projects = Project.objects.filter(created_by=request.user)
+    user_groups = StudyGroup.objects.filter(created_by=request.user)
+    
+    # Get leave requests for user's projects and groups
+    leave_requests = LeaveRequest.objects.filter(
+        Q(project__in=user_projects) | Q(group__in=user_groups),
+        is_read=False
+    ).select_related('project', 'group', 'user')
+    
+    serializer = LeaveRequestSerializer(leave_requests, many=True, context={'request': request})
+    return Response(serializer.data)

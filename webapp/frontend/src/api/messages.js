@@ -89,6 +89,10 @@ export const messagesAPI = {
     return fetchAPI('/invitations/sent/');
   },
 
+  getLeaveRequests(){
+    return fetchAPI('/leave-requests')
+  },
+
   // Respond to an invitation (accept/decline)
   respondToInvitation(inviteId, accepted) {
     return fetchAPI(`/invitations/${inviteId}/respond/`, {

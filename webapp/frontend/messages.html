@@ -47,14 +47,6 @@
                         Outgoing
                     </button>
                 </div>
-                <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-                    <button id="toggle-requests" class="type-toggle active" style="padding: 0.5rem 1rem; background: #2563EB; color: white; border: none; border-radius: 0.375rem; font-weight: 500; cursor: pointer;">
-                        Join Requests
-                    </button>
-                    <button id="toggle-invitations" class="type-toggle" style="padding: 0.5rem 1rem; background: #e5e7eb; color: #4b5563; border: none; border-radius: 0.375rem; font-weight: 500; cursor: pointer;">
-                        Invitations
-                    </button>
-                </div>
             </div>
 
             <div id="messages-container" style="min-height: 400px;">
@@ -67,15 +59,6 @@
 
     <script type="module" src="scripts/messages.js?v=20250101-1"></script>
     <style>
-        .type-toggle {
-            transition: all 0.2s ease;
-        }
-        
-        .type-toggle.active {
-            background: #2563EB !important;
-            color: white !important;
-        }
-        
         .message-item {
             background: white;
             border: 1px solid #e5e7eb;
