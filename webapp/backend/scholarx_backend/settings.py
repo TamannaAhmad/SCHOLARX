@@ -94,10 +94,11 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-s#w-t29xt*2*w1cp7&c%t1v3rv
 
 # Validate SECRET_KEY in production (when DEBUG is False AND SECRET_KEY is not explicitly set)
 # This allows development to work with default key, but production requires explicit configuration
-if not DEBUG and os.getenv('SECRET_KEY') is None:
-    raise ValueError('SECRET_KEY environment variable is required in production')
-if not DEBUG and os.getenv('SECRET_KEY') and (len(SECRET_KEY) < 50 or 'django-insecure' in SECRET_KEY):
-    raise ValueError('SECRET_KEY must be at least 50 characters and not use django-insecure prefix in production')
+if not DEBUG:
+    if 'django-insecure' in SECRET_KEY:
+        raise ValueError('SECRET_KEY must not use django-insecure prefix in production')
+    if len(SECRET_KEY) < 50:
+        raise ValueError('SECRET_KEY must be at least 50 characters in production')
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
