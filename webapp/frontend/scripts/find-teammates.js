@@ -2,11 +2,48 @@ import { authAPI } from '../src/api/auth.js';
 import { projectsAPI } from '../src/api/projects.js';
 import { groupsAPI } from '../src/api/groups.js';
 import errorHandler from '../src/utils/errorHandler.js';
-import { createMessageModal } from '../src/utils/modal.js';
+import { createMessageModal, createInviteModal } from '../src/utils/modal.js';
 const { showError, showSuccess, showInfo, handleAPIError } = errorHandler;
 
 // Global state for selected skills
 let selectedSkills = [];
+
+// Helper function to get current user data
+function getCurrentUser() {
+  try {
+    // Try to get user data from localStorage
+    const userString = localStorage.getItem('user');
+    if (!userString) {
+      console.warn('No user data found in localStorage');
+      return null;
+    }
+    
+    const userData = JSON.parse(userString);
+    console.log('User data from localStorage:', userData);
+    return userData;
+  } catch (e) {
+    console.error('Error getting current user:', e);
+    return null;
+  }
+}
+
+// Helper function to get current user ID
+function getCurrentUserId() {
+  const user = getCurrentUser();
+  if (!user) {
+    console.warn('No user data available');
+    return null;
+  }
+  
+  console.log('Available user fields:', Object.keys(user));
+  
+  // Try different possible ID fields - added 'usn' as a possible ID field
+  const userId = user.id || user.user_id || user.pk || user.usn || 
+                (user.user && (user.user.id || user.user.user_id || user.user.usn));
+  
+  console.log('Derived user ID:', userId);
+  return userId;
+}
 
 // Helper function to get CSRF token from cookies
 function getCookie(name) {
@@ -30,7 +67,6 @@ const emptyState = document.getElementById('emptyState');
 const searchInput = document.getElementById('searchInput');
 const profileCardTemplate = document.getElementById('profileCardTemplate');
 const pageTitle = document.getElementById('pageTitle');
-const addButton = document.getElementById('addButton');
 const availabilityToggle = document.getElementById('availabilityToggle');
 
 let allProfiles = [];
@@ -341,10 +377,16 @@ function renderProfiles(profiles) {
     const department = profile.department || '';
     const year = profile.year ? `Year ${profile.year}` : '';
     
-    // Determine button text based on ownership
-    const currentUserId = parseInt(localStorage.getItem('user_id'));
-    const isOwner = contextData && (contextData.owner_id === currentUserId || contextData.created_by === currentUserId);
-    const buttonText = isOwner ? 'Send Invite' : 'Send Request';
+    // Get current user ID
+    const currentUserId = getCurrentUserId();
+    console.log('Current user ID:', currentUserId);
+    const isOwner = contextData && (
+      String(contextData.owner_id) === String(currentUserId) || 
+      String(contextData.created_by) === String(currentUserId) ||
+      (contextData.owner && String(contextData.owner.id) === String(currentUserId)) ||
+      (contextData.owner && String(contextData.owner.user_id) === String(currentUserId))
+    );
+    const buttonText = 'Send Invite';
     const buttonIcon = '<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>';
     
     card.innerHTML = `
@@ -747,17 +789,18 @@ async function loadProfiles() {
       
       renderProfiles(allProfiles);
       
-      // Show add button if user is the project/group owner
-      const currentUserId = parseInt(localStorage.getItem('user_id'));
+      // Get current user ID
+      const currentUserId = getCurrentUserId();
+      console.log('Current user ID:', currentUserId);
       const isOwner = contextData && (
-        contextData.owner_id === currentUserId || 
-        contextData.created_by === currentUserId ||
-        (contextData.owner && (contextData.owner.id === currentUserId || contextData.owner.user_id === currentUserId))
+        String(contextData.owner_id) === String(currentUserId) || 
+        String(contextData.created_by) === String(currentUserId) ||
+        (contextData.owner && String(contextData.owner.id) === String(currentUserId)) ||
+        (contextData.owner && String(contextData.owner.user_id) === String(currentUserId))
       );
       
-      if (isOwner) {
-        addButton.hidden = false;
-      }
+      // We keep the isOwner check for other functionality
+      // but don't use it to show/hide a non-existent button
     } else {
       // Clear the loading state
       profilesContainer.innerHTML = '';
@@ -797,10 +840,9 @@ function initializePageContext() {
   contextType = urlParams.get('type'); // 'project' or 'study-group'
   contextId = urlParams.get('id'); // project_id or group_id
 
-  // Update page title, button text, and search placeholder based on context
+  // Update page title and search placeholder based on context
   if (contextType === 'project') {
     if (pageTitle) pageTitle.textContent = 'FIND PROJECT TEAMMATES';
-    if (addButton) addButton.textContent = 'Add to Team';
     if (searchInput) {
       searchInput.placeholder = 'Search for teammates...';
       searchInput.setAttribute('aria-label', 'Search for project teammates');
@@ -814,7 +856,6 @@ function initializePageContext() {
     }
   } else if (contextType === 'study-group') {
     if (pageTitle) pageTitle.textContent = 'FIND STUDY GROUP MEMBERS';
-    if (addButton) addButton.textContent = 'Add to Group';
     if (searchInput) {
       searchInput.placeholder = 'Search for members...';
       searchInput.setAttribute('aria-label', 'Search for study group members');
@@ -828,8 +869,7 @@ function initializePageContext() {
     }
   } else {
     // Default: generic teammates
-    pageTitle.textContent = 'FIND TEAMMATES';
-    addButton.textContent = 'Add to Team';
+    if (pageTitle) pageTitle.textContent = 'FIND TEAMMATES';
     if (searchInput) {
       searchInput.placeholder = 'Search';
       searchInput.setAttribute('aria-label', 'Search teammates');
@@ -874,9 +914,19 @@ document.addEventListener('click', async (event) => {
       return;
     }
     
-    // Check if current user is the owner
-    const currentUserId = parseInt(localStorage.getItem('user_id'));
-    const isOwner = contextData && (contextData.owner_id === currentUserId || contextData.created_by === currentUserId);
+    // Get current user ID
+    const currentUserId = getCurrentUserId();
+    console.log('Current user ID:', currentUserId);
+    
+    // Debug logging for current user ID
+    console.log('Current user ID:', currentUserId);
+    
+    const isOwner = contextData && (
+      String(contextData.owner_id) === String(currentUserId) || 
+      String(contextData.created_by) === String(currentUserId) ||
+      (contextData.owner && String(contextData.owner.id) === String(currentUserId)) ||
+      (contextData.owner && String(contextData.owner.user_id) === String(currentUserId))
+    );
     
     // Debug logging
     console.log('Ownership check:', {
@@ -893,7 +943,7 @@ document.addEventListener('click', async (event) => {
       // Owner is sending an invitation
       // Show modal for optional message input
       const actionText = contextType === 'project' ? 'Invite to Project' : 'Invite to Group';
-      createMessageModal(async (message) => {
+      createInviteModal(async (message) => {
         const originalText = button.innerHTML;
         button.disabled = true;
         button.innerHTML = `<span class="loading-spinner"></span> Sending ${actionText}...`;
@@ -949,101 +999,16 @@ document.addEventListener('click', async (event) => {
           }
         }
       }, {
-        title: `Invite ${userName}`,
-        label: 'Message (optional)',
-        placeholder: `Why would ${userName} be a great fit for your ${contextType === 'project' ? 'project' : 'group'}?`,
+        title: 'Invite to Join',
+        label: 'Message to User (optional)',
+        placeholder: `Why would you like to invite ${userName} to your ${contextType === 'project' ? 'project' : 'group'}?`,
         confirmText: 'Send Invitation'
       });
     } else {
-      // Non-owner is requesting to join
-      // Show modal for message input
-      createMessageModal(async (message) => {
-        const originalText = button.innerHTML;
-        button.disabled = true;
-        button.innerHTML = '<span class="loading-spinner"></span> Sending...';
-        
-        try {
-          let response;
-          
-          if (contextType === 'project') {
-            // Call the project API to send invitation
-            response = await projectsAPI.inviteToProject(contextId, userUsn, message);
-          } else {
-            // Call the study group API to send invitation
-            response = await groupsAPI.inviteToGroup(contextId, userUsn, message);
-          }
-          
-          // The API returns a 201 status with a message and invitation object on success
-          if (response.message && response.invitation) {
-            const successMessage = contextType === 'project'
-              ? `Invitation sent to ${userName} successfully!`
-              : `Invitation to join the group has been sent to ${userName}!`;
-              
-            // Show success message in the same style as messages.js
-            showSuccess(successMessage, {
-              position: 'top-right',
-              type: 'success',
-              duration: 5000
-            });
-            
-            // Update button state
-            button.innerHTML = '<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Invitation Sent';
-            button.disabled = true;
-          } else {
-            throw new Error(response.error || `Failed to send ${contextType === 'project' ? 'invitation' : 'group invite'}`);
-          }
-        } catch (error) {
-          console.error('Error sending request:', error);
-          
-          // Extract detailed error message
-          let errorMsg = 'Failed to send request. Please try again.';
-          
-          if (error.response) {
-            // The request was made and the server responded with a status code
-            // that falls out of the range of 2xx
-            const { status, data } = error.response;
-            console.error('Response error:', status, data);
-            
-            if (status === 400 && data.detail) {
-              // Handle 400 Bad Request with detail message
-              errorMsg = data.detail;
-            } else if (status === 403) {
-              errorMsg = data.detail || 'You do not have permission to perform this action.';
-            } else if (status === 404) {
-              errorMsg = data.detail || 'The requested resource was not found.';
-            } else if (data.detail) {
-              errorMsg = data.detail;
-            } else if (typeof data === 'string') {
-              errorMsg = data;
-            } else if (data.errors) {
-              // Handle validation errors
-              errorMsg = Object.entries(data.errors)
-                .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
-                .join('; ');
-            }
-          } else if (error.request) {
-            // The request was made but no response was received
-            console.error('No response received:', error.request);
-            errorMsg = 'No response from server. Please check your connection and try again.';
-          } else if (error.message) {
-            // Something happened in setting up the request
-            console.error('Request setup error:', error.message);
-            errorMsg = `Request error: ${error.message}`;
-          }
-          
-          // Show the error message to the user
-          showError(errorMsg, { 
-            duration: 5000, // Show for 5 seconds
-            dismissible: true // Allow user to dismiss
-          });
-          
-          // Restore button state
-          button.innerHTML = originalText;
-          button.disabled = false;
-        }
-      });
+      const errorMessage = 'You do not have permission to invite users to this ' + contextType + '.';
+      showError(errorMessage);  
+      return;
     }
-    return;
   }
 
   if (action === 'add') {

@@ -179,21 +179,21 @@ export function createModal(options = {}) {
 
 export function createMessageModal(onConfirm, options = {}) {
     const {
-        title = 'Request to Join',
-        label = 'Message to Owner (optional)',
-        placeholder = 'Why would you like to join? What skills or experience can you bring?',
-        confirmText = 'Send Request'
+        title = 'Send Message',
+        label = 'Message (optional)',
+        placeholder = 'Enter your message here...',
+        confirmText = 'Send'
     } = options;
     
     return createModal({
         title: title,
         content: `
             <div style="margin-bottom: 1rem;">
-                <label for="join-message" style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">
+                <label for="invite-message" style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">
                     ${label}
                 </label>
                 <textarea 
-                    id="join-message" 
+                    id="invite-message" 
                     placeholder="${placeholder}"
                     rows="4"
                     style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 0.375rem; font-family: inherit; font-size: 0.875rem; resize: vertical;"
@@ -203,7 +203,7 @@ export function createMessageModal(onConfirm, options = {}) {
         confirmText: confirmText,
         cancelText: 'Cancel',
         onConfirm: () => {
-            const messageEl = document.getElementById('join-message');
+            const messageEl = document.getElementById('invite-message');
             const message = messageEl ? messageEl.value.trim() : '';
             onConfirm(message);
         },

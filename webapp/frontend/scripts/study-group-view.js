@@ -605,26 +605,32 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             
             // Show modal for message input
-            createMessageModal(async (message) => {
-                try {
-                    hideError();
-                    requestJoinBtn.disabled = true;
-                    requestJoinBtn.textContent = 'Requesting...';
-                    
-                    await groupsAPI.joinGroup(groupId, message);
-                    
-                    // Show success and reload
-                    showError('Join request sent successfully!', { type: 'info', duration: 3000 });
-                    setTimeout(() => {
-                        loadGroup(); // Reload to update membership status
-                    }, 1000);
-                } catch (error) {
-                    console.error('Error joining group:', error);
-                    const errorMsg = handleAPIError(error, 'Failed to request joining the group. Please try again.');
-                    showErrorMsg(errorMsg);
-                    requestJoinBtn.disabled = false;
-                    requestJoinBtn.textContent = 'Request to Join Group';
-                }
+            createMessageModal(
+                async (message) => {
+                    try {
+                        hideError();
+                        requestJoinBtn.disabled = true;
+                        requestJoinBtn.textContent = 'Requesting...';
+                        
+                        await groupsAPI.joinGroup(groupId, message);
+                        
+                        // Show success and reload
+                        showError('Join request sent successfully!', { type: 'info', duration: 3000 });
+                        setTimeout(() => {
+                            loadGroup(); // Reload to update membership status
+                        }, 1000);
+                    } catch (error) {
+                        console.error('Error joining group:', error);
+                        const errorMsg = handleAPIError(error, 'Failed to request joining the group. Please try again.');
+                        showErrorMsg(errorMsg);
+                        requestJoinBtn.disabled = false;
+                        requestJoinBtn.textContent = 'Request to Join Group';
+                    }
+            }, 
+            {
+                title: 'Request to Join',
+                placeholder: 'Why would you like to join this group?',
+                label: 'Message to Group Owner (optional)'
             });
         });
     }

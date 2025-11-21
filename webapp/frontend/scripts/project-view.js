@@ -597,10 +597,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     requestJoinBtn.textContent = originalBtnText;
                     requestJoinBtn.disabled = originalBtnDisabled;
                 }
-            }, () => {
-                // On modal close (cancel), reset button state
-                requestJoinBtn.textContent = originalBtnText;
-                requestJoinBtn.disabled = originalBtnDisabled;
+            },
+            {
+                title: 'Request to Join',
+                placeholder: 'Why would you like to join this group?',
+                label: 'Message to Group Owner (optional)'
             });
         });
     }

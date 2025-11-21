@@ -242,9 +242,11 @@ def respond_to_invitation(request, invite_id):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # Check if user is already a member by looking at current group members
-            current_members = invite.group.members.all()
-            is_already_member = invite.invitee in current_members
+            # Check if user is already a member by querying StudyGroupMember
+            is_already_member = StudyGroupMember.objects.filter(
+                group=invite.group,
+                user=invite.invitee
+            ).exists()
             
             if not is_already_member:
                 # Add user to study group if not already a member
