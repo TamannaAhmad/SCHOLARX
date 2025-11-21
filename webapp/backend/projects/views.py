@@ -1014,7 +1014,7 @@ def find_teammates(request, project_id):
             match_percentage = round((us['match_count'] / total_required_skills) * 100, 1)
             
             # Get user's skills that match the project's required skills
-            matched_skills = (
+            matched_skills_qs = (
                 UserSkill.objects
                 .filter(
                     user_id=us['user_id'],
@@ -1023,6 +1023,23 @@ def find_teammates(request, project_id):
                 .select_related('skill')
                 .values('skill__name', 'proficiency_level')
             )
+            matched_skills_list = list(matched_skills_qs)
+            
+            # Calculate proficiency bonus based on matched skills
+            # Lower proficiency gets higher bonus (encourages helping beginners)
+            proficiency_bonus = 0.0
+            if matched_skills_list:
+                for skill in matched_skills_list:
+                    proficiency = skill.get('proficiency_level', 0)
+                    if proficiency is not None and 1 <= proficiency <= 5:
+                        # Bonus: 40% for proficiency 1, 32% for 2, 24% for 3, 16% for 4, 8% for 5
+                        proficiency_bonus += ((6 - proficiency) * 0.08)
+                # Cap the bonus at 40% (0.40 as decimal), then convert to percentage
+                proficiency_bonus = min(proficiency_bonus, 0.40) * 100
+                proficiency_bonus = round(proficiency_bonus, 1)
+            else:
+                # If no matched skills, ensure proficiency_bonus is 0
+                proficiency_bonus = 0.0
             
             # Get user's availability - use user.user to get the CustomUser instance
             availability = (
@@ -1039,12 +1056,13 @@ def find_teammates(request, project_id):
                 'year': user.user.study_year,
                 'match_percentage': match_percentage,
                 'avg_proficiency': us['avg_proficiency'],
+                'proficiency_bonus': proficiency_bonus,
                 'matched_skills': [
                     {
                         'name': skill['skill__name'],
                         'proficiency': skill['proficiency_level']
                     }
-                    for skill in matched_skills
+                    for skill in matched_skills_list
                 ],
                 'availability': list(availability)  # Convert queryset to list for JSON serialization
             })

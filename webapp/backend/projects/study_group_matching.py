@@ -156,6 +156,20 @@ def _calculate_scores(
     skill_lookup = {entry['name'].strip().lower(): entry for entry in skill_entries if entry.get('name')}
     matched_skills = []
 
+    # Deduplicate matched_items by skill name, keeping the highest similarity score
+    matched_items_dict = {}
+    for item in matched_items:
+        matched_name = item['matched_skill']
+        if matched_name not in matched_items_dict:
+            matched_items_dict[matched_name] = item
+        else:
+            # Keep the item with higher similarity
+            if item.get('similarity', 0.0) > matched_items_dict[matched_name].get('similarity', 0.0):
+                matched_items_dict[matched_name] = item
+    
+    matched_items = list(matched_items_dict.values())
+    matched_skills = []
+
     # Track proficiency bonus separately for the response
     proficiency_bonus = 0
     total_proficiency = 0

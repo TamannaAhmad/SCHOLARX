@@ -705,8 +705,8 @@ async function loadProfiles() {
       const availabilityMatch = includeAvailability ? parseFloat(profile.availability_match ?? 0) : 0;
       // Use the direct proficiency_bonus from the profile if available, otherwise try to get it from the breakdown
       const proficiencyBonus = profile.proficiency_bonus !== undefined 
-        ? parseInt(profile.proficiency_bonus, 10)
-        : parseInt(profile.score_breakdown?.proficiency_bonus?.raw || 0) * 100;
+        ? parseFloat(profile.proficiency_bonus)
+        : parseFloat(profile.score_breakdown?.proficiency_bonus?.raw || 0) * 100;
       
       // Get the skill component from the backend (before availability is applied)
       const skillComponent = parseFloat(profile.adjusted_skill_match ?? 0) / 100; // Convert from percentage to decimal
