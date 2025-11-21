@@ -1,6 +1,18 @@
 import { authAPI } from './auth.js';
 
-const API_BASE_URL = 'http://localhost:8000/api/projects';
+// Get API base URL from environment
+const getAPIBaseURL = () => {
+  const hostname = window.location.hostname;
+  const protocol = window.location.protocol;
+  
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:8000/api/projects';
+  }
+  
+  return `${protocol}//${hostname}/api/projects`;
+};
+
+const API_BASE_URL = getAPIBaseURL();
 
 async function fetchAPI(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
@@ -10,10 +22,7 @@ async function fetchAPI(endpoint, options = {}) {
     ...options.headers,
   };
 
-  const token = localStorage.getItem('authToken');
-  if (token) {
-    headers['Authorization'] = `Token ${token}`;
-  }
+  // Token is now in httpOnly cookie, sent automatically with credentials: 'include'
 
   let response;
   try {

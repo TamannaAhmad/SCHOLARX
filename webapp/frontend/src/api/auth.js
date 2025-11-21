@@ -1,4 +1,16 @@
-const API_BASE_URL = 'http://localhost:8000/api/auth';
+// Get API base URL from config (or use fallback)
+const getAPIBaseURL = () => {
+  const hostname = window.location.hostname;
+  const protocol = window.location.protocol;
+  
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:8000/api/auth';
+  }
+  
+  return `${protocol}//${hostname}/api/auth`;
+};
+
+const API_BASE_URL = getAPIBaseURL();
 
 // Helper function to handle API requests
 async function fetchAPI(endpoint, options = {}) {
@@ -10,11 +22,8 @@ async function fetchAPI(endpoint, options = {}) {
     ...options.headers,
   };
 
-  // Add auth token if available
-  const token = localStorage.getItem('authToken');
-  if (token) {
-    headers['Authorization'] = `Token ${token}`;
-  }
+  // Note: Auth token is now stored in httpOnly cookie by backend
+  // No need to manually add Authorization header - cookies are sent automatically with credentials: 'include'
 
   let response;
   try {
@@ -30,9 +39,7 @@ async function fetchAPI(endpoint, options = {}) {
 
   // Handle 401 Unauthorized
   if (response.status === 401) {
-    // For Knox, there's no token refresh, so redirect to login
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
+    // Session expired - redirect to login
     window.location.href = '/login.html';
     throw new Error('Your session has expired. Please log in again.');
   }
@@ -90,15 +97,15 @@ export const authAPI = {
       body: JSON.stringify({ email, password })
     });
     
-    // Save Knox token
-    localStorage.setItem('authToken', response.token);
+    // Token is now stored in httpOnly cookie by backend
+    // No need to manually save to localStorage
     
     return response;
   },
 
   // Logout user
   logout() {
-    localStorage.removeItem('authToken');
+    // Token is cleared by backend when logout endpoint is called
     return fetchAPI('/logout/', { method: 'POST' });
   },
 

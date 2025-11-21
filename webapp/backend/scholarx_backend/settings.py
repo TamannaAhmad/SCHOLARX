@@ -37,12 +37,12 @@ LOGGING = {
     },
     'handlers': {
         'console': {
-            'level': 'DEBUG',  # Changed from INFO to DEBUG
+            'level': os.getenv('LOG_LEVEL', 'INFO'),
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
         'file': {
-            'level': 'DEBUG',  # Changed from INFO to DEBUG
+            'level': os.getenv('LOG_LEVEL', 'INFO'),
             'class': 'logging.FileHandler',
             'filename': os.path.join(BASE_DIR, 'django.log'),
             'formatter': 'verbose',
@@ -56,9 +56,8 @@ LOGGING = {
         },
         'chatbot': {  # Specific logger for chatbot app
             'handlers': ['console', 'file'],
-            'level': 'DEBUG',  # Set to DEBUG to see all logs
+            'level': os.getenv('LOG_LEVEL', 'INFO'),
             'propagate': False,
-            'propagate': False, 
         },
         'django.utils.autoreload': {
             'level': 'WARNING', 
@@ -87,35 +86,30 @@ LOGGING = {
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-s#w-t29xt*2*w1cp7&c%t1v3rv6qcf2jco@=v4gj@$me4*ng5h'
-
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False').lower() in ['1', 'true', 'yes']
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-s#w-t29xt*2*w1cp7&c%t1v3rv6qcf2jco@=v4gj@$me4*ng5h')
+
+# Validate SECRET_KEY in production (when DEBUG is False AND SECRET_KEY is not explicitly set)
+# This allows development to work with default key, but production requires explicit configuration
+if not DEBUG and os.getenv('SECRET_KEY') is None:
+    raise ValueError('SECRET_KEY environment variable is required in production')
+if not DEBUG and os.getenv('SECRET_KEY') and (len(SECRET_KEY) < 50 or 'django-insecure' in SECRET_KEY):
+    raise ValueError('SECRET_KEY must be at least 50 characters and not use django-insecure prefix in production')
+
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 # CORS & CSRF settings
-CORS_ALLOW_ALL_ORIGINS = True  # Only for development
+CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'False').lower() in ['1', 'true', 'yes']
 CORS_ALLOW_CREDENTIALS = True
 
 # For development, allow all origins
-CORS_ALLOWED_ORIGINS = [
-    'http://127.0.0.1:5500',
-    'http://localhost:5500',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:8000'
-]
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://127.0.0.1:5500,http://localhost:5500,http://localhost:3000,http://127.0.0.1:3000,http://127.0.0.1:8000').split(',')
 
 # Required for CSRF verification
-CSRF_TRUSTED_ORIGINS = [
-    'http://127.0.0.1:5500',
-    'http://localhost:5500',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:8000'
-]
+CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://127.0.0.1:5500,http://localhost:5500,http://localhost:3000,http://127.0.0.1:3000,http://127.0.0.1:8000').split(',')
 
 # Explicitly allow CSRF and Authorization headers
 CORS_ALLOW_HEADERS = [
@@ -161,31 +155,20 @@ CORS_EXPOSE_HEADERS = [
     'x-csrftoken',
 ]
 
-# Allow credentials (cookies) to be included in cross-site HTTP requests
-CORS_ALLOW_CREDENTIALS = True
-
-# Allow all origins for development
-CORS_ORIGIN_ALLOW_ALL = True
-
-# Or specify allowed origins
-CORS_ALLOWED_ORIGINS = [
-    'http://127.0.0.1:5500',
-    'http://localhost:5500',
-]
-
-# Required for CSRF verification
-CSRF_TRUSTED_ORIGINS = [
-    'http://127.0.0.1:5500',
-    'http://localhost:5500',
-]
 
 # Session and CSRF settings
-CSRF_COOKIE_SAMESITE = 'Lax'
-SESSION_COOKIE_SAMESITE = 'Lax'
-CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read the CSRF cookie
-CSRF_COOKIE_SECURE = False    # Set to True in production with HTTPS
-SESSION_COOKIE_SECURE = False # Set to True in production with HTTPS
-SESSION_COOKIE_HTTPONLY = False  # Allow JavaScript to read the session cookie
+CSRF_COOKIE_SAMESITE = 'Strict' if not DEBUG else 'Lax'
+SESSION_COOKIE_SAMESITE = 'Strict' if not DEBUG else 'Lax'
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SECURE = not DEBUG  # Set to True in production with HTTPS
+SESSION_COOKIE_SECURE = not DEBUG  # Set to True in production with HTTPS
+SESSION_COOKIE_HTTPONLY = True
+
+# HTTPS and Security Headers
+SECURE_SSL_REDIRECT = not DEBUG  # Redirect all HTTP to HTTPS in production
+SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '31536000' if not DEBUG else '0'))  # 1 year in production
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_HSTS_PRELOAD = not DEBUG
 
 # REST Framework settings for Knox authentication
 REST_FRAMEWORK = {
@@ -200,12 +183,8 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
 }
 
-# Disable CSRF check for API views (for development only!)
+# CSRF configuration
 CSRF_USE_SESSIONS = False
-CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read the CSRF cookie
-CSRF_COOKIE_SECURE = False    # Allow non-HTTPS for development
-SESSION_COOKIE_SECURE = False # Allow non-HTTPS for development
-SESSION_COOKIE_HTTPONLY = False  # Allow JavaScript to read the session cookie
 
 
 # Application definition
@@ -232,6 +211,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  # Should be as early as possible
+    'whitenoise.middleware.WhiteNoiseMiddleware', 
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -350,16 +330,7 @@ SIMPLE_JWT = {
     'TOKEN_TYPE_CLAIM': 'token_type',
 }
 
-# CORS settings
-CORS_ALLOW_ALL_ORIGINS = True  # For development only, restrict in production
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',  # React development server
-    'http://127.0.0.1:3000',
-    'http://localhost:5500',
-    'http://127.0.0.1:5500',
-    'http://127.0.0.1:8000'
-]
+# CORS settings are configured above
 
 # Gemini AI Configuration
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')  # Add your Gemini API key to .env file
@@ -390,9 +361,7 @@ LOGIN_REDIRECT_URL = '/dashboard/'
 SESSION_COOKIE_AGE = 1209600  # 2 weeks, in seconds
 SESSION_SAVE_EVERY_REQUEST = True
 
-# CORS settings
-CORS_ORIGIN_ALLOW_ALL = True  # For development only, restrict in production
-CORS_ALLOW_CREDENTIALS = True
+# Additional CORS settings
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'

@@ -1,5 +1,16 @@
 // API Configuration
-const API_BASE_URL = 'http://127.0.0.1:8000/api/auth';
+const getAPIBaseURL = () => {
+  const hostname = window.location.hostname;
+  const protocol = window.location.protocol;
+  
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:8000/api/auth';
+  }
+  
+  return `${protocol}//${hostname}/api/auth`;
+};
+
+const API_BASE_URL = getAPIBaseURL();
 
 // Function to get CSRF token from cookies
 function getCookie(name) {
@@ -24,7 +35,7 @@ let csrftoken = getCookie('csrftoken');
 async function ensureCSRFToken() {
     if (!csrftoken) {
         try {
-            const response = await fetch('http://127.0.0.1:8000/api/auth/csrf/', {
+            const response = await fetch(`${API_BASE_URL}/csrf/`, {
                 method: 'GET',
                 credentials: 'include',
                 headers: {
@@ -222,20 +233,9 @@ function togglePasswordVisibility(inputId, button) {
 
 // Main execution
 document.addEventListener('DOMContentLoaded', function() {
-    // Check if user is already logged in
-    const token = localStorage.getItem('authToken');
-    if (token) {
-        // Verify token is still valid before redirecting
-        verifyToken(token).then(isValid => {
-            if (isValid) {
-                window.location.href = 'dashboard.html';
-            } else {
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('user');
-            }
-        });
-        return;
-    }
+    // Check if user is already logged in by attempting to fetch profile
+    // If user has valid session cookie, they'll be redirected
+    // This will be handled by the API response
 
     // Get form elements
     const loginForm = document.getElementById('loginForm');

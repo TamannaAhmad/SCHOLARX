@@ -3,7 +3,6 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 import json
 import logging
-from .services import chatbot_service
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +12,9 @@ def chatbot_ask(request):
     """
     Handle chatbot queries and return responses using the trained model
     """
+    # Lazy import to avoid blocking Django startup
+    from .services import chatbot_service
+    
     try:
         # Parse request data
         try:
