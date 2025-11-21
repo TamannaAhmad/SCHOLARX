@@ -7,6 +7,9 @@ secrets.py
 .env.development.local
 .env.test.local
 .env.production.local
+# Allow .env.example files (templates)
+!.env.example
+!**/.env.example
 documentation
 
 # Python
