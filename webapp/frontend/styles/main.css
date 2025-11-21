@@ -342,6 +342,10 @@ input[type="password"].form-input {
   border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
   z-index: 2;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .password-toggle:hover {

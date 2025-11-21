@@ -610,7 +610,7 @@ class RegistrationForm {
             skillElement.innerHTML = `
                 <span>${skillObj.name}</span>
                 <span class="proficiency-badge">${skill.proficiency_level}/5</span>
-                <button type="button" class="remove-skill" data-skill-id="${skill.skill_id}">
+                <button type="button" class="remove-skill" data-skill-id="${skill.skill_id}" style="padding-left: 5px; padding-right: 5px">
                     &times;
                 </button>
             `;

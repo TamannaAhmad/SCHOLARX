@@ -222,14 +222,6 @@ function togglePasswordVisibility(inputId, button) {
 
 // Main execution
 document.addEventListener('DOMContentLoaded', function() {
-    // Set up password toggle
-    const passwordToggleBtn = document.getElementById('passwordToggle');
-    if (passwordToggleBtn) {
-        passwordToggleBtn.addEventListener('click', function() {
-            togglePasswordVisibility('password', this);
-        });
-    }
-
     // Check if user is already logged in
     const token = localStorage.getItem('authToken');
     if (token) {
