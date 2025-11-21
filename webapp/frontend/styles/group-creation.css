@@ -9,6 +9,7 @@
     flex-wrap: wrap;
     gap: 8px;
     margin-top: 8px;
+    margin-left: var(--spacing-sm);
 }
 
 .topic-tag {

@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function showWelcomeMessage() {
-        appendMessage('bot', 'Hi! I\'m your ScholarX AI Assistant. Ask me anything about your courses or VTU.');
+        appendMessage('bot', 'Hi! I\'m your ScholarX AI Assistant. Ask me anything about your courses.');
     }
 
     function appendMessage(sender, text) {

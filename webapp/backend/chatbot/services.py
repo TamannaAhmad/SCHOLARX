@@ -155,6 +155,7 @@ IMPORTANT GUIDELINES:
 - Write in plain text sentences
 - Do NOT use bullet points or numbered lists
 - Focus on the most important information only
+- Mention that the answer is not from the course materials, but from Gemini fallback
 
 Answer:"""
             else:
@@ -168,6 +169,7 @@ IMPORTANT GUIDELINES:
 - Write in plain text sentences
 - Do NOT use bullet points or numbered lists
 - Focus on the most important information only
+- Mention that the answer is not from the course materials, but from Gemini fallback
 
 Answer:"""
             
@@ -216,7 +218,7 @@ IMPORTANT GUIDELINES:
 - Write in plain text sentences
 - Do NOT use bullet points or numbered lists
 - Focus on the most important information only
-
+- Mention that the answer is not from the course materials, but from Gemini fallback
 Answer:"""
                     
                     response = self.gemini_model.generate_content(prompt)
@@ -401,7 +403,7 @@ I'm ready to assist you with any queries you might have regarding Visvesvaraya T
 You can ask me questions related to your subjects, and I will use the textbooks that I was trained on to provide the best possible response. 
 
 Feel free to ask me anything about your subjects, and I'll do my best to help!"""
-        return self.markdown_to_plain_text(welcome_text)
+        return welcome_text
 
     def is_general_knowledge_question(self, query: str) -> bool:
         """

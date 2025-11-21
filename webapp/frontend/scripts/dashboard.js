@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const groups = await groupsAPI.listMyGroups();
             if (!groups || groups.length === 0) {
-                studyGroupsList.innerHTML = '<p class="no-data">No study groups found. <a href="group-creation.html">Create your first study group</a></p>';
+                studyGroupsList.innerHTML = '<p class="no-data">No study groups found.</p>';
             } else {
                 studyGroupsList.innerHTML = groups.map(group => {
                     const subjectLabel = toTitleCase(group.subject_area) || 'Unknown';

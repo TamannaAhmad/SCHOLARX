@@ -215,6 +215,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         messagesContainer.innerHTML = requests.map(request => {
+            // Check if this is an invitation or a request
+            const isInvitation = 'invite_id' in request;
             const status = request.status || 'pending';
             const statusClass = status === 'approved' ? 'status-approved' : 
                               status === 'rejected' ? 'status-rejected' : 'status-pending';
@@ -224,6 +226,25 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const projectName = request.project?.title || request.group?.name || 'Unknown';
             const projectType = request.project ? 'project' : 'study-group';
+            let messageContent = '';
+            if (isInvitation) {
+                const recipientName = request.invitee_name || request.invitee?.full_name || 'a user';
+                messageContent = `
+                    <div class="message-body">
+                        <p>You invited ${escapeHtml(recipientName)} to join this ${projectType}.</p>
+                        ${request.message ? `<div class="invitation-message">${escapeHtml(request.message)}</div>` : ''}
+                        <div class="message-meta">Sent on ${formatDate(request.sent_at || request.created_at)}</div>
+                    </div>
+                `;
+            } else {
+                messageContent = `
+                    <div class="message-body">
+                        ${request.message ? `<div class="message-text">${escapeHtml(request.message)}</div>` : ''}
+                        <div class="message-meta">Sent on ${formatDate(request.created_at)}</div>
+                    </div>
+                `;
+            }
+            
             const projectId = (
                 request.project?.project_id ??
                 request.project?.id ??
@@ -255,11 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <span class="message-status ${statusClass}">${statusText}</span>
                     </div>
-                    ${request.message ? `
-                        <div class="message-body">
-                            <div class="message-text">${escapeHtml(request.message)}</div>
-                        </div>
-                    ` : ''}
+                    ${messageContent}
                 </div>
             `;
         }).join('');
@@ -318,9 +335,21 @@ document.addEventListener('DOMContentLoaded', () => {
             hideError();
             messagesContainer.innerHTML = '<div class="loading-message">Loading your requests...</div>';
             
-            const data = await messagesAPI.getOutgoingRequests();
-            outgoingRequests = Array.isArray(data) ? data : (data.results || data.requests || []);
+            const [requestsData, invitationsData] = await Promise.all([
+                messagesAPI.getOutgoingRequests(),
+                messagesAPI.getSentInvitations()
+            ]);
+
+            // Combine and normalize the data
+            const requests = Array.isArray(requestsData) ? requestsData : (requestsData.results || requestsData.requests || []);
+            const invitations = Array.isArray(invitationsData) ? invitationsData : (invitationsData.results || invitationsData.invitations || []);
             
+            // Combine and sort by date (newest first)
+            const allOutgoingItems = [...requests, ...invitations].sort((a, b) => 
+                new Date(b.created_at || b.sent_at) - new Date(a.created_at || a.sent_at)
+            );
+
+            outgoingRequests = allOutgoingItems;
             renderOutgoingRequests(outgoingRequests);
         } catch (error) {
             console.error('Error loading outgoing requests:', error);

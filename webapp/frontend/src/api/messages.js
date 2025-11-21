@@ -112,6 +112,9 @@ export const messagesAPI = {
   rejectRequest(requestId) {
     return fetchAPI(`/messages/${requestId}/reject/`, {
       method: 'POST',
+      body: JSON.stringify({
+        responded_at: new Date().toISOString()
+      })
     });
   },
 

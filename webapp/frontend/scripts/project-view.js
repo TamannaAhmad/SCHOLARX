@@ -95,9 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showError(message, {duration: 5000});
     }
 
-    function showSuccessMsg(message) {
-        showSuccess(message, {duration: 3000});
-    }
+    // Removed showSuccessMsg - using showSuccess directly instead
 
     function hideError() {
         if (errorContainer) {
@@ -502,7 +500,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Update the UI by removing the member from the list
             currentProject.members = currentProject.members.filter(m => m.usn !== usn);
             renderMembers(currentProject.members);
-            showSuccessMsg(`${memberName} has been removed from the project.`);
+            showSuccess(`${memberName} has been removed from the project.`, { duration: 3000 });
         } catch (error) {
             console.error('Error removing member:', error);
             handleAPIError(error, 'Failed to remove member');
@@ -555,7 +553,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 await loadProject();
                 setEditMode(false);
                 // Show success notification
-                showSuccessMsg('Project updated successfully!', { duration: 3000 });
+                showSuccess('Project updated successfully!', { duration: 3000 });
             } catch (error) {
                 // Log the full error for debugging
                 console.error('API Error Details:', {

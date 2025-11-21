@@ -38,6 +38,7 @@
     flex-wrap: wrap;
     gap: var(--spacing-sm);
     margin-top: var(--spacing-sm);
+    margin-left: var(--spacing-sm);
     width: 100%;
 }
 

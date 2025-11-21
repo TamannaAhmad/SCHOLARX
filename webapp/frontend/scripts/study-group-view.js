@@ -248,7 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         
         // Toggle edit/save buttons
-        if (editBtn) editBtn.style.display = on ? 'none' : 'inline-block';
+        if (editBtn) editBtn.style.display = on ? 'none' : (currentGroup?.is_owner ? 'inline-block' : 'none');
         if (saveBtn) saveBtn.style.display = on ? 'inline-block' : 'none';
     }
 
@@ -410,7 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentGroup.is_owner = isOwner;
             
             // Show/hide edit button based on ownership
-            if (isOwner) {
+            if (currentGroup?.is_owner) {
                 editBtn.style.display = 'inline-block';
             } else {
                 editBtn.style.display = 'none';
@@ -632,16 +632,6 @@ document.addEventListener('DOMContentLoaded', () => {
             showSkillSuggestions(e.target.value);
         });
     }
-
-    editBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (!currentGroup?.is_owner) {
-            showErrorMsg('You do not have permission to edit this study group. Only the group owner can make changes.');
-            return;
-        }
-        setEditMode(!isEditing);
-        if (!isEditing) loadGroup();
-    });
     saveBtn.addEventListener('click', saveChanges);
     
     // Handle join group request
@@ -659,11 +649,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         await groupsAPI.joinGroup(groupId, message);
                         
-                        // Show success and reload
-                        showError('Join request sent successfully!', { type: 'info', duration: 3000 });
-                        setTimeout(() => {
-                            loadGroup(); // Reload to update membership status
-                        }, 1000);
+                        // Show success message
+                        showSuccess('Join request sent successfully!', { duration: 3000 });
                     } catch (error) {
                         console.error('Error joining group:', error);
                         const errorMsg = handleAPIError(error, 'Failed to request joining the group. Please try again.');
