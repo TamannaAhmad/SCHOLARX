@@ -1,4 +1,9 @@
 # Secrets and sensitive files
+__pycache__
+chatbot
+documentation
+Profile_matching
+schedule_matching
 secrets.py
 *.env
 .env
