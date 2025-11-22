@@ -100,17 +100,22 @@ if not DEBUG:
     if len(SECRET_KEY) < 50:
         raise ValueError('SECRET_KEY must be at least 50 characters in production')
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = ['*']
 
 # CORS & CSRF settings
-CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'False').lower() in ['1', 'true', 'yes']
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = [
+    "https://scholarx-zeta.vercel.app/",  # Replace with your Vercel URL
+    "http://localhost:8000",
+]
 
 # For development, allow all origins
 CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://127.0.0.1:5500,http://localhost:5500,http://localhost:3000,http://127.0.0.1:3000,http://127.0.0.1:8000').split(',')
 
 # Required for CSRF verification
-CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://127.0.0.1:5500,http://localhost:5500,http://localhost:3000,http://127.0.0.1:3000,http://127.0.0.1:8000').split(',')
+CSRF_TRUSTED_ORIGINS = [
+    "https://scholarx-zeta.vercel.app/"
+]
 
 # Explicitly allow CSRF and Authorization headers
 CORS_ALLOW_HEADERS = [
@@ -161,12 +166,12 @@ CORS_EXPOSE_HEADERS = [
 CSRF_COOKIE_SAMESITE = 'Strict' if not DEBUG else 'Lax'
 SESSION_COOKIE_SAMESITE = 'Strict' if not DEBUG else 'Lax'
 CSRF_COOKIE_HTTPONLY = True
-CSRF_COOKIE_SECURE = not DEBUG  # Set to True in production with HTTPS
-SESSION_COOKIE_SECURE = not DEBUG  # Set to True in production with HTTPS
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
 SESSION_COOKIE_HTTPONLY = True
 
 # HTTPS and Security Headers
-SECURE_SSL_REDIRECT = not DEBUG  # Redirect all HTTP to HTTPS in production
+SECURE_SSL_REDIRECT = True
 SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '31536000' if not DEBUG else '0'))  # 1 year in production
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 SECURE_HSTS_PRELOAD = not DEBUG
