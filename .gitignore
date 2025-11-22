@@ -12,6 +12,12 @@ secrets.py
 !**/.env.example
 documentation
 
+# Ignore folders not needed for deployment
+__pycache__/
+chatbot/
+Profile_matching/
+schedule_matching/
+
 # Python
 __pycache__/
 *.py[cod]
