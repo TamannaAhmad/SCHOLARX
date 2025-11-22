@@ -8,12 +8,24 @@
         "maxLambdaSize": "15mb",
         "runtime": "python3.9"
       }
+    },
+    {
+      "src": "webapp/frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
       "dest": "webapp/backend/wsgi.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "webapp/frontend/dist/$1",
+      "status": 200
     }
   ]
 }
