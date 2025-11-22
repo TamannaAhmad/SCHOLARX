@@ -1,6 +1,4 @@
 # Core Dependencies
-# Use constraints file to exclude pyarrow (prevents build issues on Netlify)
--c constraints.txt
 python-dotenv>=1.0.1
 
 # Web Framework
@@ -8,43 +6,35 @@ Django==4.2.7
 djangorestframework==3.14.0
 djangorestframework-simplejwt>=5.3.0
 django-cors-headers==4.3.1
-django-rest-knox==4.2.0
+djangorestframework-knox==4.2.0
 
 # Database
-sqlalchemy>=1.4.0
 psycopg2-binary>=2.9.0
 dj-database-url==2.1.0
 
 # Authentication & Security
 python-jose[cryptography]>=3.3.0
 
-# Data Processing
+# Data Processing (required by backend)
 numpy>=1.26.0
-pandas>=2.2.0
-openpyxl>=3.1.2
-xlrd>=2.0.1
-xlsxwriter>=3.2.0
+pandas>=2.0.0,<2.2.0  # Pin to avoid pyarrow dependency in newer versions
 
-# Machine Learning & NLP
+# Machine Learning & NLP (required by backend)
 sentence-transformers>=2.7.0
 scikit-learn>=1.4.0
 torch>=2.0.0
 faiss-cpu>=1.7.4
-spacy>=3.7.0
-textblob>=0.18.0.post0
-# Google AI - pinned to avoid dependency resolution issues on Netlify
+
+# Google AI (required by chatbot)
 google-generativeai==0.3.0
 google-api-core==2.11.0
 googleapis-common-protos==1.71.0
 grpcio-status==1.75.1
 protobuf<4,>=3.20.0
 
-# Visualization
-plotly>=5.22.0
-
-# Web & API
-supabase>=2.0.0
-# streamlit>=1.37.0  # Removed: not needed for backend deployment, causes pyarrow dependency issues on Netlify
+# Development/Production
+gunicorn>=21.2.0
+whitenoise>=6.5.0
 
 # Utilities
 python-dateutil>=2.8.2

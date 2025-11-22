@@ -1,8 +1,7 @@
 # Constraints file to exclude pyarrow
 # pyarrow causes build failures on Netlify with Python 3.14
-# This constraint prevents pyarrow from being installed
-# If a package requires pyarrow, pip will fail - but pyarrow is not needed for backend
-# Note: This may cause installation to fail if a package explicitly requires pyarrow
-# In that case, we need to identify and remove/update the package requiring it
-pyarrow==0.0.0
+# Setting to impossible version prevents installation
+# Note: If a package explicitly requires pyarrow, this will cause pip to fail
+# In that case, we need to identify and update the package requiring it
+pyarrow==999.0.0
 
