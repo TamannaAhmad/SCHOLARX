@@ -1,4 +1,9 @@
 # Secrets and sensitive files
+__pycache__
+chatbot
+documentation
+Profile_matching
+schedule_matching
 secrets.py
 *.env
 .env
@@ -7,7 +12,16 @@ secrets.py
 .env.development.local
 .env.test.local
 .env.production.local
+# Allow .env.example files (templates)
+!.env.example
+!**/.env.example
 documentation
+
+# Ignore folders not needed for deployment
+__pycache__/
+chatbot/
+Profile_matching/
+schedule_matching/
 
 # Python
 __pycache__/
