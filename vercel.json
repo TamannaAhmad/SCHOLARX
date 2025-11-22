@@ -10,22 +10,12 @@
       }
     },
     {
-      "src": "webapp/frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
+      "src": "webapp/frontend/**/*",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "webapp/backend/wsgi.py"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "webapp/frontend/dist/$1",
-      "status": 200
-    }
+    { "src": "/api/(.*)", "dest": "webapp/backend/wsgi.py" },
+    { "src": "/(.*)", "dest": "webapp/frontend/$1" }
   ]
 }
