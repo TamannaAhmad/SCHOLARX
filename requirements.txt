@@ -1,4 +1,6 @@
 # Core Dependencies
+# Use constraints file to exclude pyarrow (prevents build issues on Netlify)
+-c constraints.txt
 python-dotenv>=1.0.1
 
 # Web Framework

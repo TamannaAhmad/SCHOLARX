@@ -1,0 +1,5 @@
+# Constraints file to exclude pyarrow
+# pyarrow causes build failures on Netlify with Python 3.14
+# This file is used to prevent pyarrow from being installed
+pyarrow==0.0.0
+
