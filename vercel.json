@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "webapp/backend/wsgi.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "15mb",
+        "runtime": "python3.9"
+      }
+    },
+    {
+      "src": "webapp/frontend/**/*",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "webapp/backend/wsgi.py" },
+    { "src": "/(.*)", "dest": "webapp/frontend/$1" }
+  ]
+}
